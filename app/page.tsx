@@ -1,58 +1,78 @@
-import { DeployButton } from "@/components/deploy-button";
-import { EnvVarWarning } from "@/components/env-var-warning";
-import { AuthButton } from "@/components/auth-button";
-import { Hero } from "@/components/hero";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import { ConnectSupabaseSteps } from "@/components/tutorial/connect-supabase-steps";
-import { SignUpUserSteps } from "@/components/tutorial/sign-up-user-steps";
-import { hasEnvVars } from "@/lib/utils";
 import Link from "next/link";
+import { ArrowRight, CalendarDays, Library, Search } from "lucide-react";
 import { Suspense } from "react";
+
+import { AuthButton } from "@/components/auth-button";
+import { ThemeSwitcher } from "@/components/theme-switcher";
+import { Button } from "@/components/ui/button";
+
+const features = [
+  {
+    title: "Keep one library",
+    description: "Organize the movies you care about in a private workspace.",
+    icon: Library,
+  },
+  {
+    title: "Find what is next",
+    description: "Turn an overflowing watchlist into a focused next-up queue.",
+    icon: Search,
+  },
+  {
+    title: "Make time to watch",
+    description: "Plan movie nights and keep your viewing schedule visible.",
+    icon: CalendarDays,
+  },
+] as const;
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col items-center">
-      <div className="flex-1 w-full flex flex-col gap-20 items-center">
-        <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-          <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
-            <div className="flex gap-5 items-center font-semibold">
-              <Link href={"/"}>Next.js Supabase Starter</Link>
-              <div className="flex items-center gap-2">
-                <DeployButton />
-              </div>
-            </div>
-            {!hasEnvVars ? (
-              <EnvVarWarning />
-            ) : (
-              <Suspense>
-                <AuthButton />
-              </Suspense>
-            )}
+    <main className="min-h-svh bg-muted/30">
+      <nav className="border-b bg-background/90">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Link href="/" className="font-semibold tracking-tight">
+            WatchFlow
+          </Link>
+          <div className="flex items-center gap-3">
+            <Suspense
+              fallback={<div className="h-8 w-36 animate-pulse rounded bg-muted" />}
+            >
+              <AuthButton />
+            </Suspense>
+            <ThemeSwitcher />
           </div>
-        </nav>
-        <div className="flex-1 flex flex-col gap-20 max-w-5xl p-5">
-          <Hero />
-          <main className="flex-1 flex flex-col gap-6 px-4">
-            <h2 className="font-medium text-xl mb-4">Next steps</h2>
-            {hasEnvVars ? <SignUpUserSteps /> : <ConnectSupabaseSteps />}
-          </main>
+        </div>
+      </nav>
+
+      <section className="mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Your movies, in flow
+          </p>
+          <h1 className="mt-5 max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl">
+            Spend less time choosing. Watch more great movies.
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
+            WatchFlow gives you one calm place to build your library, decide
+            what to watch next, and plan the perfect movie night.
+          </p>
+          <Button asChild size="lg" className="mt-8">
+            <Link href="/auth/sign-up">
+              Create your workspace
+              <ArrowRight className="ml-2 size-4" aria-hidden="true" />
+            </Link>
+          </Button>
         </div>
 
-        <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
-          <p>
-            Powered by{" "}
-            <a
-              href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
-              target="_blank"
-              className="font-bold hover:underline"
-              rel="noreferrer"
-            >
-              Supabase
-            </a>
-          </p>
-          <ThemeSwitcher />
-        </footer>
-      </div>
+        <div className="grid gap-4">
+          {features.map(({ title, description, icon: Icon }) => (
+            <div key={title} className="rounded-xl border bg-card p-5 shadow-sm">
+              <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
+              <h2 className="mt-3 font-semibold">{title}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
