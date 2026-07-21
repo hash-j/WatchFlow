@@ -6,8 +6,9 @@ WatchFlow is a multi-user movie-management SaaS built with the Next.js App
 Router, TypeScript, Tailwind CSS, Supabase Auth, Supabase PostgreSQL, and
 Supabase Row Level Security (RLS).
 
-The current milestone is Phase 1: project foundation and authentication.
-TMDB integration and payments are explicitly out of scope until a later phase.
+Phase 1 established the project foundation and authentication. The current
+milestone is Phase 2: server-side TMDB search and the private movie library.
+Payments remain explicitly out of scope.
 
 ## Engineering rules
 
@@ -29,6 +30,8 @@ TMDB integration and payments are explicitly out of scope until a later phase.
 - Never print, expose, copy, or log values from `.env.local`.
 - Never commit environment files or credentials.
 - Never expose a Supabase secret/service-role key to browser code.
+- Never expose `TMDB_READ_ACCESS_TOKEN` or `SUPABASE_SECRET_KEY` to browser
+  JavaScript.
 - Browser code may use only the public Supabase URL and publishable/anon key.
 - Keep secret environment variables out of Client Components.
 - Use the `@supabase/ssr` browser and server clients for cookie-based auth.
@@ -41,6 +44,16 @@ TMDB integration and payments are explicitly out of scope until a later phase.
   application paths.
 - Query user-owned data with the signed-in user's Supabase client so RLS is
   enforced. Never bypass RLS in application code.
+- Mark TMDB provider and Supabase admin-client modules with `import
+  "server-only"`.
+- Never accept a user ID from browser input. Derive it from verified server-side
+  Supabase claims.
+- Confirm the authenticated user before invoking TMDB detail ingestion or
+  constructing the secret-key admin client.
+- Restrict the secret-key client to shared `movies` metadata. Perform
+  `user_movies` reads and mutations with the authenticated SSR client so RLS
+  remains enforced.
+- Map provider responses into internal movie types at the provider boundary.
 - Do not log access tokens, refresh tokens, credentials, or private user data.
 
 ## Current data contract

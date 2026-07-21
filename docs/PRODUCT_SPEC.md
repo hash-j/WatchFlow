@@ -74,3 +74,18 @@ password authentication and an authenticated product shell.
 - Authentication callbacks create server-visible cookie sessions.
 - The dashboard renders the authenticated email and profile availability.
 - The repository passes ESLint, TypeScript checking, and a production build.
+
+## Phase 2: discovery and private library
+
+Phase 2 adds server-side TMDB title search and a private library. Search results
+show poster availability, localized and original titles, release year, overview,
+and public rating. Adding a result fetches complete details, director, main cast,
+and a suitable YouTube trailer before shared metadata is upserted.
+
+Every personal library operation derives the member identity from verified
+server claims and uses the authenticated Supabase client under RLS. Members can
+view a responsive library grid, open stored movie details, and remove an item
+only after confirmation.
+
+Still out of scope: queue ordering, scheduling implementation, payments, social
+features, and recommendations.

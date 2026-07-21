@@ -84,6 +84,20 @@ service-role client exists in Phase 1.
 
 ## Future integration boundaries
 
-Phase 2 may add a server-only TMDB adapter and movie ingestion workflow. Billing
-is not designed or implemented. Neither concern belongs in the Phase 1 auth or
-Supabase client modules.
+Phase 2 adds its server-only TMDB adapter and movie ingestion workflow behind
+separate provider and library modules. Billing is not designed or implemented.
+Neither concern is coupled to the Phase 1 auth client modules.
+
+## Phase 2 provider and library boundaries
+
+`lib/movies/provider.ts` defines the provider-independent search/details
+contract. `lib/movies/tmdb-provider.ts` is marked server-only, authenticates to
+TMDB with the read-access Bearer token, applies an eight-second timeout, and
+maps unknown API payloads before returning internal types.
+
+Library server actions accept only TMDB or library-record identifiers. The
+orchestration service authenticates first. Shared `movies` metadata is then
+upserted with a separate server-only secret-key client; the client is created
+only after a verified user is available. All `user_movies` reads, inserts, and
+deletes use the cookie-bound authenticated client and explicit verified-user
+filters in addition to the existing RLS policies.

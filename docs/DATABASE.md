@@ -52,9 +52,13 @@ Phase 1 application contract:
 Purpose: the shared movie catalog used by all members. It should hold canonical
 movie metadata once Phase 2 begins.
 
-Phase 1 does not read or write this table. TMDB identifiers, metadata mapping,
-upsert behavior, and refresh policy must be confirmed during Phase 2 against the
-actual deployed columns.
+Phase 2 upserts shared metadata on the unique `tmdb_id` key. The application
+adapter uses `title`, `original_title`, `overview`, `poster_path`,
+`backdrop_path`, `release_date`, `runtime`, `genres`, `director`,
+`cast_members`, `trailer_key`, and `vote_average`. These are now the explicit
+application-side column contract; the configured public schema endpoint
+returned HTTP 401 during implementation, so the deployed definitions must be
+confirmed before production writes.
 
 ### `user_movies`
 
@@ -62,9 +66,11 @@ Purpose: the association between a member and a shared movie. It is the natural
 location for user-specific state such as library membership, status, priority,
 rating, notes, or scheduling references where those columns exist.
 
-Phase 1 does not read or write this table. The deployed foreign-key column names,
-status vocabulary, uniqueness constraint, and timestamps must be confirmed
-before implementing library mutations.
+Phase 2 uses `id`, `user_id`, `movie_id`, `status`, and the optional
+`created_at`/`added_at` timestamp. New relationships default to
+`want_to_watch`. The unique `(user_id, movie_id)` constraint is the concurrency
+guard against duplicate personal-library rows; PostgreSQL error `23505` is
+treated as an already-added success state.
 
 ## RLS expectations
 

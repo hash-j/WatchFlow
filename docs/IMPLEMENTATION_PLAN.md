@@ -29,14 +29,20 @@ Status: implemented in this milestone.
 
 ## Phase 2: movie discovery and library workflows
 
-Planned, not implemented:
+Status: implemented in this milestone.
 
-- Baseline or generate database types from the deployed schema.
-- Add a server-only TMDB adapter and environment configuration.
-- Implement movie search with rate/error handling and attribution.
-- Map and upsert shared `movies` records without duplicating TMDB entries.
-- Implement RLS-scoped `user_movies` library actions and the Watch Next view.
-- Add focused automated tests for data mapping and cross-user isolation.
+- Added a server-only TMDB adapter, response mapper, timeout, and internal movie
+  types.
+- Added protected movie search with adult-content exclusion and resilient empty,
+  loading, missing-metadata, no-results, and provider-error states.
+- Added authenticated shared-metadata upserts and RLS-scoped personal-library
+  operations with unique-constraint duplicate handling.
+- Added the private library grid, stored movie details, and confirmed removal.
+- Added unit tests for mapping, validation, authentication ordering, duplicate
+  handling, and verified-session library scope.
+
+Before production data writes, confirm the deployed columns documented in
+`DATABASE.md`; no migration or schema mutation is included here.
 
 ## Later phases
 
