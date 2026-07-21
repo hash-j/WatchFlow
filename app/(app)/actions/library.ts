@@ -20,10 +20,21 @@ import {
   MovieNotFoundError,
   MovieProviderError,
 } from "@/lib/movies/errors";
+import { SupabaseAdminConfigurationError } from "@/lib/supabase/admin";
 
 function getActionErrorMessage(error: unknown) {
   if (error instanceof AuthenticationRequiredError) {
     return "Your session has expired. Sign in again to manage your library.";
+  }
+
+  if (error instanceof SupabaseAdminConfigurationError) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[WatchFlow] Supabase admin configuration error", {
+        message: error.message,
+      });
+    }
+
+    return "The library service is not configured. Please contact support.";
   }
 
   if (

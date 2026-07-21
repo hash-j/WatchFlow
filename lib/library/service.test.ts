@@ -22,6 +22,8 @@ const movie: MovieDetails = {
   genres: ["Action", "Science Fiction"],
   director: "Lana Wachowski",
   cast: [{ name: "Keanu Reeves", character: "Neo" }],
+  originalLanguage: "en",
+  productionCountries: ["United States of America"],
   trailer: { key: "trailer-key", name: "Official Trailer", site: "YouTube" },
 };
 
@@ -57,6 +59,32 @@ describe("authenticated library service", () => {
     expect(dependencies.insertUserMovie).not.toHaveBeenCalled();
   });
 
+  it("successfully upserts complete shared movie metadata", async () => {
+    const upsertSharedMovie = vi.fn().mockResolvedValue({ id: "movie-row-id" });
+    const dependencies = createDependencies({ upsertSharedMovie });
+
+    await expect(addMovieToLibrary(603, dependencies)).resolves.toBe("added");
+
+    expect(upsertSharedMovie).toHaveBeenCalledOnce();
+    expect(upsertSharedMovie).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "verified-user-id" }),
+      movie,
+    );
+  });
+
+  it("successfully inserts user_movies with the saved shared movie ID", async () => {
+    const insertUserMovie = vi.fn().mockResolvedValue("added");
+    const dependencies = createDependencies({ insertUserMovie });
+
+    await expect(addMovieToLibrary(603, dependencies)).resolves.toBe("added");
+
+    expect(insertUserMovie).toHaveBeenCalledOnce();
+    expect(insertUserMovie).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "verified-user-id" }),
+      "movie-row-id",
+    );
+  });
+
   it("reports a unique-constraint duplicate without creating another record", async () => {
     const dependencies = createDependencies({
       insertUserMovie: vi.fn().mockResolvedValue("duplicate"),
@@ -86,5 +114,17 @@ describe("authenticated library service", () => {
 
     expect(listUserMoviesMock).toHaveBeenCalledOnce();
     expect(listUserMoviesMock).toHaveBeenCalledWith(session);
+  });
+
+  it("does not insert user_movies when the database upsert fails", async () => {
+    const upsertError = new Error("safe test upsert failure");
+    const insertUserMovie = vi.fn();
+    const dependencies = createDependencies({
+      upsertSharedMovie: vi.fn().mockRejectedValue(upsertError),
+      insertUserMovie,
+    });
+
+    await expect(addMovieToLibrary(603, dependencies)).rejects.toBe(upsertError);
+    expect(insertUserMovie).not.toHaveBeenCalled();
   });
 });

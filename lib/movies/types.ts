@@ -25,6 +25,8 @@ export type MovieDetails = MovieSearchResult & {
   genres: string[];
   director: string | null;
   cast: MovieCastMember[];
+  originalLanguage: string | null;
+  productionCountries: string[];
   trailer: MovieTrailer | null;
 };
 

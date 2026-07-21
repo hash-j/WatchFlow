@@ -77,6 +77,22 @@ function mapGenres(value: unknown) {
     .filter((genre): genre is string => Boolean(genre));
 }
 
+function mapProductionCountries(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((country) => {
+      if (!isRecord(country)) {
+        return null;
+      }
+
+      return asString(country.name) ?? asString(country.iso_3166_1);
+    })
+    .filter((country): country is string => Boolean(country));
+}
+
 function mapDirector(value: unknown) {
   if (!isRecord(value) || !Array.isArray(value.crew)) {
     return null;
@@ -182,6 +198,8 @@ export function mapTmdbMovieDetails(payload: unknown): MovieDetails {
     genres: mapGenres(payload.genres),
     director: mapDirector(payload.credits),
     cast: mapCast(payload.credits),
+    originalLanguage: asString(payload.original_language),
+    productionCountries: mapProductionCountries(payload.production_countries),
     trailer: mapTrailer(payload.videos),
   };
 }

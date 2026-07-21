@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { tmdbMovieProvider } from "../movies/tmdb-provider";
 import type { LibraryMovie, MovieDetails } from "../movies/types";
 import { createAdminClient } from "../supabase/admin";
+import { logSupabaseError } from "../supabase/error-logging";
 import { createClient } from "../supabase/server";
 import { LibraryPersistenceError } from "./errors";
 import { classifyUserMovieInsert } from "./duplicate";
@@ -24,14 +25,16 @@ function getSessionClient(session: AuthenticatedLibrarySession) {
 
 async function authenticate(): Promise<SupabaseLibrarySession | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
-  if (error || !userId) {
+  if (error || !user) {
     return null;
   }
 
-  return { userId, client: supabase };
+  return { userId: user.id, client: supabase };
 }
 
 async function upsertSharedMovie(
@@ -50,7 +53,15 @@ async function upsertSharedMovie(
       ? String(data.id)
       : null;
 
-  if (error || !id) {
+  if (error) {
+    logSupabaseError("movies metadata upsert failed", error);
+    throw new LibraryPersistenceError("The movie metadata could not be saved.");
+  }
+
+  if (!id) {
+    logSupabaseError("movies metadata upsert returned no ID", {
+      message: "Supabase returned no movie ID after a successful upsert.",
+    });
     throw new LibraryPersistenceError("The movie metadata could not be saved.");
   }
 
@@ -70,6 +81,7 @@ async function insertUserMovie(
   const result = classifyUserMovieInsert(error);
 
   if (result === "error") {
+    logSupabaseError("user_movies insert failed", error!);
     throw new LibraryPersistenceError();
   }
 
@@ -97,6 +109,7 @@ async function listUserMovies(session: AuthenticatedLibrarySession) {
     .eq("user_id", userId);
 
   if (error) {
+    logSupabaseError("user_movies list failed", error);
     throw new LibraryPersistenceError("Your library could not be loaded.");
   }
 
@@ -116,6 +129,7 @@ async function getUserMovie(
     .maybeSingle();
 
   if (error) {
+    logSupabaseError("user_movies detail lookup failed", error);
     throw new LibraryPersistenceError("The movie could not be loaded.");
   }
 
@@ -136,6 +150,7 @@ async function removeUserMovie(
     .maybeSingle();
 
   if (error) {
+    logSupabaseError("user_movies delete failed", error);
     throw new LibraryPersistenceError("The movie could not be removed.");
   }
 

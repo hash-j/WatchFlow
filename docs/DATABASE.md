@@ -52,13 +52,17 @@ Phase 1 application contract:
 Purpose: the shared movie catalog used by all members. It should hold canonical
 movie metadata once Phase 2 begins.
 
-Phase 2 upserts shared metadata on the unique `tmdb_id` key. The application
-adapter uses `title`, `original_title`, `overview`, `poster_path`,
-`backdrop_path`, `release_date`, `runtime`, `genres`, `director`,
-`cast_members`, `trailer_key`, and `vote_average`. These are now the explicit
-application-side column contract; the configured public schema endpoint
-returned HTTP 401 during implementation, so the deployed definitions must be
-confirmed before production writes.
+Phase 2 upserts shared metadata on the unique `tmdb_id` key. Live schema
+inspection confirmed the application columns are `title`, `original_title`,
+`overview`, `poster_path`, `backdrop_path`, `release_date`, `release_year`,
+`runtime_minutes`, `genres`, `director`, `main_cast`, `original_language`,
+`production_countries`, `public_rating`, `trailer_key`, and
+`metadata_updated_at`.
+
+`genres`, `main_cast`, and `production_countries` are JSONB and required.
+`metadata_updated_at` is also required and defaults to `now()`. A conflict-target
+diagnostic reached PostgreSQL constraint execution rather than returning
+`42P10`, confirming `tmdb_id` has the unique constraint required by the upsert.
 
 ### `user_movies`
 

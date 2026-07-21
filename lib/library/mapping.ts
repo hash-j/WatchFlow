@@ -85,8 +85,8 @@ function mapStoredMovie(record: UnknownRecord): (MovieDetails & { id: string }) 
 
   const title = asString(record.title) ?? "Untitled movie";
   const originalTitle = asString(record.original_title);
-  const runtime = asNumber(record.runtime);
-  const rating = asNumber(record.vote_average);
+  const runtime = asNumber(record.runtime_minutes);
+  const rating = asNumber(record.public_rating);
   const trailerKey = asString(record.trailer_key);
   const trailer: MovieTrailer | null = trailerKey
     ? {
@@ -112,7 +112,9 @@ function mapStoredMovie(record: UnknownRecord): (MovieDetails & { id: string }) 
         : null,
     genres: mapStringArray(record.genres),
     director: asString(record.director),
-    cast: mapCast(record.cast_members ?? record.cast),
+    cast: mapCast(record.main_cast),
+    originalLanguage: asString(record.original_language),
+    productionCountries: mapStringArray(record.production_countries),
     trailer,
   };
 }
@@ -139,6 +141,10 @@ export function mapLibraryMovieRow(value: unknown): LibraryMovie | null {
 }
 
 export function toSharedMovieRow(movie: MovieDetails) {
+  const releaseYear = movie.releaseDate
+    ? Number.parseInt(movie.releaseDate.slice(0, 4), 10)
+    : null;
+
   return {
     tmdb_id: movie.tmdbId,
     title: movie.title,
@@ -147,12 +153,16 @@ export function toSharedMovieRow(movie: MovieDetails) {
     poster_path: movie.posterPath,
     backdrop_path: movie.backdropPath,
     release_date: movie.releaseDate,
-    runtime: movie.runtimeMinutes,
+    release_year: Number.isSafeInteger(releaseYear) ? releaseYear : null,
+    runtime_minutes: movie.runtimeMinutes,
     genres: movie.genres,
     director: movie.director,
-    cast_members: movie.cast,
+    main_cast: movie.cast,
+    original_language: movie.originalLanguage,
+    production_countries: movie.productionCountries,
+    public_rating: movie.voteAverage,
     trailer_key: movie.trailer?.key ?? null,
-    vote_average: movie.voteAverage,
+    metadata_updated_at: new Date().toISOString(),
   };
 }
 

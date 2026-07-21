@@ -66,6 +66,8 @@ describe("TMDB response mapping", () => {
       vote_count: 0,
       runtime: null,
       genres: null,
+      original_language: null,
+      production_countries: null,
       credits: { cast: [], crew: [] },
       videos: { results: [] },
     });
@@ -83,6 +85,8 @@ describe("TMDB response mapping", () => {
       genres: [],
       director: null,
       cast: [],
+      originalLanguage: null,
+      productionCountries: [],
       trailer: null,
     });
   });
@@ -97,6 +101,10 @@ describe("TMDB response mapping", () => {
       vote_count: 25000,
       runtime: 136,
       genres: [{ id: 28, name: "Action" }],
+      original_language: "en",
+      production_countries: [
+        { iso_3166_1: "US", name: "United States of America" },
+      ],
       credits: {
         crew: [{ job: "Director", name: "Lana Wachowski" }],
         cast: [
@@ -130,5 +138,7 @@ describe("TMDB response mapping", () => {
       "Carrie-Anne Moss",
     ]);
     expect(result.trailer?.key).toBe("official-trailer");
+    expect(result.originalLanguage).toBe("en");
+    expect(result.productionCountries).toEqual(["United States of America"]);
   });
 });
