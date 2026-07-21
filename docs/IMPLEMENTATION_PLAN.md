@@ -44,9 +44,39 @@ Status: implemented in this milestone.
 Before production data writes, confirm the deployed columns documented in
 `DATABASE.md`; no migration or schema mutation is included here.
 
+## Phase 3: movie management, queue, and schedule
+
+Status: implemented in this milestone.
+
+- Added seven validated movie statuses plus private rating, review, priority,
+  rewatch preference, and watched-date editing.
+- Added an ordered Watch Next view with accessible move controls, authenticated
+  status-change normalization, and atomic database resequencing for dedicated
+  move, scheduling, and removal operations.
+- Added timezone-aware scheduling with Today, Upcoming, and Past sections,
+  profile timezone persistence, and private schedule notes.
+- Added dashboard summaries for the next movie, today's schedule, recently
+  added movies, and recently watched movies.
+- Added unit coverage for status and field validation, queue ordering,
+  authenticated ownership, schedule persistence, and timezone conversion.
+
+### Phase 3 deployment checklist
+
+- Apply `supabase/migrations/202607210001_phase_3_movie_management.sql` before
+  deploying the Phase 3 application code.
+- Confirm the authenticated role can execute the four public mutation
+  functions and the normalization helper, while `anon` cannot.
+- Exercise queue moves and scheduling with two test users to verify RLS tenant
+  isolation against the deployed policies.
+- Confirm `profiles` rows exist for registered users so their timezone can be
+  used as the preferred scheduling default.
+- Apply `supabase/migrations/202607220002_schedule_queue_fixes.sql` to add the
+  per-schedule timezone, atomic queue movement, partial unique queue index, and
+  explicit ownership-only SELECT/UPDATE policies.
+
 ## Later phases
 
-- Scheduling and reminder workflows.
+- Calendar synchronization and reminder workflows.
 - Profile and preference editing.
 - Operational monitoring, audit needs, and expanded end-to-end tests.
 - Payments only after a separate product and security design; no billing work is

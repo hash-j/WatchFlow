@@ -62,6 +62,7 @@ export async function addMovieAction(
       createSupabaseLibraryDependencies(),
     );
 
+    revalidatePath("/dashboard");
     revalidatePath("/library");
 
     return result === "duplicate"
@@ -88,7 +89,10 @@ export async function removeMovieAction(
       return { status: "error", message: "That library item was not found." };
     }
 
-    revalidatePath("/library");
+    revalidatePath("/dashboard");
+    revalidatePath("/library", "layout");
+    revalidatePath("/watch-next");
+    revalidatePath("/schedule");
 
     return { status: "success", message: "Removed from your library." };
   } catch (error) {

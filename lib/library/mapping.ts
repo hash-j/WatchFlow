@@ -1,9 +1,11 @@
 import type {
   LibraryMovie,
+  LibraryMovieStatus,
   MovieCastMember,
   MovieDetails,
   MovieTrailer,
 } from "../movies/types";
+import { LIBRARY_MOVIE_STATUSES } from "../movies/types";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -34,6 +36,18 @@ function asNumber(value: unknown) {
   }
 
   return null;
+}
+
+function asInteger(value: unknown) {
+  const number = asNumber(value);
+  return number !== null && Number.isSafeInteger(number) ? number : null;
+}
+
+function asStatus(value: unknown): LibraryMovieStatus {
+  return typeof value === "string" &&
+    LIBRARY_MOVIE_STATUSES.includes(value as LibraryMovieStatus)
+    ? (value as LibraryMovieStatus)
+    : "want_to_watch";
 }
 
 function mapStringArray(value: unknown) {
@@ -134,8 +148,18 @@ export function mapLibraryMovieRow(value: unknown): LibraryMovie | null {
 
   return {
     libraryId,
-    status: asString(value.status) ?? "want_to_watch",
+    status: asStatus(value.status),
     addedAt: asString(value.created_at ?? value.added_at),
+    updatedAt: asString(value.updated_at),
+    personalRating: asNumber(value.personal_rating),
+    review: asString(value.review),
+    priority: asInteger(value.priority) ?? 0,
+    queuePosition: asInteger(value.queue_position),
+    scheduledFor: asString(value.scheduled_for),
+    scheduleTimezone: asString(value.schedule_timezone),
+    scheduleNote: asString(value.schedule_note),
+    watchedAt: asString(value.watched_at),
+    wouldWatchAgain: value.would_watch_again === true,
     movie,
   };
 }

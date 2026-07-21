@@ -5,13 +5,20 @@ import { notFound } from "next/navigation";
 
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { MovieRating } from "@/components/movies/movie-rating";
+import { MovieManagementForm } from "@/components/movies/movie-management-form";
 import { RemoveFromLibraryForm } from "@/components/movies/remove-from-library-form";
 import { getLibraryMovie } from "@/lib/library/service";
 import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
 import {
+  getLocalDateInput,
+  getLocalTimeInput,
+  normalizeTimeZone,
+} from "@/lib/library/timezone";
+import {
   getMovieReleaseYear,
   getYouTubeTrailerUrl,
 } from "@/lib/movies/images";
+import { getAuthContext } from "@/lib/supabase/auth";
 
 type MovieDetailPageProps = {
   params: Promise<{ movieId: string }>;
@@ -33,10 +40,10 @@ function DetailLoading() {
 
 async function MovieDetail({ params }: MovieDetailPageProps) {
   const { movieId } = await params;
-  const item = await getLibraryMovie(
-    movieId,
-    createSupabaseLibraryDependencies(),
-  );
+  const [item, authContext] = await Promise.all([
+    getLibraryMovie(movieId, createSupabaseLibraryDependencies()),
+    getAuthContext(),
+  ]);
 
   if (!item) {
     notFound();
@@ -44,6 +51,13 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
 
   const { movie } = item;
   const year = getMovieReleaseYear(movie.releaseDate);
+  const timezone = normalizeTimeZone(authContext.profile?.timezone);
+  const scheduledDate = item.scheduledFor
+    ? getLocalDateInput(item.scheduledFor, timezone)
+    : getLocalDateInput(new Date().toISOString(), timezone);
+  const scheduledTime = item.scheduledFor
+    ? getLocalTimeInput(item.scheduledFor, timezone)
+    : "19:00";
 
   return (
     <article className="grid gap-8 md:grid-cols-[16rem_1fr]">
@@ -146,6 +160,21 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
             No suitable trailer is currently available.
           </p>
         )}
+
+        <section className="mt-10 rounded-xl border bg-card p-5 shadow-sm sm:p-6">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold">Your movie details</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Status, ratings, notes, and dates are private to your account.
+            </p>
+          </div>
+          <MovieManagementForm
+            item={item}
+            timezone={timezone}
+            scheduledDate={scheduledDate}
+            scheduledTime={scheduledTime}
+          />
+        </section>
       </div>
     </article>
   );

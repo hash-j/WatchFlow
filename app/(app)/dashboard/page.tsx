@@ -1,36 +1,128 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { CalendarDays, Library, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { listLibraryMovies } from "@/lib/library/service";
+import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
+import {
+  compareLocalDate,
+  formatScheduledDateTime,
+  normalizeTimeZone,
+} from "@/lib/library/timezone";
+import type { LibraryMovie } from "@/lib/movies/types";
 import { getAuthContext } from "@/lib/supabase/auth";
 
 const quickActions = [
   {
     href: "/search",
     title: "Find a movie",
-    description: "Search will connect to TMDB in Phase 2.",
+    description: "Search TMDB and add a title to your private library.",
     icon: Search,
   },
   {
     href: "/library",
     title: "Open your library",
-    description: "Your saved movies will live here.",
+    description: "Update statuses, ratings, reviews, and priorities.",
     icon: Library,
   },
   {
     href: "/schedule",
     title: "Plan a watch",
-    description: "Scheduling tools are ready for a later phase.",
+    description: "Schedule a movie in your local timezone.",
     icon: CalendarDays,
   },
 ] as const;
 
-export default async function DashboardPage() {
-  const { user, profile, profileLoadFailed, profileName } =
-    await getAuthContext();
+function DashboardLoading() {
+  return (
+    <div className="space-y-8" aria-busy="true">
+      <span className="sr-only">Loading your dashboard</span>
+      <div className="h-24 animate-pulse rounded-xl bg-muted" />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="h-44 animate-pulse rounded-xl border bg-card" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MovieList({
+  items,
+  emptyMessage,
+  detail,
+}: {
+  items: LibraryMovie[];
+  emptyMessage: string;
+  detail?: (item: LibraryMovie) => string | null;
+}) {
+  if (items.length === 0) {
+    return <p className="mt-4 text-sm text-muted-foreground">{emptyMessage}</p>;
+  }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <ul className="mt-4 space-y-3">
+      {items.map((item) => (
+        <li key={item.libraryId}>
+          <Link
+            href={`/library/${item.movie.id}`}
+            className="text-sm font-medium hover:underline"
+          >
+            {item.movie.title}
+          </Link>
+          {detail?.(item) ? (
+            <p className="text-xs text-muted-foreground">{detail(item)}</p>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+async function DashboardContent() {
+  const [authContext, movies] = await Promise.all([
+    getAuthContext(),
+    listLibraryMovies(createSupabaseLibraryDependencies()),
+  ]);
+  const { user, profile, profileLoadFailed, profileName } = authContext;
+  const timezone = normalizeTimeZone(profile?.timezone);
+  const queue = movies
+    .filter((item) => item.status === "watch_next")
+    .sort(
+      (left, right) =>
+        (left.queuePosition ?? Number.MAX_SAFE_INTEGER) -
+        (right.queuePosition ?? Number.MAX_SAFE_INTEGER),
+    );
+  const scheduledToday = movies
+    .filter(
+      (item) =>
+        item.status === "scheduled" &&
+        item.scheduledFor &&
+        compareLocalDate(
+          item.scheduledFor,
+          normalizeTimeZone(item.scheduleTimezone, timezone),
+        ) === 0,
+    )
+    .sort((left, right) =>
+      (left.scheduledFor ?? "").localeCompare(right.scheduledFor ?? ""),
+    );
+  const recentlyAdded = [...movies]
+    .sort((left, right) =>
+      (right.addedAt ?? "").localeCompare(left.addedAt ?? ""),
+    )
+    .slice(0, 4);
+  const recentlyWatched = movies
+    .filter((item) => item.status === "watched")
+    .sort((left, right) =>
+      (right.watchedAt ?? right.updatedAt ?? "").localeCompare(
+        left.watchedAt ?? left.updatedAt ?? "",
+      ),
+    )
+    .slice(0, 4);
+
+  return (
+    <div className="space-y-8">
       <div>
         <p className="text-sm font-medium text-muted-foreground">Dashboard</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight">
@@ -53,6 +145,56 @@ export default async function DashboardPage() {
             <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           </Link>
         ))}
+      </section>
+
+      <section aria-labelledby="dashboard-overview-heading">
+        <h2 id="dashboard-overview-heading" className="text-xl font-semibold">
+          Your viewing overview
+        </h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <article className="rounded-xl border bg-card p-5 shadow-sm">
+            <h3 className="font-semibold">Next movie</h3>
+            <MovieList
+              items={queue.slice(0, 1)}
+              emptyMessage="Nothing is queued yet."
+              detail={() => "First in Watch Next"}
+            />
+          </article>
+          <article className="rounded-xl border bg-card p-5 shadow-sm">
+            <h3 className="font-semibold">Scheduled today</h3>
+            <MovieList
+              items={scheduledToday}
+              emptyMessage="No movies scheduled today."
+              detail={(item) =>
+                item.scheduledFor
+                  ? formatScheduledDateTime(
+                      item.scheduledFor,
+                      normalizeTimeZone(item.scheduleTimezone, timezone),
+                    )
+                  : null
+              }
+            />
+          </article>
+          <article className="rounded-xl border bg-card p-5 shadow-sm">
+            <h3 className="font-semibold">Recently added</h3>
+            <MovieList
+              items={recentlyAdded}
+              emptyMessage="Your library is empty."
+            />
+          </article>
+          <article className="rounded-xl border bg-card p-5 shadow-sm">
+            <h3 className="font-semibold">Recently watched</h3>
+            <MovieList
+              items={recentlyWatched}
+              emptyMessage="No watched movies yet."
+              detail={(item) =>
+                item.personalRating !== null
+                  ? `Your rating: ${item.personalRating}/10`
+                  : null
+              }
+            />
+          </article>
+        </div>
       </section>
 
       <section className="rounded-xl border bg-card p-5 shadow-sm sm:p-6">
@@ -87,6 +229,16 @@ export default async function DashboardPage() {
           </div>
         </dl>
       </section>
+    </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <div className="mx-auto max-w-6xl">
+      <Suspense fallback={<DashboardLoading />}>
+        <DashboardContent />
+      </Suspense>
     </div>
   );
 }

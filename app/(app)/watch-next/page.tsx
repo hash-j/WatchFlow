@@ -1,10 +1,101 @@
-import { PlaceholderPage } from "@/components/placeholder-page";
+import Link from "next/link";
+import { Suspense } from "react";
+import { ListOrdered } from "lucide-react";
+
+import { MoviePoster } from "@/components/movies/movie-poster";
+import { QueueControls } from "@/components/movies/queue-controls";
+import { Button } from "@/components/ui/button";
+import { listLibraryMovies } from "@/lib/library/service";
+import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
+
+function QueueLoading() {
+  return (
+    <div className="mt-8 space-y-3" aria-busy="true">
+      <span className="sr-only">Loading your Watch Next queue</span>
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} className="h-32 animate-pulse rounded-xl border bg-card" />
+      ))}
+    </div>
+  );
+}
+
+async function WatchNextQueue() {
+  const queue = (await listLibraryMovies(createSupabaseLibraryDependencies()))
+    .filter((item) => item.status === "watch_next")
+    .sort(
+      (left, right) =>
+        (left.queuePosition ?? Number.MAX_SAFE_INTEGER) -
+          (right.queuePosition ?? Number.MAX_SAFE_INTEGER) ||
+        (left.addedAt ?? "").localeCompare(right.addedAt ?? ""),
+    );
+
+  if (queue.length === 0) {
+    return (
+      <div className="mt-8 rounded-xl border bg-card p-10 text-center shadow-sm">
+        <ListOrdered className="mx-auto size-9 text-muted-foreground" aria-hidden="true" />
+        <h2 className="mt-4 text-lg font-semibold">Your queue is empty</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+          Open a saved movie and change its status to Watch Next to build your
+          ordered queue.
+        </p>
+        <Button asChild className="mt-6">
+          <Link href="/library">Open your library</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <ol className="mt-8 space-y-3">
+      {queue.map((item, index) => (
+        <li
+          key={item.libraryId}
+          className="grid gap-4 rounded-xl border bg-card p-4 shadow-sm sm:grid-cols-[2.5rem_5rem_1fr_auto] sm:items-center"
+        >
+          <span className="grid size-10 place-items-center rounded-full bg-muted text-sm font-semibold">
+            {index + 1}
+          </span>
+          <div className="w-20">
+            <MoviePoster
+              path={item.movie.posterPath}
+              title={item.movie.title}
+              sizes="80px"
+            />
+          </div>
+          <div className="min-w-0">
+            <Link
+              href={`/library/${item.movie.id}`}
+              className="font-semibold hover:underline"
+            >
+              {item.movie.title}
+            </Link>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Priority {item.priority} · Position {index + 1}
+            </p>
+          </div>
+          <QueueControls
+            libraryId={item.libraryId}
+            isFirst={index === 0}
+            isLast={index === queue.length - 1}
+          />
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 export default function WatchNextPage() {
   return (
-    <PlaceholderPage
-      title="Watch Next"
-      description="Build a focused queue from the movies saved in your personal library."
-    />
+    <div className="mx-auto max-w-5xl">
+      <p className="text-sm font-medium text-muted-foreground">Your queue</p>
+      <h1 className="mt-1 text-3xl font-bold tracking-tight">Watch Next</h1>
+      <p className="mt-2 max-w-2xl text-muted-foreground">
+        Move movies up or down to decide what you will watch first. Changes are
+        private and positions stay sequential.
+      </p>
+      <Suspense fallback={<QueueLoading />}>
+        <WatchNextQueue />
+      </Suspense>
+    </div>
   );
 }

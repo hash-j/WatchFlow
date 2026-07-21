@@ -140,21 +140,16 @@ async function removeUserMovie(
   session: AuthenticatedLibrarySession,
   libraryId: string,
 ) {
-  const { client, userId } = getSessionClient(session);
+  const { client } = getSessionClient(session);
   const { data, error } = await client
-    .from("user_movies")
-    .delete()
-    .eq("id", libraryId)
-    .eq("user_id", userId)
-    .select("id")
-    .maybeSingle();
+    .rpc("watchflow_remove_library_movie", { p_library_id: libraryId });
 
   if (error) {
     logSupabaseError("user_movies delete failed", error);
     throw new LibraryPersistenceError("The movie could not be removed.");
   }
 
-  return Boolean(data);
+  return data === true;
 }
 
 export function createSupabaseLibraryDependencies(): LibraryDependencies {

@@ -8,9 +8,10 @@ migrations, schema dump, or generated Supabase database types, so this document
 records the verified table-level design and the application contract without
 inventing unverified deployed columns.
 
-The live Supabase schema remains authoritative. Before Phase 2 adds writes or
-generated types, capture the deployed definitions in a reviewed, non-destructive
-migration baseline.
+The live Supabase schema remains authoritative. A read-only OpenAPI inspection
+before Phase 3 confirmed the columns documented below. Phase 3 introduces the
+first reviewed migration in this repository for the one missing field and the
+atomic authenticated queue functions.
 
 ## Relationship model
 
@@ -47,6 +48,10 @@ Phase 1 application contract:
   `username`, or `name` are used only when present; the authenticated email
   continues to come from verified Auth claims.
 
+The deployed table also contains required `timezone` (default `UTC`) and
+`subscription_plan` fields. Phase 3 updates `timezone` through an authenticated,
+security-invoker scheduling function scoped to `auth.uid()`.
+
 ### `movies`
 
 Purpose: the shared movie catalog used by all members. It should hold canonical
@@ -70,11 +75,57 @@ Purpose: the association between a member and a shared movie. It is the natural
 location for user-specific state such as library membership, status, priority,
 rating, notes, or scheduling references where those columns exist.
 
-Phase 2 uses `id`, `user_id`, `movie_id`, `status`, and the optional
-`created_at`/`added_at` timestamp. New relationships default to
-`want_to_watch`. The unique `(user_id, movie_id)` constraint is the concurrency
-guard against duplicate personal-library rows; PostgreSQL error `23505` is
-treated as an already-added success state.
+The verified deployed columns are:
+
+- `id` UUID primary key
+- `user_id` UUID owner reference
+- `movie_id` bigint shared-movie reference
+- `status` text (default `want_to_watch`)
+- `personal_rating` numeric
+- `review` text
+- `priority` smallint (default `0`)
+- `queue_position` integer
+- `scheduled_for` timestamptz
+- `watched_at` timestamptz
+- `would_watch_again` boolean
+- `created_at` and `updated_at` timestamptz
+
+Migration `202607210001_phase_3_movie_management.sql` introduced the initial
+Phase 3 functions. Migration `202607220002_schedule_queue_fixes.sql` is the
+standalone fix for deployed environments that still lack `schedule_timezone`,
+`schedule_note`, the conflict-safe queue function, and explicit ownership-only
+SELECT/UPDATE policies.
+
+New relationships default to `want_to_watch`. The unique `(user_id, movie_id)`
+constraint remains the concurrency guard against duplicate personal-library
+rows; PostgreSQL error `23505` is treated as an already-added success state.
+
+Phase 3 status values are `want_to_watch`, `watch_next`, `scheduled`,
+`currently_watching`, `watched`, `on_hold`, and `dropped`. Application and
+database functions validate ratings from 0 through 10 and integer priorities
+from 0 through 5.
+
+### Queue invariant
+
+Only `watch_next` rows receive a queue position. Positions are contiguous and
+one-based per user, with a partial unique index on `(user_id, queue_position)`.
+Direct status updates and queue normalization filter every row by the verified
+user ID and remain subject to RLS. `move_watch_queue_item` derives the owner
+from `auth.uid()`, locks and serializes the queue, and performs conflict-safe
+atomic swaps. No browser request accepts a user ID.
+
+### Scheduling invariant
+
+`scheduled_for` stores the absolute viewing instant as `timestamptz`.
+`schedule_timezone` stores the IANA timezone used for that viewing, while
+`schedule_note` stores an optional private note. `profiles.timezone` is the
+preferred form default. Schedule grouping uses the per-item timezone with the
+profile timezone as fallback.
+
+The schedule/queue fix migration enables RLS and adds authenticated-only
+policies equivalent to `auth.uid() = user_id` for SELECT and both UPDATE
+expressions. It does not add unrestricted access or grant mutation functions to
+`anon`.
 
 ## RLS expectations
 
@@ -83,15 +134,18 @@ security properties are:
 
 - Members can access only their own `profiles` row.
 - Members can access only their own associations in `user_movies`.
-- Access to shared `movies` rows follows the deployed read/write policies.
-- Browser and server requests use the member's publishable-key client and JWT;
-  application code does not use a service-role key.
+- Access to shared `movies` rows follows the deployed read policies; the
+  server-only secret-key client is used only for authenticated TMDB metadata
+  upserts into this shared table.
+- All `profiles` and `user_movies` operations use the member's cookie-bound
+  client and JWT. Security-invoker functions remain subject to RLS.
 
 These are security expectations, not a replacement for reviewing the deployed
 policy SQL before Phase 2 writes are introduced.
 
 ## Schema-change policy
 
-No schema changes are part of Phase 1. Future changes should be represented as
-reviewable migrations, preserve RLS, include indexes for foreign keys and common
-filters, and be tested as at least two distinct users to verify tenant isolation.
+Schema changes are represented as reviewable migrations, preserve RLS, include
+indexes for common filters, and should be tested as at least two distinct users
+to verify tenant isolation. Apply the Phase 3 migration before deploying the
+Phase 3 application code.

@@ -1,26 +1,43 @@
 import Link from "next/link";
 
+import { MovieStatusBadge } from "@/components/movies/movie-status-badge";
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { MovieRating } from "@/components/movies/movie-rating";
 import { RemoveFromLibraryForm } from "@/components/movies/remove-from-library-form";
 import { getMovieReleaseYear } from "@/lib/movies/images";
+import { MOVIE_STATUS_VISUALS } from "@/lib/library/status-visuals";
 import type { LibraryMovie } from "@/lib/movies/types";
-
-function formatStatus(status: string) {
-  return status
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
+import { cn } from "@/lib/utils";
 
 export function LibraryMovieCard({ item }: { item: LibraryMovie }) {
   const { movie } = item;
   const year = getMovieReleaseYear(movie.releaseDate);
+  const statusVisual = MOVIE_STATUS_VISUALS[item.status];
+  const StatusIcon = statusVisual.icon;
 
   return (
-    <article className="flex flex-col rounded-xl border bg-card p-3 shadow-sm">
-      <Link href={`/library/${movie.id}`} className="group">
-        <MoviePoster path={movie.posterPath} title={movie.title} />
+    <article
+      className={cn(
+        "flex flex-col rounded-xl border bg-card p-3 shadow-sm",
+        statusVisual.cardAccentClasses,
+      )}
+    >
+      <Link
+        href={`/library/${movie.id}`}
+        className="group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <div className="relative">
+          <MoviePoster path={movie.posterPath} title={movie.title} />
+          {item.status === "watched" ? (
+            <span
+              className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50/95 px-2 py-1 text-xs font-semibold text-emerald-800 shadow-sm dark:border-emerald-900 dark:bg-emerald-950/95 dark:text-emerald-200"
+              aria-label="Watched movie"
+            >
+              <StatusIcon className="size-3.5" aria-hidden="true" />
+              Watched
+            </span>
+          ) : null}
+        </div>
         <div className="px-1 pb-2 pt-4">
           <h2 className="font-semibold leading-tight group-hover:underline">
             {movie.title}
@@ -31,9 +48,9 @@ export function LibraryMovieCard({ item }: { item: LibraryMovie }) {
             </span>
             <MovieRating rating={movie.voteAverage} />
           </div>
-          <span className="mt-3 inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
-            {formatStatus(item.status)}
-          </span>
+          <div className="mt-3">
+            <MovieStatusBadge status={item.status} />
+          </div>
         </div>
       </Link>
       <div className="mt-auto border-t px-1 pt-3">

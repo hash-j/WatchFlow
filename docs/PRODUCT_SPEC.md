@@ -89,3 +89,25 @@ only after confirmation.
 
 Still out of scope: queue ordering, scheduling implementation, payments, social
 features, and recommendations.
+
+## Phase 3: management, Watch Next, and scheduling
+
+Phase 3 turns each private library relationship into a manageable viewing
+record. Members can choose Want to Watch, Watch Next, Scheduled, Currently
+Watching, Watched, On Hold, or Dropped; save a 0–10 personal rating, review,
+0–5 priority, rewatch preference, and watched date; and edit those values from
+the stored movie detail page.
+
+Watch Next is a one-based ordered queue. Members can move items earlier or
+later with keyboard-accessible controls. Adding, leaving, moving, scheduling,
+or removing an item keeps positions sequential for that authenticated member
+without affecting another member's queue.
+
+Scheduling accepts a local date, time, IANA timezone, and optional private
+note. WatchFlow stores an absolute timezone-aware timestamp, remembers the
+member timezone, and groups scheduled movies into Today, Upcoming, and Past.
+The dashboard summarizes the next queued movie, today's schedule, recently
+added movies, and recently watched movies.
+
+Still out of scope: external calendar synchronization, email reminders,
+payments, social features, and recommendations.

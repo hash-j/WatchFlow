@@ -71,8 +71,8 @@ repeats the identity check at the data boundary; this defense-in-depth prevents
 a route matcher mistake from exposing protected Server Components.
 
 Profile reads use the signed-in user's server client and target the authenticated
-user ID. Supabase RLS remains the final authorization layer. No admin or
-service-role client exists in Phase 1.
+user ID. Supabase RLS remains the final authorization layer. The server-only
+secret-key client added in Phase 2 is restricted to shared `movies` metadata.
 
 ## Error and loading behavior
 
@@ -101,3 +101,29 @@ upserted with a separate server-only secret-key client; the client is created
 only after a verified user is available. All `user_movies` reads, inserts, and
 deletes use the cookie-bound authenticated client and explicit verified-user
 filters in addition to the existing RLS policies.
+
+## Phase 3 movie-management boundary
+
+Interactive forms submit a library-item ID and user-entered movie fields to
+server actions. The actions verify the user with `auth.getUser()`, validate the
+status, rating, priority, text lengths, dates, time, and IANA timezone, then use
+the authenticated SSR client. Browser input never includes a user ID.
+
+Personal-detail saves use a direct authenticated `user_movies` update filtered
+by both the relationship ID and the verified user ID. Status changes normalize
+that member's queue with the same cookie-bound client. Dedicated queue moves,
+scheduling, and deletion use security-invoker PostgreSQL functions that derive
+ownership from `auth.uid()` and retain RLS enforcement. The admin client is not
+involved in either path.
+
+Local schedule input is converted on the server to an ISO instant and stored in
+`user_movies.scheduled_for` (`timestamptz`). The selected IANA timezone is saved
+on the relationship in `schedule_timezone`; a best-effort authenticated profile
+update makes it the next form default. Today, Upcoming, and Past use the saved
+relationship timezone with the profile timezone as fallback. The optional
+private note is stored on `user_movies`.
+
+`move_watch_queue_item` is a security-invoker RPC available only to the
+authenticated role. It derives ownership from `auth.uid()`, locks the member's
+queue, serializes concurrent moves, clears positions to avoid unique-index swap
+conflicts, and writes contiguous one-based positions in the same transaction.

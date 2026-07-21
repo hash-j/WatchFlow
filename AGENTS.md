@@ -6,9 +6,10 @@ WatchFlow is a multi-user movie-management SaaS built with the Next.js App
 Router, TypeScript, Tailwind CSS, Supabase Auth, Supabase PostgreSQL, and
 Supabase Row Level Security (RLS).
 
-Phase 1 established the project foundation and authentication. The current
-milestone is Phase 2: server-side TMDB search and the private movie library.
-Payments remain explicitly out of scope.
+Phase 1 established the project foundation and authentication, and Phase 2
+added server-side TMDB search and the private movie library. The current
+milestone is Phase 3: private movie management, the Watch Next queue, and
+timezone-aware scheduling. Payments remain explicitly out of scope.
 
 ## Engineering rules
 
@@ -53,6 +54,13 @@ Payments remain explicitly out of scope.
 - Restrict the secret-key client to shared `movies` metadata. Perform
   `user_movies` reads and mutations with the authenticated SSR client so RLS
   remains enforced.
+- Keep queue and schedule mutations user-scoped. Direct `user_movies` updates
+  must filter by both the record ID and the verified user ID; database
+  functions must derive ownership from `auth.uid()`. RLS must apply in either
+  path.
+- Store scheduled instants in `scheduled_for` as `timestamptz`; validate IANA
+  timezone input, store the selected timezone in `schedule_timezone`, and use
+  `profiles.timezone` as the preferred form default.
 - Map provider responses into internal movie types at the provider boundary.
 - Do not log access tokens, refresh tokens, credentials, or private user data.
 
@@ -62,7 +70,7 @@ Payments remain explicitly out of scope.
   users.
 - `movies` stores shared movie records.
 - `user_movies` associates a user/profile with a movie and stores user-specific
-  movie state.
+  movie state, queue position, personal metadata, and scheduling data.
 - RLS is already configured and must remain enabled.
 
 See `docs/ARCHITECTURE.md` and `docs/DATABASE.md` before extending these areas.
