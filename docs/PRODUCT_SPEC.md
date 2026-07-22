@@ -111,3 +111,63 @@ added movies, and recently watched movies.
 
 Still out of scope: external calendar synchronization, email reminders,
 payments, social features, and recommendations.
+
+## Part 10A: Google Sheets CSV import
+
+Part 10A lets an authenticated member export an existing Google Sheet as CSV
+and import up to 500 non-empty movie rows into their private WatchFlow library.
+The protected `/import` workflow has seven explicit steps: upload, map columns,
+preview and validate, match with TMDB, review ambiguous or unmatched rows,
+confirm, and review results. No database write occurs before confirmation.
+
+### Supported mapped fields
+
+- Movie title (required)
+- Release year, director, cast, and genres
+- Personal rating, status, watched date, review, and priority
+
+Header suggestions recognize common names such as Movie Name, Name, Year,
+Type, Actors, Notes, and Personal Rating. A generic Rating header is never
+silently interpreted as a personal rating. Unexpected columns can remain
+unmapped, duplicate headers remain individually selectable, and only one CSV
+column may supply each WatchFlow field.
+
+### Imported status meanings
+
+- Want to Watch, Unwatched, and Pending become `want_to_watch`.
+- Watch Next and Next become `watch_next`.
+- Scheduled becomes `scheduled`.
+- Watching and Currently Watching become `currently_watching`.
+- Watched, Complete, Completed, and Yes become `watched`.
+- On Hold and Paused become `on_hold`.
+- Dropped and Abandoned become `dropped`.
+
+Unrecognized status values require explicit confirmation before WatchFlow uses
+the `want_to_watch` default. Empty statuses use that default automatically.
+
+### Import result meanings
+
+- Imported: a new private `user_movies` relationship was created.
+- Already in library: the shared movie was found or refreshed, but the member's
+  unique library relationship already existed and was not duplicated.
+- Skipped: the member skipped the row or it duplicated an earlier CSV row.
+- Invalid: mapped personal values failed validation.
+- Unmatched: no TMDB selection was confirmed.
+- Failed: a row-level provider or database operation failed safely.
+
+### Known limitations
+
+- WatchFlow accepts a downloaded CSV, not a live Google Sheets URL or Google
+  account connection.
+- Files are limited to 2 MB and 500 non-empty data rows per import.
+- The temporary wizard state is not persisted; refreshing the page restarts the
+  import.
+- Watched dates support ISO calendar dates and only unambiguous slash dates.
+  Ambiguous values must be corrected to `YYYY-MM-DD`.
+- Director is shown in preview but is not yet used to make extra TMDB credits
+  requests during candidate scoring. Title, original title, and year determine
+  confidence.
+- Temporary TMDB failures and rate limits remain row-level retry operations.
+
+Direct spreadsheet synchronization, payments, subscriptions, social features,
+AI recommendations, and production deployment remain out of scope.

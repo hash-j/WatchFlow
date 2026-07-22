@@ -4,6 +4,7 @@ import type { MovieProvider } from "./provider";
 import {
   MovieNotFoundError,
   MovieProviderError,
+  MovieProviderRateLimitError,
   MovieProviderTimeoutError,
 } from "./errors";
 import { mapTmdbMovieDetails, mapTmdbSearchResponse } from "./tmdb-mapper";
@@ -39,13 +40,21 @@ async function requestTmdb(path: string, params: URLSearchParams) {
       throw new MovieNotFoundError();
     }
 
+    if (response.status === 429) {
+      throw new MovieProviderRateLimitError();
+    }
+
     if (!response.ok) {
       throw new MovieProviderError();
     }
 
     return (await response.json()) as unknown;
   } catch (error) {
-    if (error instanceof MovieProviderError || error instanceof MovieNotFoundError) {
+    if (
+      error instanceof MovieProviderError ||
+      error instanceof MovieNotFoundError ||
+      error instanceof MovieProviderRateLimitError
+    ) {
       throw error;
     }
 

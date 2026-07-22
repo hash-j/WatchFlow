@@ -74,3 +74,18 @@ timezone-aware scheduling. Payments remain explicitly out of scope.
 - RLS is already configured and must remain enabled.
 
 See `docs/ARCHITECTURE.md` and `docs/DATABASE.md` before extending these areas.
+
+## Critical authentication route stability
+
+Critical authentication routes must not be deleted, renamed, or moved while
+implementing unrelated features:
+
+- `/auth/login`
+- `/auth/sign-up`
+- `/auth/forgot-password`
+- `/auth/reset-password`
+- `/auth/callback` or `/auth/confirm`
+- `/dashboard`
+
+Before completing future features, verify that `/auth/sign-up` does not return
+a 404 response.

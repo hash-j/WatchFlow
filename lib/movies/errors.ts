@@ -33,6 +33,13 @@ export class MovieProviderTimeoutError extends Error {
   }
 }
 
+export class MovieProviderRateLimitError extends Error {
+  constructor() {
+    super("The movie service is busy. Wait a moment, then retry these rows.");
+    this.name = "MovieProviderRateLimitError";
+  }
+}
+
 export class MovieProviderError extends Error {
   constructor(message = "The movie service is unavailable. Please try again.") {
     super(message);

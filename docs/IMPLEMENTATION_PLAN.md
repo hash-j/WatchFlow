@@ -81,3 +81,44 @@ Status: implemented in this milestone.
 - Operational monitoring, audit needs, and expanded end-to-end tests.
 - Payments only after a separate product and security design; no billing work is
   authorized by this plan.
+
+## Part 10A: Google Sheets CSV import
+
+Status: implemented in this milestone.
+
+- Added protected `/import` navigation and a seven-step, responsive import
+  wizard with visible read, validate, match, save, and complete progress.
+- Added in-memory UTF-8 CSV parsing with a 2 MB file limit, 500-row limit,
+  quoted-field support, duplicate-header handling, empty-row removal, and safe
+  client/server file validation.
+- Added suggested but editable mappings for title, year, director, cast,
+  genres, personal rating, status, watched date, review, and priority. Generic
+  Rating columns require explicit selection.
+- Added server-repeated row normalization, exact status aliases, decimal rating
+  validation, conservative date parsing, duplicate CSV detection, and a
+  20-row preview.
+- Added server-only TMDB matching with normalized title/original-title/year
+  scoring, per-operation lookup caching, four-request concurrency, explicit
+  ambiguous selection, missing-metadata support, and row-level timeout,
+  rate-limit, and provider failures.
+- Added authenticated partial-batch confirmation. Full details are fetched per
+  selected movie, shared metadata uses the protected admin client, and private
+  relationships use the authenticated SSR client under RLS.
+- Added unique-constraint duplicate handling, retry idempotency, imported
+  personal fields, and CSV-ordered Watch Next appends followed by the existing
+  authenticated queue-normalization RPC.
+- Added summary counts, row-level safe results, library navigation, retry, and
+  downloadable/copyable failure reports.
+- Added focused unit and adapter tests across parsing, mapping, validation,
+  matching, authentication, persistence, partial failure, tenant scoping, and
+  queue placement.
+
+### Part 10A deployment checklist
+
+- Keep `TMDB_READ_ACCESS_TOKEN` and `SUPABASE_SECRET_KEY` server-only.
+- Confirm the existing `movies.tmdb_id` and `(user_id, movie_id)` unique
+  constraints are present and Phase 3 queue functions are applied.
+- Exercise the importer with two member accounts to verify RLS isolation and
+  duplicate reporting in the deployed Supabase project.
+- Monitor TMDB response/rate-limit behavior before changing the four-request
+  concurrency limit or 500-row batch size.

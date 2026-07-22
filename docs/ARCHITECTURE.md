@@ -127,3 +127,54 @@ private note is stored on `user_movies`.
 authenticated role. It derives ownership from `auth.uid()`, locks the member's
 queue, serializes concurrent moves, clears positions to avoid unique-index swap
 conflicts, and writes contiguous one-based positions in the same transaction.
+
+## Part 10A CSV import architecture
+
+The `/import` page is inside the authenticated `(app)` route group and is also
+listed in the proxy's protected-route set. The browser owns only temporary
+wizard state. The CSV is sent directly to a Server Action, parsed in memory,
+returned as bounded structured rows, and never written to disk, logs, Supabase
+Storage, or another persistence layer.
+
+```text
+CSV File
+  -> authenticated parse action
+  -> bounded ParsedCsv (temporary browser state)
+  -> column mapping + server re-validation
+  -> concurrency-limited, cached TMDB search
+  -> explicit member match decisions
+  -> authenticated confirmation action
+       -> full TMDB details
+       -> secret-key client: movies upsert only
+       -> cookie-bound client: user_movies lookup/insert
+       -> authenticated queue normalization RPC when needed
+  -> row-level result report
+```
+
+The code boundary is intentionally split across `lib/import/csv.ts` (syntax and
+file limits), `mapping.ts` (column and personal-value normalization),
+`matching.ts` (provider-independent confidence scoring and concurrency),
+`service.ts` (confirmation orchestration), and `supabase-import.ts` (server-only
+database adapter). Browser-submitted structured data is treated as untrusted
+and reconstructed through these validators at matching and confirmation time.
+
+Every import Server Action verifies the current Supabase user. Matching and
+confirmation services authenticate again at their data boundaries. No action
+accepts a user ID. `TMDB_READ_ACCESS_TOKEN` remains confined to the existing
+server-only provider. `SUPABASE_SECRET_KEY` remains confined to the server-only
+admin factory, which is constructed only after `auth.getUser()` succeeds and
+is used only to upsert shared `movies` metadata.
+
+The member's cookie-bound client performs duplicate lookups and `user_movies`
+inserts with the verified user ID, so RLS continues to enforce tenant
+isolation. The unique `(user_id, movie_id)` constraint is the final idempotency
+guard. Watch Next rows are processed sequentially in CSV order after the
+existing maximum position and the existing security-invoker normalization RPC
+restores contiguous positions.
+
+TMDB search results are mapped internal movie types before scoring. A single
+operation caches identical normalized title/year lookups and starts at most
+four requests concurrently. Exact title plus year matches may be selected
+automatically. A unique high-confidence title match may be classified as
+probable; lower-confidence and competing results require an explicit choice.
+No importer silently chooses the first provider result.

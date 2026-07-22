@@ -2,6 +2,23 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
 
+export const PROTECTED_ROUTE_PREFIXES = [
+  "/dashboard",
+  "/search",
+  "/library",
+  "/import",
+  "/watch-next",
+  "/schedule",
+  "/settings",
+  "/protected",
+] as const;
+
+export function isProtectedRoute(pathname: string) {
+  return PROTECTED_ROUTE_PREFIXES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -47,22 +64,7 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  const protectedRoutes = [
-    "/dashboard",
-    "/search",
-    "/library",
-    "/watch-next",
-    "/schedule",
-    "/settings",
-    "/protected",
-  ];
-  const isProtectedRoute = protectedRoutes.some(
-    (route) =>
-      request.nextUrl.pathname === route ||
-      request.nextUrl.pathname.startsWith(`${route}/`),
-  );
-
-  if (!user && isProtectedRoute) {
+  if (!user && isProtectedRoute(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     url.search = "";

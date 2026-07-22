@@ -149,3 +149,31 @@ Schema changes are represented as reviewable migrations, preserve RLS, include
 indexes for common filters, and should be tested as at least two distinct users
 to verify tenant isolation. Apply the Phase 3 migration before deploying the
 Phase 3 application code.
+
+## Part 10A CSV import data behavior
+
+CSV import requires no schema migration. It writes only the existing shared
+`movies` and private `user_movies` tables and retains all existing RLS policies
+and constraints.
+
+For a confirmed TMDB selection, the server-only secret-key client upserts the
+complete provider metadata into `movies` using the unique `tmdb_id` conflict
+target. The member's authenticated SSR client then checks and inserts
+`user_movies` with the identity returned by `auth.getUser()`. Browser input does
+not contain or control `user_id`.
+
+Valid mapped personal values populate `status`, `personal_rating`, `review`,
+`priority`, and `watched_at`. Empty ratings and watched dates become `null`, an
+empty review becomes `null`, missing or explicitly accepted unknown status
+becomes `want_to_watch`, and priority defaults to `0`. Existing status, rating,
+priority, date, review-length, and ownership constraints remain authoritative.
+
+The unique `(user_id, movie_id)` constraint prevents retries or concurrent
+imports from duplicating personal library relationships. A constraint-safe
+post-insert ownership lookup distinguishes an already-owned movie from other
+database conflicts without exposing database details to the browser.
+
+Imported `watch_next` rows start after the authenticated member's current
+maximum `queue_position`, preserve CSV order, and use the existing
+`watchflow_normalize_queue()` security-invoker function after the batch. The
+admin client never reads or mutates queue or personal-library data.
