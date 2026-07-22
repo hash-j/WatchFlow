@@ -7,11 +7,13 @@ import { listLibraryMovies } from "@/lib/library/service";
 import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
 import {
   compareLocalDate,
-  formatScheduledDateTime,
   normalizeTimeZone,
 } from "@/lib/library/timezone";
 import type { LibraryMovie } from "@/lib/movies/types";
 import { getAuthContext } from "@/lib/supabase/auth";
+import { formatUserDateTime } from "@/lib/settings/formatting";
+import { getCurrentUserPreferences } from "@/lib/settings/supabase-settings";
+import { DEFAULT_USER_PREFERENCES } from "@/lib/settings/types";
 
 const quickActions = [
   {
@@ -81,10 +83,12 @@ function MovieList({
 }
 
 async function DashboardContent() {
-  const [authContext, movies] = await Promise.all([
+  const [authContext, movies, savedPreferences] = await Promise.all([
     getAuthContext(),
     listLibraryMovies(createSupabaseLibraryDependencies()),
+    getCurrentUserPreferences(),
   ]);
+  const preferences = savedPreferences ?? DEFAULT_USER_PREFERENCES;
   const { user, profile, profileLoadFailed, profileName } = authContext;
   const timezone = normalizeTimeZone(profile?.timezone);
   const queue = movies
@@ -167,9 +171,11 @@ async function DashboardContent() {
               emptyMessage="No movies scheduled today."
               detail={(item) =>
                 item.scheduledFor
-                  ? formatScheduledDateTime(
+                  ? formatUserDateTime(
                       item.scheduledFor,
                       normalizeTimeZone(item.scheduleTimezone, timezone),
+                      preferences.dateFormat,
+                      preferences.timeFormat,
                     )
                   : null
               }

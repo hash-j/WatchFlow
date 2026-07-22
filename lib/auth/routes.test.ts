@@ -71,6 +71,19 @@ describe("critical authentication route contracts", () => {
     );
   });
 
+  it("keeps reset-password, dashboard, and both callback route options", () => {
+    for (const relativePath of [
+      "app/auth/reset-password/page.tsx",
+      "app/auth/callback/route.ts",
+      "app/auth/confirm/route.ts",
+      "app/(app)/dashboard/page.tsx",
+    ]) {
+      expect(existsSync(join(repositoryRoot, relativePath)), relativePath).toBe(
+        true,
+      );
+    }
+  });
+
   it("keeps public auth routes outside proxy protection and /import inside it", () => {
     for (const route of [
       "/auth/login",
@@ -83,6 +96,8 @@ describe("critical authentication route contracts", () => {
       expect(isProtectedRoute(route), route).toBe(false);
     }
     expect(isProtectedRoute("/import")).toBe(true);
+    expect(isProtectedRoute("/settings")).toBe(true);
+    expect(isProtectedRoute("/settings/profile")).toBe(true);
   });
 
   it("uses the existing Supabase signup callback", () => {

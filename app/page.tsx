@@ -3,6 +3,7 @@ import { ArrowRight, CalendarDays, Library, Search } from "lucide-react";
 import { Suspense } from "react";
 
 import { AuthButton } from "@/components/auth-button";
+import { AccountDeletedNotice } from "@/components/account-deleted-notice";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 
@@ -42,6 +43,10 @@ export default function Home() {
           </div>
         </div>
       </nav>
+
+      <Suspense fallback={null}>
+        <AccountDeletedNotice />
+      </Suspense>
 
       <section className="mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
         <div>

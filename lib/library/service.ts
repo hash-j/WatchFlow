@@ -12,7 +12,10 @@ export type AddLibraryMovieResult = "added" | "duplicate";
 
 export interface LibraryDependencies {
   authenticate(): Promise<AuthenticatedLibrarySession | null>;
-  getMovieDetails(tmdbId: number): Promise<MovieDetails>;
+  getMovieDetails(
+    session: AuthenticatedLibrarySession,
+    tmdbId: number,
+  ): Promise<MovieDetails>;
   upsertSharedMovie(
     session: AuthenticatedLibrarySession,
     movie: MovieDetails,
@@ -50,7 +53,7 @@ export async function addMovieToLibrary(
 ) {
   const session = await requireSession(dependencies);
   const validTmdbId = validateTmdbId(tmdbId);
-  const movie = await dependencies.getMovieDetails(validTmdbId);
+  const movie = await dependencies.getMovieDetails(session, validTmdbId);
   const sharedMovie = await dependencies.upsertSharedMovie(session, movie);
 
   return dependencies.insertUserMovie(session, sharedMovie.id);

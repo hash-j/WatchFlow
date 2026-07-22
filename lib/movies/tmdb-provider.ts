@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { MovieProvider } from "./provider";
+import type { MovieProvider, MovieProviderOptions } from "./provider";
 import {
   MovieNotFoundError,
   MovieProviderError,
@@ -69,28 +69,41 @@ async function requestTmdb(path: string, params: URLSearchParams) {
 }
 
 export class TmdbMovieProvider implements MovieProvider {
-  async searchMovies(query: string) {
+  async searchMovies(query: string, options: MovieProviderOptions = {}) {
     const normalizedQuery = validateMovieSearchQuery(query);
     const params = new URLSearchParams({
       query: normalizedQuery,
-      include_adult: "false",
-      language: "en-US",
+      include_adult: options.includeAdult ? "true" : "false",
+      language: options.language ?? "en",
       page: "1",
     });
     const payload = await requestTmdb("/search/movie", params);
 
-    return mapTmdbSearchResponse(payload);
+    const movies = mapTmdbSearchResponse(payload, {
+      includeAdult: options.includeAdult,
+    });
+
+    if (options.includeUnreleased !== false) {
+      return movies;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    return movies.filter(
+      (movie) => Boolean(movie.releaseDate) && movie.releaseDate! <= today,
+    );
   }
 
-  async getMovieDetails(tmdbId: number) {
+  async getMovieDetails(tmdbId: number, options: MovieProviderOptions = {}) {
     const validTmdbId = validateTmdbId(tmdbId);
     const params = new URLSearchParams({
       append_to_response: "credits,videos",
-      language: "en-US",
+      language: options.language ?? "en",
     });
     const payload = await requestTmdb(`/movie/${validTmdbId}`, params);
 
-    return mapTmdbMovieDetails(payload);
+    return mapTmdbMovieDetails(payload, {
+      includeAdult: options.includeAdult,
+    });
   }
 }
 

@@ -11,13 +11,19 @@ import {
 } from "@/lib/library/schedule";
 import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
 import {
-  formatScheduledDateTime,
   getLocalDateInput,
   isValidTimeZone,
   normalizeTimeZone,
 } from "@/lib/library/timezone";
 import type { LibraryMovie } from "@/lib/movies/types";
 import { getAuthContext } from "@/lib/supabase/auth";
+import { formatUserDateTime } from "@/lib/settings/formatting";
+import { getCurrentUserPreferences } from "@/lib/settings/supabase-settings";
+import {
+  DEFAULT_USER_PREFERENCES,
+  type DateFormat,
+  type TimeFormat,
+} from "@/lib/settings/types";
 
 function ScheduleLoading() {
   return (
@@ -37,10 +43,14 @@ function ScheduleSection({
   title,
   items,
   timezone,
+  dateFormat,
+  timeFormat,
 }: {
   title: string;
   items: LibraryMovie[];
   timezone: string;
+  dateFormat: DateFormat;
+  timeFormat: TimeFormat;
 }) {
   return (
     <section>
@@ -60,9 +70,11 @@ function ScheduleSection({
                 {item.movie.title}
               </Link>
               <p className="mt-1 text-sm text-muted-foreground">
-                {formatScheduledDateTime(
+                {formatUserDateTime(
                   item.scheduledFor!,
                   getScheduleTimezone(item, timezone),
+                  dateFormat,
+                  timeFormat,
                 )}
               </p>
               {item.scheduleNote ? (
@@ -77,10 +89,12 @@ function ScheduleSection({
 }
 
 async function ScheduleWorkspace() {
-  const [movies, authContext] = await Promise.all([
+  const [movies, authContext, savedPreferences] = await Promise.all([
     listLibraryMovies(createSupabaseLibraryDependencies()),
     getAuthContext(),
+    getCurrentUserPreferences(),
   ]);
+  const preferences = savedPreferences ?? DEFAULT_USER_PREFERENCES;
   const profileTimezoneValue = authContext.profile?.timezone;
   const profileTimezone =
     typeof profileTimezoneValue === "string" &&
@@ -120,9 +134,27 @@ async function ScheduleWorkspace() {
         />
       </div>
       <div className="space-y-8">
-        <ScheduleSection title="Today" items={today} timezone={timezone} />
-        <ScheduleSection title="Upcoming" items={upcoming} timezone={timezone} />
-        <ScheduleSection title="Past" items={past} timezone={timezone} />
+        <ScheduleSection
+          title="Today"
+          items={today}
+          timezone={timezone}
+          dateFormat={preferences.dateFormat}
+          timeFormat={preferences.timeFormat}
+        />
+        <ScheduleSection
+          title="Upcoming"
+          items={upcoming}
+          timezone={timezone}
+          dateFormat={preferences.dateFormat}
+          timeFormat={preferences.timeFormat}
+        />
+        <ScheduleSection
+          title="Past"
+          items={past}
+          timezone={timezone}
+          dateFormat={preferences.dateFormat}
+          timeFormat={preferences.timeFormat}
+        />
       </div>
     </div>
   );

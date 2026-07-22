@@ -46,10 +46,13 @@ function mapVoteAverage(record: UnknownRecord) {
   return Math.min(10, Math.max(0, average));
 }
 
-function mapSummary(record: UnknownRecord): MovieSearchResult | null {
+function mapSummary(
+  record: UnknownRecord,
+  includeAdult = false,
+): MovieSearchResult | null {
   const tmdbId = asPositiveInteger(record.id);
 
-  if (!tmdbId || record.adult === true) {
+  if (!tmdbId || (!includeAdult && record.adult === true)) {
     return null;
   }
 
@@ -161,26 +164,34 @@ function mapTrailer(value: unknown): MovieTrailer | null {
   };
 }
 
-export function mapTmdbSearchResponse(payload: unknown): MovieSearchResult[] {
+export function mapTmdbSearchResponse(
+  payload: unknown,
+  options: { includeAdult?: boolean } = {},
+): MovieSearchResult[] {
   if (!isRecord(payload) || !Array.isArray(payload.results)) {
     throw new MovieProviderError("The movie service returned an invalid response.");
   }
 
   return payload.results
-    .map((result) => (isRecord(result) ? mapSummary(result) : null))
+    .map((result) =>
+      isRecord(result) ? mapSummary(result, options.includeAdult) : null,
+    )
     .filter((movie): movie is MovieSearchResult => Boolean(movie));
 }
 
-export function mapTmdbMovieDetails(payload: unknown): MovieDetails {
+export function mapTmdbMovieDetails(
+  payload: unknown,
+  options: { includeAdult?: boolean } = {},
+): MovieDetails {
   if (!isRecord(payload)) {
     throw new MovieProviderError("The movie service returned an invalid response.");
   }
 
-  if (payload.adult === true) {
+  if (payload.adult === true && !options.includeAdult) {
     throw new AdultMovieExcludedError();
   }
 
-  const summary = mapSummary(payload);
+  const summary = mapSummary(payload, options.includeAdult);
 
   if (!summary) {
     throw new MovieProviderError("The movie service returned incomplete movie data.");

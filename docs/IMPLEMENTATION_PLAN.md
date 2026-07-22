@@ -122,3 +122,45 @@ Status: implemented in this milestone.
   duplicate reporting in the deployed Supabase project.
 - Monitor TMDB response/rate-limit behavior before changing the four-request
   concurrency limit or 500-row batch size.
+
+## Part 10B: settings, preferences, and account data
+
+Status: implemented in this milestone.
+
+- Added protected settings navigation and Profile, Preferences, Notifications,
+  and Data and Privacy pages.
+- Added Zod-validated Server Actions with fresh `auth.getUser()` verification,
+  explicit owner filters, safe action states, and no browser-supplied user IDs.
+- Added a versioned `user_preferences` schema, updated-at trigger, new-user
+  trigger, conflict-safe backfill, ownership-only RLS, and restricted column
+  grants. The deployed profile trigger is not replaced.
+- Applied member defaults to manual adds, TMDB adult/release/language behavior,
+  library grid/list and page size, and schedule-oriented date/time rendering.
+  Explicit URL view and page-size parameters take precedence.
+- Added on-demand private CSV and format-version-1 JSON exports with attachment
+  headers, no-store behavior, explicit field whitelists, and CSV formula
+  neutralization.
+- Added separately confirmed library deletion and account deletion. The latter
+  requires a recent trusted Auth sign-in and confines admin use to final
+  deletion of the verified current Auth user.
+- Added focused validation, adapter, action, export, migration, security, and
+  route-regression tests.
+
+### Part 10B deployment checklist
+
+- Apply `supabase/migrations/202607220003_user_settings.sql` in the Supabase SQL
+  Editor after the two Phase 3 migrations; do not rerun old migrations blindly.
+- Confirm the deployed profile ownership policies still allow the approved
+  columns and deny cross-user reads/updates.
+- Register two test users and confirm profile plus preference rows are created;
+  verify the backfill leaves any existing preference values unchanged.
+- Exercise manual Watch Next defaults concurrently and confirm queue positions
+  remain unique and sequential.
+- Exercise CSV/JSON exports, library deletion, and account deletion with two
+  accounts to confirm tenant isolation and shared `movies` retention.
+- Confirm `profiles` and `user_movies` foreign keys to Auth use the expected
+  delete cascades before enabling production account deletion.
+- Add a reviewed private avatar bucket and folder-scoped Storage policies before
+  implementing avatar upload.
+- Add an in-place recent-login reauthentication flow and operational audit/alert
+  handling before high-volume production use.

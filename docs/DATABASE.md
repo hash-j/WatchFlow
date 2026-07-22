@@ -3,15 +3,16 @@
 ## Scope and source of truth
 
 The deployed Supabase database already contains `profiles`, `movies`, and
-`user_movies`, with RLS enabled. This repository currently contains no SQL
-migrations, schema dump, or generated Supabase database types, so this document
-records the verified table-level design and the application contract without
-inventing unverified deployed columns.
+`user_movies`, with RLS enabled. The repository does not contain the original
+base-schema migration, schema dump, or generated database types. It does contain
+reviewed Phase 3 and Part 10B incremental migrations, so this document combines
+the previously verified deployed contract with those version-controlled
+changes.
 
 The live Supabase schema remains authoritative. A read-only OpenAPI inspection
-before Phase 3 confirmed the columns documented below. Phase 3 introduces the
-first reviewed migration in this repository for the one missing field and the
-atomic authenticated queue functions.
+before Phase 3 confirmed the base columns documented below. Incremental
+migrations add schedule/queue fixes and Part 10B settings without recreating the
+base tables.
 
 ## Relationship model
 
@@ -51,6 +52,41 @@ Phase 1 application contract:
 The deployed table also contains required `timezone` (default `UTC`) and
 `subscription_plan` fields. Phase 3 updates `timezone` through an authenticated,
 security-invoker scheduling function scoped to `auth.uid()`.
+
+Migration `202607220003_user_settings.sql` ensures optional `full_name`,
+`avatar_url`, and `country` plus `timezone`, `created_at`, and `updated_at` are
+available without removing any existing profile column. Authenticated profile
+UPDATE privileges are restricted to `full_name`, `avatar_url`, `country`, and
+`timezone`; RLS still decides which row may be updated. Application forms expose
+only full name, country, and timezone in this milestone.
+
+### `user_preferences`
+
+Purpose: one private settings row per Auth user. `user_id` is the primary key
+and references `auth.users(id) on delete cascade`.
+
+Application fields are `default_movie_status`, `default_priority`,
+`default_library_view`, `date_format`, `time_format`, `show_adult_results`,
+`include_unreleased_movies`, `preferred_language`, `movies_per_page`,
+`email_notifications_enabled`, `schedule_reminders_enabled`,
+`reminder_offset_minutes`, and `weekly_summary_enabled`. Audit fields are
+`created_at` and trigger-maintained `updated_at`.
+
+Check constraints enforce the seven library statuses, priorities 0 through 5,
+grid/list views, the three supported date formats, 12h/24h time formats,
+reasonable language codes, page sizes 12/24/48/96, and reminder offsets
+15/30/60/180/1440 minutes. Adult results default off and unreleased movies
+default on.
+
+RLS policies permit authenticated SELECT, INSERT, and UPDATE only when
+`(select auth.uid()) = user_id`. The authenticated role has no DELETE grant or
+policy. Column grants prevent direct changes to `user_id`, `created_at`, or
+`updated_at`. Account deletion removes the row through its Auth foreign-key
+cascade, not a normal member delete operation.
+
+`watchflow_auth_user_preferences_created` is a preferences-only Auth trigger.
+It supplements, and does not replace, the deployed profile-creation trigger.
+The migration backfills every existing Auth user with `ON CONFLICT DO NOTHING`.
 
 ### `movies`
 
@@ -143,6 +179,11 @@ security properties are:
 These are security expectations, not a replacement for reviewing the deployed
 policy SQL before Phase 2 writes are introduced.
 
+Part 10B also adds `watchflow_add_user_movie(bigint)`. The security-invoker
+function derives its owner from `auth.uid()`, reads that owner's default status
+and priority, assigns a serialized Watch Next position when needed, and returns
+`added` or `duplicate`. Only `authenticated` can execute it.
+
 ## Schema-change policy
 
 Schema changes are represented as reviewable migrations, preserve RLS, include
@@ -177,3 +218,16 @@ Imported `watch_next` rows start after the authenticated member's current
 maximum `queue_position`, preserve CSV order, and use the existing
 `watchflow_normalize_queue()` security-invoker function after the batch. The
 admin client never reads or mutates queue or personal-library data.
+
+## Part 10B export and deletion behavior
+
+Exports do not create database objects or persisted files. CSV and JSON Route
+Handlers select explicit private columns through the authenticated client and
+filter `profiles.id`, `user_preferences.user_id`, and `user_movies.user_id` by
+the ID returned from `auth.getUser()`.
+
+Deleting a library removes only the current user's `user_movies` rows. It never
+deletes `movies`. Complete account deletion calls the Auth admin API only after
+server-side identity and confirmation checks; existing foreign-key cascades
+remove user-owned profile, preference, and library data while shared movie
+metadata remains.

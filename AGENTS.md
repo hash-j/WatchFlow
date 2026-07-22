@@ -6,10 +6,11 @@ WatchFlow is a multi-user movie-management SaaS built with the Next.js App
 Router, TypeScript, Tailwind CSS, Supabase Auth, Supabase PostgreSQL, and
 Supabase Row Level Security (RLS).
 
-Phase 1 established the project foundation and authentication, and Phase 2
-added server-side TMDB search and the private movie library. The current
-milestone is Phase 3: private movie management, the Watch Next queue, and
-timezone-aware scheduling. Payments remain explicitly out of scope.
+Phase 1 established the project foundation and authentication, Phase 2 added
+server-side TMDB search and the private movie library, and Phase 3 added private
+movie management, the Watch Next queue, and timezone-aware scheduling. Part
+10A added CSV import. Part 10B adds private settings, preferences, exports, and
+account data controls. Payments remain explicitly out of scope.
 
 ## Engineering rules
 
@@ -63,6 +64,11 @@ timezone-aware scheduling. Payments remain explicitly out of scope.
   `profiles.timezone` as the preferred form default.
 - Map provider responses into internal movie types at the provider boundary.
 - Do not log access tokens, refresh tokens, credentials, or private user data.
+- Generate private exports on demand, send them as no-store attachments, and
+  protect CSV values from spreadsheet formula execution.
+- Use the authenticated client for profile, preference, export, and library
+  deletion operations. Construct the admin client only after `getUser()` for
+  the final deletion of that same Auth user.
 
 ## Current data contract
 
@@ -71,6 +77,8 @@ timezone-aware scheduling. Payments remain explicitly out of scope.
 - `movies` stores shared movie records.
 - `user_movies` associates a user/profile with a movie and stores user-specific
   movie state, queue position, personal metadata, and scheduling data.
+- `user_preferences` stores private application, display, search, and future
+  notification choices. Notification delivery is not implemented.
 - RLS is already configured and must remain enabled.
 
 See `docs/ARCHITECTURE.md` and `docs/DATABASE.md` before extending these areas.
@@ -86,6 +94,7 @@ implementing unrelated features:
 - `/auth/reset-password`
 - `/auth/callback` or `/auth/confirm`
 - `/dashboard`
+- `/settings`
 
 Before completing future features, verify that `/auth/sign-up` does not return
 a 404 response.

@@ -14,6 +14,7 @@ import type {
   AuthenticatedLibrarySession,
   LibraryDependencies,
 } from "./service";
+import { readUserPreferences } from "../settings/supabase-settings";
 
 type SupabaseLibrarySession = AuthenticatedLibrarySession & {
   client: SupabaseClient;
@@ -72,12 +73,19 @@ async function insertUserMovie(
   session: AuthenticatedLibrarySession,
   movieId: string,
 ) {
-  const { client, userId } = getSessionClient(session);
-  const { error } = await client.from("user_movies").insert({
-    user_id: userId,
-    movie_id: movieId,
-    status: "want_to_watch",
+  const { client } = getSessionClient(session);
+  const { data, error } = await client.rpc("watchflow_add_user_movie", {
+    p_movie_id: movieId,
   });
+
+  if (!error && data === "duplicate") {
+    return "duplicate";
+  }
+
+  if (!error && data === "added") {
+    return "added";
+  }
+
   const result = classifyUserMovieInsert(error);
 
   if (result === "error") {
@@ -155,7 +163,14 @@ async function removeUserMovie(
 export function createSupabaseLibraryDependencies(): LibraryDependencies {
   return {
     authenticate,
-    getMovieDetails: (tmdbId) => tmdbMovieProvider.getMovieDetails(tmdbId),
+    getMovieDetails: async (session, tmdbId) => {
+      const { client, userId } = getSessionClient(session);
+      const preferences = await readUserPreferences(client, userId);
+      return tmdbMovieProvider.getMovieDetails(tmdbId, {
+        includeAdult: preferences.showAdultResults,
+        language: preferences.preferredLanguage,
+      });
+    },
     upsertSharedMovie,
     insertUserMovie,
     listUserMovies,

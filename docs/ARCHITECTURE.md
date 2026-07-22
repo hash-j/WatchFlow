@@ -178,3 +178,64 @@ four requests concurrently. Exact title plus year matches may be selected
 automatically. A unique high-confidence title match may be classified as
 probable; lower-confidence and competing results require an explicit choice.
 No importer silently chooses the first provider result.
+
+## Part 10B settings architecture
+
+All settings pages live under the existing authenticated `(app)` route group.
+The proxy protects the `/settings` prefix, the parent application layout checks
+verified claims, and the settings layout performs a fresh `auth.getUser()`
+check. Server Components load profile and preference records; small Client
+Components are used only for pending form state and confirmation controls.
+
+```text
+Settings form
+  -> Zod-validated Server Action
+  -> auth.getUser()
+  -> cookie-bound Supabase client
+  -> explicit verified-user filter + RLS
+
+Private export route
+  -> auth.getUser()
+  -> explicit, owner-filtered profile/preferences/user_movies selects
+  -> in-memory CSV or JSON serialization
+  -> private no-store attachment response
+```
+
+`profiles` contains member identity-adjacent presentation data: full name,
+avatar reference, country, and scheduling timezone. `user_preferences` contains
+application defaults, display/search behavior, and future notification choices.
+The application maps absent preference rows to documented defaults, while the
+migration backfills existing Auth users and creates rows for new users through a
+preferences-only trigger that does not replace the deployed profile trigger.
+
+Profile and preference mutations never accept a user ID from FormData. Profile
+updates contain only `full_name`, `country`, and `timezone`; the migration also
+limits the authenticated role's column privileges to the four approved profile
+fields including the future `avatar_url` boundary. Preference upserts use the
+verified Auth ID and ownership-only SELECT/INSERT/UPDATE RLS. Normal users have
+no DELETE policy or grant on `user_preferences`.
+
+The manual-add database function is `security invoker`, derives ownership from
+`auth.uid()`, reads that user's status and priority defaults, serializes queue
+placement, and remains subject to RLS. TMDB requests stay server-only and accept
+only validated stored adult, release, and supported-language preferences.
+
+CSV and JSON exports are generated entirely in memory. Both whitelist columns,
+scope every private query to the verified member, set attachment and no-store
+headers, and are never persisted. CSV serialization doubles quotes, quotes
+commas/newlines, and prefixes formula-like spreadsheet values. JSON format
+version 1 separates profile, preferences, personal library, and schedule data
+without including raw Auth records or internal secrets.
+
+Library deletion uses the authenticated client to delete only `user_movies`
+rows where `user_id` matches the verified user. Account deletion is a separate
+flow: exact phrase and checkbox validation, fresh `getUser()`, a trusted
+30-minute `last_sign_in_at` check, then server-only admin deletion of that same
+user ID. The admin client is never imported by a Client Component. No user-owned
+rows are pre-deleted, so an admin failure leaves the account intact and is
+reported honestly. After success the local cookie session is signed out and the
+visitor is redirected to a neutral public confirmation.
+
+Avatar upload remains deferred until a private `avatars` bucket, MIME/size
+validation, and folder-scoped Storage policies can be reviewed together.
+Notification delivery also remains out of scope; only preferences are stored.

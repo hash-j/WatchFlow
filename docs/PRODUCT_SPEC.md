@@ -171,3 +171,50 @@ the `want_to_watch` default. Empty statuses use that default automatically.
 
 Direct spreadsheet synchronization, payments, subscriptions, social features,
 AI recommendations, and production deployment remain out of scope.
+
+## Part 10B: settings and account data controls
+
+Part 10B replaces the settings placeholder with protected Profile,
+Preferences, Notifications, and Data and Privacy sections. Profile settings
+support full name, optional country, and a validated IANA timezone. Account
+email and creation date are read-only. The profile timezone becomes the default
+for new schedules; changing it never rewrites an existing scheduled instant or
+its saved timezone.
+
+Application preferences cover the default movie status and priority, grid/list
+library view, page size, date and time formats, adult and unreleased TMDB search
+behavior, and supported provider language. Explicit library URL parameters
+continue to override saved view and page-size defaults. Manual movie additions
+use the authenticated member's default status and priority. Search passes adult,
+release, and language choices to the server-only TMDB provider.
+
+Notification choices store email, schedule-reminder, reminder-offset, and
+weekly-summary preferences for a future delivery system. WatchFlow does not send
+email, reminders, or summaries in this milestone and the interface states that
+clearly.
+
+Members can download an on-demand UTF-8 CSV of their movie library or a
+versioned JSON export of their profile, preferences, personal library, queue,
+and schedule data. Exports omit internal relationship UUIDs, Auth records,
+tokens, keys, and other members' data. CSV fields are quoted correctly and
+formula-like values are neutralized.
+
+The Data and Privacy danger zone separates deleting all private `user_movies`
+relationships from deleting the complete account. Library deletion requires
+`DELETE MOVIES` and leaves shared `movies` metadata and the Auth account intact.
+Account deletion requires `DELETE`, a separate checkbox, a server-verified
+login within 30 minutes, and final Auth deletion through the server-only admin
+boundary. User-owned rows cascade from `auth.users`; shared movies remain.
+
+### Part 10B known limitations
+
+- Avatar upload is deferred because no reviewed Supabase Storage bucket or
+  ownership policies are versioned; profile initials are shown instead.
+- Notification preferences are stored but delivery is not implemented.
+- Date/time preferences are applied to settings and schedule-oriented displays;
+  native HTML date inputs retain their required ISO input representation.
+- The recent-login check uses the trusted Auth `last_sign_in_at` value. A
+  dedicated in-place reauthentication screen is a production-hardening task.
+- Account deletion depends on the deployed foreign-key cascades already
+  documented for user-owned tables and must be exercised with two test accounts
+  before production rollout.

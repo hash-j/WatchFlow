@@ -11,6 +11,7 @@ import {
 } from "@/lib/movies/errors";
 import { getMovieReleaseYear } from "@/lib/movies/images";
 import { tmdbMovieProvider } from "@/lib/movies/tmdb-provider";
+import { getCurrentUserPreferences } from "@/lib/settings/supabase-settings";
 
 type SearchPageProps = {
   searchParams: Promise<{ q?: string | string[] }>;
@@ -47,10 +48,17 @@ async function SearchResults({ searchParams }: SearchPageProps) {
     );
   }
 
-  await getAuthContext();
+  const [, preferences] = await Promise.all([
+    getAuthContext(),
+    getCurrentUserPreferences(),
+  ]);
 
   try {
-    const movies = await tmdbMovieProvider.searchMovies(query);
+    const movies = await tmdbMovieProvider.searchMovies(query, {
+      includeAdult: preferences?.showAdultResults ?? false,
+      includeUnreleased: preferences?.includeUnreleasedMovies ?? true,
+      language: preferences?.preferredLanguage ?? "en",
+    });
 
     if (movies.length === 0) {
       return (
