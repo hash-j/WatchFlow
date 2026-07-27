@@ -1,5 +1,18 @@
 # WatchFlow Repository Guidance
 
+## PROJECT CONTEXT REQUIREMENT
+
+Before planning or modifying code:
+
+1. Read `docs/PROJECT_CONTEXT.md`.
+2. Treat it as the primary project handoff document.
+3. Verify relevant statements against the current repository.
+4. Do not repeat completed discovery work unless the file is stale or
+   conflicting.
+5. After completing a task, update `docs/PROJECT_CONTEXT.md`.
+6. Never place secrets or actual environment-variable values in the context
+   file.
+
 ## Product scope
 
 WatchFlow is a multi-user movie-management SaaS built with the Next.js App
