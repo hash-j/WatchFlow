@@ -149,6 +149,7 @@ export function mapLibraryMovieRow(value: unknown): LibraryMovie | null {
   return {
     libraryId,
     status: asStatus(value.status),
+    favourite: value.favourite === true,
     addedAt: asString(value.created_at ?? value.added_at),
     updatedAt: asString(value.updated_at),
     personalRating: asNumber(value.personal_rating),

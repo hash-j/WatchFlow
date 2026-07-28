@@ -10,6 +10,7 @@ import {
 
 const libraryRow = {
   status: "watched",
+  favourite: true,
   personal_rating: 9,
   review: "Great, but a \"wild\" ending\nSecond line",
   priority: 4,
@@ -93,6 +94,7 @@ describe("complete JSON account export", () => {
       metadata: { formatVersion: 1 },
     });
     expect(result.library).toHaveLength(1);
+    expect(result.library[0]?.favourite).toBe(true);
     expect(result.schedules).toHaveLength(0);
     expect(json).not.toContain("internal-user-id");
     expect(json).not.toContain("subscription_plan");

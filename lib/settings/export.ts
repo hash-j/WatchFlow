@@ -12,6 +12,7 @@ export const CSV_EXPORT_HEADERS = [
   "Public Rating",
   "Personal Rating",
   "Status",
+  "Favourite",
   "Priority",
   "Review",
   "Watched Date",
@@ -83,6 +84,7 @@ export function buildLibraryCsv(rows: unknown[]) {
       movie.public_rating,
       record.personal_rating,
       record.status,
+      record.favourite === true ? "Yes" : "No",
       record.priority,
       record.review,
       record.watched_at,
@@ -131,6 +133,7 @@ function mapPersonalMovie(value: unknown) {
   return {
     movie: mapMovieMetadata(record.movies),
     status: nullableString(record.status),
+    favourite: record.favourite === true,
     personalRating:
       typeof record.personal_rating === "number" ? record.personal_rating : null,
     review: nullableString(record.review),

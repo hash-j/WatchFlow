@@ -75,6 +75,15 @@ password authentication and an authenticated product shell.
 - The dashboard renders the authenticated email and profile availability.
 - The repository passes ESLint, TypeScript checking, and a production build.
 
+### Authentication accessibility and browser QA
+
+- Public authentication pages expose one semantic page heading and labelled
+  fields.
+- Authentication errors are announced as alerts; password-recovery success is
+  announced as status.
+- Playwright covers the canonical sign-up route, invalid login, callback
+  failures, keyboard order, logged-out redirects, and five responsive sizes.
+
 ## Phase 2: discovery and private library
 
 Phase 2 adds server-side TMDB title search and a private library. Search results
@@ -218,3 +227,55 @@ boundary. User-owned rows cascade from `auth.users`; shared movies remain.
 - Account deletion depends on the deployed foreign-key cascades already
   documented for user-owned tables and must be exercised with two test accounts
   before production rollout.
+
+## Part 12: search and library improvements
+
+Part 12 makes private libraries of several hundred to roughly 1,000 movies
+manageable without downloading every relationship into the browser. `/library`
+supports literal search across title, original title, director, cast names, and
+genres; filters for status, watched state, favourite, genre, director, exact or
+ranged release year, and ranged personal rating; and twelve stable sort modes.
+
+Search, filters, sort, grid/list view, page, and page size use validated URL
+parameters. Saved `default_library_view` and `movies_per_page` apply only when
+valid URL overrides are absent. Exact release year takes precedence over the
+range. Invalid enum, page, year, rating, and sort values fall back safely;
+inverted year/rating ranges are ignored with a visible message. Empty library
+and no-match states remain distinct.
+
+Pagination uses an exact filtered count and a server-side range. Page sizes
+remain 12, 24, 48, or 96; out-of-range pages canonicalize to the final valid
+page. Null ratings, release years, and watched dates appear after known values.
+Every sort has a deterministic personal-relationship ID tie-breaker.
+
+Favourite is a private boolean on `user_movies`, defaults to false, appears on
+cards and stored-movie detail, can be filtered/sorted, and is included in CSV
+and JSON exports. It is never stored on shared `movies` or inferred from a
+rating.
+
+Selection covers only the current visible page and uses accessible checkboxes
+named for each movie. It clears when search/filter/sort/view/page scope changes.
+Members may confirm a bulk status change or removal for at most 100 unique
+relationship IDs. Bulk `scheduled` is excluded because each schedule needs an
+explicit date, time, and timezone.
+
+Entering Watch Next appends newly queued selections in displayed order without
+overwriting existing positions. Leaving Watch Next or deleting queued
+relationships compacts the remaining queue transactionally. Bulk watched
+changes do not invent `watched_at`; status changes preserve existing latent
+schedule data. Deletion removes ratings, reviews, queue positions, and schedules
+with the relationship but never deletes shared movie metadata.
+
+Part 12 does not add custom lists, recommendations, social features,
+notifications, calendar integration, statistics, or payments.
+
+### Part 12 known limitations
+
+- The migration must be applied manually and verified with two accounts before
+  deployment; local contract tests do not prove remote RLS or privileges.
+- Literal substring search is intentionally simple and has no full-text or
+  trigram index. Revisit with measured query plans beyond the target scale.
+- Selection does not span pages.
+- Playwright is configured, but authenticated Part 12 flows, two-user isolation,
+  and confirmation-dialog focus remain unverified until two confirmed QA users
+  and an applied development migration are available.

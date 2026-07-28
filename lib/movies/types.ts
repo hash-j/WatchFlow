@@ -55,6 +55,7 @@ export const LIBRARY_MOVIE_STATUS_LABELS: Record<LibraryMovieStatus, string> = {
 export type LibraryMovie = {
   libraryId: string;
   status: LibraryMovieStatus;
+  favourite: boolean;
   addedAt: string | null;
   updatedAt: string | null;
   personalRating: number | null;
@@ -67,4 +68,24 @@ export type LibraryMovie = {
   watchedAt: string | null;
   wouldWatchAgain: boolean;
   movie: MovieDetails & { id: string };
+};
+
+export type LibraryMovieSummary = {
+  libraryId: string;
+  status: LibraryMovieStatus;
+  favourite: boolean;
+  addedAt: string | null;
+  personalRating: number | null;
+  priority: number;
+  watchedAt: string | null;
+  movie: {
+    id: string;
+    tmdbId: number;
+    title: string;
+    originalTitle: string | null;
+    posterPath: string | null;
+    releaseDate: string | null;
+    releaseYear: number | null;
+    voteAverage: number | null;
+  };
 };

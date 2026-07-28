@@ -84,7 +84,7 @@ describe("critical authentication route contracts", () => {
     }
   });
 
-  it("keeps public auth routes outside proxy protection and /import inside it", () => {
+  it("keeps public auth routes outside proxy protection and canonical app routes inside it", () => {
     for (const route of [
       "/auth/login",
       "/auth/sign-up",
@@ -95,9 +95,22 @@ describe("critical authentication route contracts", () => {
     ]) {
       expect(isProtectedRoute(route), route).toBe(false);
     }
-    expect(isProtectedRoute("/import")).toBe(true);
-    expect(isProtectedRoute("/settings")).toBe(true);
-    expect(isProtectedRoute("/settings/profile")).toBe(true);
+    for (const route of [
+      "/dashboard",
+      "/search",
+      "/library",
+      "/library/42",
+      "/watch-next",
+      "/schedule",
+      "/import",
+      "/settings",
+      "/settings/profile",
+      "/settings/preferences",
+      "/settings/notifications",
+      "/settings/data",
+    ]) {
+      expect(isProtectedRoute(route), route).toBe(true);
+    }
   });
 
   it("uses the existing Supabase signup callback", () => {
@@ -106,6 +119,27 @@ describe("critical authentication route contracts", () => {
     expect(form).toContain("/auth/callback?next=/dashboard");
     expect(existsSync(join(repositoryRoot, "app/auth/callback/route.ts"))).toBe(
       true,
+    );
+  });
+
+  it("keeps authentication headings and mutation feedback accessible", () => {
+    expect(source("components/ui/card.tsx")).toContain(
+      'as?: "h1" | "h2" | "h3"',
+    );
+
+    for (const relativePath of [
+      "components/login-form.tsx",
+      "components/sign-up-form.tsx",
+      "components/forgot-password-form.tsx",
+      "components/update-password-form.tsx",
+    ]) {
+      const form = source(relativePath);
+      expect(form, relativePath).toContain('as="h1"');
+      expect(form, relativePath).toContain('role="alert"');
+    }
+
+    expect(source("components/forgot-password-form.tsx")).toContain(
+      '<Card role="status">',
     );
   });
 

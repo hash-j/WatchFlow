@@ -7,6 +7,7 @@ import { SettingsPersistenceError } from "./errors";
 
 const LIBRARY_EXPORT_SELECT = `
   status,
+  favourite,
   personal_rating,
   review,
   priority,

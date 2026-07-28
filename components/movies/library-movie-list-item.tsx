@@ -1,13 +1,14 @@
 import Link from "next/link";
+import { Star } from "lucide-react";
 
+import { LibraryItemActions } from "@/components/library/library-item-actions";
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { MovieRating } from "@/components/movies/movie-rating";
 import { MovieStatusBadge } from "@/components/movies/movie-status-badge";
-import { RemoveFromLibraryForm } from "@/components/movies/remove-from-library-form";
 import { getMovieReleaseYear } from "@/lib/movies/images";
-import type { LibraryMovie } from "@/lib/movies/types";
+import type { LibraryMovieSummary } from "@/lib/movies/types";
 
-export function LibraryMovieListItem({ item }: { item: LibraryMovie }) {
+export function LibraryMovieListItem({ item }: { item: LibraryMovieSummary }) {
   return (
     <article className="grid gap-4 rounded-xl border bg-card p-4 shadow-sm sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:items-center">
       <div className="w-20">
@@ -32,9 +33,20 @@ export function LibraryMovieListItem({ item }: { item: LibraryMovie }) {
         <div className="mt-3">
           <MovieStatusBadge status={item.status} />
         </div>
+        {item.favourite ? (
+          <p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold">
+            <Star className="size-3.5 fill-current" aria-hidden="true" />
+            Favourite
+          </p>
+        ) : null}
       </div>
-      <div className="sm:min-w-36">
-        <RemoveFromLibraryForm libraryId={item.libraryId} />
+      <div className="min-w-0 sm:min-w-48">
+        <LibraryItemActions
+          libraryId={item.libraryId}
+          movieId={item.movie.id}
+          title={item.movie.title}
+          favourite={item.favourite}
+        />
       </div>
     </article>
   );

@@ -124,6 +124,7 @@ The verified deployed columns are:
 - `scheduled_for` timestamptz
 - `watched_at` timestamptz
 - `would_watch_again` boolean
+- `favourite` boolean (Part 12 migration: `not null default false`)
 - `created_at` and `updated_at` timestamptz
 
 Migration `202607210001_phase_3_movie_management.sql` introduced the initial
@@ -140,6 +141,9 @@ Phase 3 status values are `want_to_watch`, `watch_next`, `scheduled`,
 `currently_watching`, `watched`, `on_hold`, and `dropped`. Application and
 database functions validate ratings from 0 through 10 and integer priorities
 from 0 through 5.
+
+Favourite is personal relationship state. It belongs only on `user_movies` and
+must never be added to shared `movies` or inferred from a rating.
 
 ### Queue invariant
 
@@ -183,6 +187,50 @@ Part 10B also adds `watchflow_add_user_movie(bigint)`. The security-invoker
 function derives its owner from `auth.uid()`, reads that owner's default status
 and priority, assigns a serialized Watch Next position when needed, and returns
 `added` or `duplicate`. Only `authenticated` can execute it.
+
+## Part 12 library query and bulk contract
+
+Migration `202607280001_part_12_library_improvements.sql` adds `favourite`,
+narrow authenticated column privileges, and five focused indexes:
+
+| Index | Query supported |
+|---|---|
+| `user_movies_library_created_at_idx` | Owner-scoped added-newest/oldest pagination with stable ID |
+| `user_movies_library_status_created_at_idx` | Exact status/watched filtering plus default order |
+| `user_movies_library_favourite_created_at_idx` | Favourite filtering and favourites-first order |
+| `user_movies_library_personal_rating_idx` | Non-null personal-rating ranges and rated-first sorts |
+| `user_movies_library_watched_at_idx` | Non-null recently-watched ordering |
+
+Existing unique movie, Watch Next, and schedule indexes are not duplicated.
+Shared title/director/genre or trigram indexes are deferred: the current target
+is an owner-scoped join of several hundred to about 1,000 relationships.
+
+`watchflow_library_rows(...)` is a flat, stable, security-invoker relation.
+It derives the owner from `auth.uid()`, filters before PostgREST applies exact
+count/order/range, and accepts no user ID. Literal substring search covers
+title, original title, director, JSONB cast names, and JSONB genre labels.
+`watchflow_library_filter_options()` returns only that owner's normalized
+genres, directors, release years, and All/Watched/Unwatched/Favourites counts.
+
+`watchflow_bulk_update_library_status(uuid[], text)` and
+`watchflow_bulk_remove_library_movies(uuid[])` validate at most 100 unique IDs,
+take the existing per-user advisory queue lock, reject a mixed stale or foreign
+selection before mutation, and normalize the queue transactionally. Bulk
+`scheduled` is excluded because a valid date/time cannot be invented. Entering
+Watch Next appends new rows in submitted order; leaving it compacts the queue.
+Status changes preserve `watched_at` and latent schedule fields. Bulk deletion
+touches only owned `user_movies`, never shared `movies`.
+
+All Part 12 functions are `security invoker`, revoke execution from
+`public`/`anon`, and grant execution only to `authenticated`. Existing RLS and
+table privileges still apply. The repository cannot prove the base
+INSERT/DELETE policies or grants, so inspect them on the target project and
+exercise all functions with two users after applying the migration.
+
+The 2026-07-28 logged-out Playwright pass does not establish that this migration
+is applied. It never invokes these authenticated functions and therefore does
+not verify grants, RLS, result counts, mixed-owner rejection, queue compaction,
+or index behavior.
 
 ## Schema-change policy
 

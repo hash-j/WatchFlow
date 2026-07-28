@@ -77,6 +77,8 @@ secret-key client added in Phase 2 is restricted to shared `movies` metadata.
 ## Error and loading behavior
 
 - Auth forms show pending and recoverable error states inline.
+- Auth cards expose semantic page headings, errors use `role="alert"`, and
+  forgot-password success uses `role="status"`.
 - Invalid or expired callback links route to `/auth/error`.
 - The authenticated route group has a streaming loading skeleton.
 - Its error boundary provides a retry action without displaying backend error
@@ -239,3 +241,63 @@ visitor is redirected to a neutral public confirmation.
 Avatar upload remains deferred until a private `avatars` bucket, MIME/size
 validation, and folder-scoped Storage policies can be reviewed together.
 Notification delivery also remains out of scope; only preferences are stored.
+
+## Part 12 private-library query and mutation architecture
+
+`/library` no longer calls the legacy full-library list service. That service
+is preserved for dashboard, Watch Next, and schedule callers. The Part 12 page
+uses a separate boundary:
+
+```text
+validated URL state
+  -> one fresh auth.getUser() + preferences read
+  -> security-invoker watchflow_library_rows (auth.uid owner scope)
+  -> whitelisted stable database order + exact count + range
+  -> lean defensive summary mapping
+
+owner-scoped watchflow_library_filter_options
+  -> normalized genres/directors/years + four summary counts
+```
+
+`lib/library/query.ts` owns parameter validation, sort configuration,
+pagination math, canonical URLs, and exact-year precedence. The database
+function performs literal substring search across shared title/original title,
+director, genre labels, and cast names only after joining from the verified
+member's `user_movies`. Search/filter values remain typed function arguments;
+no raw PostgREST expression or dynamic SQL is built from browser input.
+
+The RPC returns flat sortable columns because ordering an embedded `movies`
+relation does not reliably order parent `user_movies`. PostgREST applies exact
+count and `.range()` to this already owner-filtered relation. Results and
+facets are request-scoped private data and are not statically or globally
+cached.
+
+Grid/list cards remain Server Components. Small Client Components own favourite
+submission, current-page selection, native modal confirmation, and pending
+feedback. Selection keys are `user_movies.id`, serialize in displayed order,
+never span pages, and reset whenever canonical URL scope changes.
+
+Favourite uses a direct authenticated update filtered by both relationship ID
+and the user ID returned by `auth.getUser()`. Bulk status and deletion use
+authenticated, security-invoker RPCs with no user-ID argument. They validate a
+100-row maximum, lock the caller's queue, verify the complete selection before
+mutation, and normalize queue positions transactionally. New Watch Next rows
+append in displayed order; bulk `scheduled` is deliberately unavailable.
+Changing status does not invent a watched date and preserves latent scheduling
+metadata. Deletion removes only personal relationships and never shared movie
+metadata.
+
+## Browser QA architecture
+
+`playwright.config.ts` runs headless Chrome against `PLAYWRIGHT_BASE_URL` or
+`http://localhost:3000` and can reuse an existing local server. The focused
+specs are:
+
+- `e2e/authentication.spec.ts`
+- `e2e/protected-routes.spec.ts`
+- `e2e/responsive.spec.ts`
+
+They cover logged-out authentication semantics/errors, callback failure
+handling, protected-route redirects, keyboard order, and public responsive
+behavior. They do not store an authenticated session and do not prove Part 12
+migration application, Supabase privileges/RLS, or two-user data isolation.

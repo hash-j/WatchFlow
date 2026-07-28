@@ -164,3 +164,67 @@ Status: implemented in this milestone.
   implementing avatar upload.
 - Add an in-place recent-login reauthentication flow and operational audit/alert
   handling before high-volume production use.
+
+## Part 12: search and library improvements
+
+Status: implemented locally; target Supabase migration and live isolation
+verification remain.
+
+- Added a separate `/library` query path so legacy dashboard, queue, schedule,
+  and detail callers retain their working full-domain service.
+- Added centralized validation/canonical URLs for personal search, status,
+  watched, favourite, genre, director, exact/range year, rating range, twelve
+  sort modes, grid/list view, page, and 12/24/48/96 page size.
+- Added an authenticated security-invoker row function plus owner-only facets.
+  Filtering happens before exact count, stable ordering, and range; cards never
+  load the full matching library.
+- Added `user_movies.favourite`, owner-filtered card/detail toggles, a
+  Favourites shortcut/filter, and favourite CSV/JSON export fields.
+- Added current-page selection, select-page/clear/exit controls, native modal
+  confirmations, and friendly mutation feedback.
+- Added atomic security-invoker bulk status/deletion functions. Scheduled is
+  excluded, new Watch Next rows append in displayed order, remaining positions
+  compact, watched dates are not invented, latent schedules are preserved, and
+  shared `movies` are never deleted.
+- Added focused parser, URL, sorting, pagination, mapping, selection, mutation,
+  adapter, action, UI, route, export, and SQL contract tests.
+
+### Browser QA hardening
+
+- Added Playwright 1.62.0, a Chrome-based E2E configuration, and focused auth,
+  route-protection, keyboard, and responsive specs.
+- Auth page titles now use semantic headings; errors and recovery success use
+  live-region roles.
+- The logged-out 22-test suite passes. Authenticated Part 12 behavior remains a
+  deployment prerequisite because no confirmed QA users or applied-migration
+  evidence is available.
+
+### Part 12 deployment checklist
+
+- Confirm the four prior incremental migrations are already applied. Do not
+  rerun the older non-idempotent files blindly.
+- Inspect target `user_movies` SELECT/INSERT/UPDATE/DELETE policies and
+  authenticated grants plus equivalent existing indexes.
+- Apply only
+  `supabase/migrations/202607280001_part_12_library_improvements.sql`.
+- Confirm `favourite` is `boolean not null default false` on `user_movies` and
+  absent from `movies`.
+- With two test accounts, exercise search/count/pagination, a direct favourite
+  update, mixed-owner bulk rejection, Watch Next append/compaction, and bulk
+  deletion while confirming shared movies and the other account remain intact.
+- Capture `EXPLAIN (ANALYZE, BUFFERS)` for representative 1,000-row libraries
+  before adding any shared movie/trigram indexes.
+- Keep the passing critical sign-up and logged-out redirect Playwright coverage.
+- After two confirmed QA accounts and migration application are available, add
+  authenticated coverage for URL persistence, favourites, current-page
+  selection, bulk actions, queue compaction, isolation, and modal focus.
+
+## Next milestones
+
+1. Part 13 — Custom lists.
+2. Part 14 — Movie picker and recommendations.
+3. Part 15 — Testing and production hardening.
+4. Part 16 — Preview deployment.
+5. Part 17 — Public beta preparation.
+6. Part 18 — Notifications and calendar integration.
+7. Part 19 — Paid SaaS.

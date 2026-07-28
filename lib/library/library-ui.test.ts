@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -19,6 +21,7 @@ function createMovie(
   return {
     libraryId,
     status,
+    favourite: false,
     addedAt: null,
     updatedAt: null,
     personalRating: null,
@@ -108,5 +111,82 @@ describe("library watched and unwatched UI", () => {
     }
 
     expect(MOVIE_STATUS_VISUALS.watched.cardAccentClasses).toContain("emerald");
+  });
+});
+
+describe("Part 12 library UI contracts", () => {
+  const source = (path: string) =>
+    readFileSync(resolve(process.cwd(), path), "utf8");
+
+  it("uses server URL search, filters, sorting, page size, and view controls", () => {
+    const controls = source("components/library/library-controls.tsx");
+    const page = source("app/(app)/library/page.tsx");
+
+    expect(controls).toContain('role="search"');
+    for (const name of [
+      "q",
+      "status",
+      "watched",
+      "favourite",
+      "genre",
+      "director",
+      "year",
+      "yearFrom",
+      "yearTo",
+      "ratingMin",
+      "ratingMax",
+      "sort",
+      "perPage",
+    ]) {
+      expect(controls).toContain(`name="${name}"`);
+    }
+    expect(page).toContain("getLibraryPageData");
+    expect(page).not.toContain("listLibraryMovies");
+    expect(page).not.toContain("filterLibraryMovies");
+  });
+
+  it("renders accessible favourite state and labels outside the movie detail link", () => {
+    const favourite = source(
+      "components/movies/favourite-toggle-form.tsx",
+    );
+    const card = source("components/movies/library-movie-card.tsx");
+    const linkEnd = card.indexOf("</Link>");
+    const actions = card.indexOf("<LibraryItemActions");
+
+    expect(favourite).toContain("aria-pressed={favourite}");
+    expect(favourite).toContain("Add ${title} to favourites");
+    expect(favourite).toContain("Remove ${title} from favourites");
+    expect(favourite).toContain("fill-current");
+    expect(actions).toBeGreaterThan(linkEnd);
+  });
+
+  it("provides keyboard-operable current-page selection and confirmations", () => {
+    const selection = source(
+      "components/library/library-selection-workspace.tsx",
+    );
+
+    expect(selection).toContain('type="checkbox"');
+    expect(selection).toContain("Select all movies on this page");
+    expect(selection).toContain("Select movies");
+    expect(selection).toContain("Clear selection");
+    expect(selection).toContain("Exit selection");
+    expect(selection).toContain("<dialog");
+    expect(selection).toContain("showModal()");
+    expect(selection).toContain("aria-labelledby");
+    expect(selection).toContain("aria-describedby");
+    expect(selection).toContain("triggerRef.current?.focus()");
+    expect(selection).toContain("Shared movie metadata will not be deleted");
+  });
+
+  it("uses actual disabled pagination buttons at page boundaries", () => {
+    const pagination = source(
+      "components/library/library-pagination.tsx",
+    );
+    expect(pagination).toContain("<button");
+    expect(pagination).toContain("disabled");
+    expect(pagination).toContain(
+      'aria-current={page === pagination.page ? "page" : undefined}',
+    );
+    expect(pagination).toContain('aria-label="Library pagination"');
   });
 });

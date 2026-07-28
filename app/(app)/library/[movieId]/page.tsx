@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { MovieRating } from "@/components/movies/movie-rating";
 import { MovieManagementForm } from "@/components/movies/movie-management-form";
+import { FavouriteToggleForm } from "@/components/movies/favourite-toggle-form";
 import { RemoveFromLibraryForm } from "@/components/movies/remove-from-library-form";
 import { getLibraryMovie } from "@/lib/library/service";
 import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
@@ -91,6 +92,14 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
         <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
           {movie.title}
         </h1>
+        <div className="mt-4">
+          <FavouriteToggleForm
+            libraryId={item.libraryId}
+            movieId={movie.id}
+            title={movie.title}
+            favourite={item.favourite}
+          />
+        </div>
         {movie.originalTitle ? (
           <p className="mt-2 text-sm text-muted-foreground">
             Original title: {movie.originalTitle}
