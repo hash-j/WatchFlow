@@ -279,3 +279,96 @@ notifications, calendar integration, statistics, or payments.
 - Playwright is configured, but authenticated Part 12 flows, two-user isolation,
   and confirmation-dialog focus remain unverified until two confirmed QA users
   and an applied development migration are available.
+
+## Part 13: private custom movie lists
+
+Part 13 lets an authenticated member organize personal-library movies into
+private named collections. The protected `/lists` page shows every list owned
+by the current member, while `/lists/[listId]` opens one list by its UUID.
+Missing, invalid, and other-member list IDs use the same safe not-found
+response.
+
+### Private-list journeys
+
+1. A member creates a list with a trimmed name and optional description.
+   Names are limited to 80 characters, descriptions to 500 characters, and
+   case-insensitive duplicate names are rejected for that member.
+2. The member can rename the list, edit its description, or delete it after
+   typing its name. Deleting a list removes only that list and its membership
+   rows; personal-library movies and their private metadata remain.
+3. From list detail, the member searches only their personal WatchFlow library,
+   optionally filters by status or favourite state, selects one or more
+   available movies, and appends them in displayed order.
+4. The member moves list items up or down with labelled keyboard-accessible
+   controls. First-up and last-down are safe no-ops, and saved positions remain
+   sequential after refresh.
+5. The member can remove one membership after confirmation without changing
+   the movie's status, rating, review, favourite state, Watch Next position,
+   schedule, or shared metadata.
+6. The stored movie-detail experience shows every private list available to
+   the member and which lists contain that `user_movies` relationship.
+   Selecting or clearing multiple memberships saves them atomically: existing
+   positions remain, new memberships append, and removals compact only affected
+   lists.
+
+### Membership and ordering contract
+
+`lists` belongs directly to one authenticated user and remains
+`visibility = 'private'`. `list_movies.user_movie_id` references
+`public.user_movies.id`, never `public.movies.id`, a TMDB ID, a card position,
+or a browser-provided user ID. This ensures that only movies already in the
+member's personal library can enter their lists.
+
+One personal-library relationship may belong to multiple lists, but may appear
+only once in any one list. Positions are one-based and unique within a list.
+Batch additions accept at most 100 unique `user_movies` UUIDs, skip existing
+memberships, and preserve submitted order. The Add Movies picker returns at
+most 50 matching results per server query; it searches title, original title,
+director, cast, and genre through the existing private library query and marks
+already-added movies as unavailable.
+
+List creation, editing, deletion, additions, removals, reordering, and
+movie-detail membership saves use the authenticated cookie-bound Supabase
+client after `auth.getUser()`. RLS derives ownership through `lists` and
+`user_movies`; no list mutation accepts a user ID. Atomic database functions
+serialize per-list ordering, lock relevant rows, normalize damaged order, and
+return explicit success/no-op/count results. Deleting a `user_movies`
+relationship cascades its list memberships and compacts surviving affected
+lists without changing the Watch Next queue architecture.
+
+The list index uses one owner-scoped aggregate query for movie counts and up to
+four poster previews per list. List detail uses fixed owner-scoped queries
+rather than one request per movie. Private list names are not placed in public
+metadata or public browser storage.
+
+### Part 13 privacy and scope exclusions
+
+All custom lists are private during Part 13. The product does not expose public
+visibility, public list URLs, sharing, collaboration, followers, comments,
+likes, voting, social feeds, public profiles, AI-generated lists, or payments.
+Drag-and-drop is not required; accessible Up and Down controls are the ordering
+baseline.
+
+### Part 13 known limitations
+
+- `supabase/migrations/202607290001_part_13_private_custom_lists.sql` must be
+  applied manually and the PostgREST schema reloaded before database-backed
+  list routes can work against a target project.
+- Repository code and contract tests do not prove the target tables, grants,
+  RLS policies, RPC execution privileges, cascade behavior, concurrency, or
+  cross-user isolation. Those checks still require two confirmed QA accounts.
+- Authenticated create/edit/delete, picker, ordering, movie-detail membership,
+  mobile viewport, screenshot, console, and failed-network browser flows remain
+  pending until the migration and QA sessions are available.
+- The picker displays the first 50 matching movies per query and has no
+  additional picker pagination in this milestone. One add request is limited
+  to 100 movies.
+- The movie-detail membership selector reads at most 500 private lists. This is
+  sufficient for the current target of hundreds of lists but is a documented
+  future pagination/search boundary.
+- Poster collages show at most four available posters. Missing posters retain
+  an accessible empty preview.
+
+## Next milestone
+
+Part 14 - Movie Picker and Recommendations.

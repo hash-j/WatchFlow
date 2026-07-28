@@ -5,6 +5,7 @@ import {
   FileUp,
   LayoutDashboard,
   Library,
+  ListPlus,
   Search,
   Settings,
 } from "lucide-react";
@@ -16,6 +17,7 @@ const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/search", label: "Search Movies", icon: Search },
   { href: "/library", label: "My Library", icon: Library },
+  { href: "/lists", label: "My Lists", icon: ListPlus },
   { href: "/import", label: "Import Movies", icon: FileUp },
   { href: "/watch-next", label: "Watch Next", icon: Clapperboard },
   { href: "/schedule", label: "Schedule", icon: CalendarDays },

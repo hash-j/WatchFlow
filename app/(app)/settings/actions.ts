@@ -197,10 +197,12 @@ export async function deleteLibraryDataAction(
     "/library",
     "/watch-next",
     "/schedule",
+    "/lists",
     "/settings/data",
   ]) {
     revalidatePath(path);
   }
+  revalidatePath("/lists", "layout");
   redirect(`/settings/data?libraryDeleted=${removed}`);
 }
 

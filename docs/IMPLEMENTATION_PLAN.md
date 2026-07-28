@@ -219,12 +219,112 @@ verification remain.
   authenticated coverage for URL persistence, favourites, current-page
   selection, bulk actions, queue compaction, isolation, and modal focus.
 
+## Part 13: private custom movie lists
+
+Status: implemented locally; manual target migration, live RLS/isolation
+verification, and authenticated browser QA remain.
+
+- Added protected `/lists` and `/lists/[listId]` routes plus My Lists
+  navigation, loading/not-found states, private list summaries, list detail,
+  responsive movie rows, and native modal create/edit/delete/add/remove flows.
+- Added `public.lists` for private user-owned list metadata and
+  `public.list_movies` for ordered membership. Membership stores
+  `user_movies.id`, not a shared movie ID, TMDB ID, browser position, or
+  browser-supplied user ID.
+- Added trimmed name/description validation, per-user normalized
+  case-insensitive name uniqueness, private-only visibility, one membership per
+  movie per list, one-based positions, and list deletion cascades that do not
+  delete personal-library or shared movie rows.
+- Added ownership-only RLS for both tables and authenticated table privileges.
+  `list_movies` access requires both an owned parent list and an owned
+  `user_movies` relationship. No list operation uses the admin client.
+- Added authenticated Server Actions for create, edit, delete, ordered
+  multi-add, move, membership-only removal, and movie-detail multi-list saves.
+  Inputs are Zod-validated, sessions use `auth.getUser()`, and user-facing
+  errors distinguish authentication, invalid input, missing tables/columns or
+  RPCs, stale schema cache, permission failure, conflicts, stale records, and
+  general persistence failure.
+- Added one owner-scoped summary RPC for counts and four-poster previews and
+  fixed-query list detail reads to avoid N+1 requests.
+- Added a URL-driven private-library picker with title/original-title/director/
+  cast/genre search, status and favourite filters, a 50-result server cap,
+  already-added indicators, preserved displayed order, and a 100-movie
+  mutation limit.
+- Added accessible Up/Down ordering controls, first/last no-op behavior,
+  confirmed list-membership removal, and movie-detail checkboxes that preserve
+  existing order, append new memberships, and compact removals.
+- Kept public/shared/collaborative lists, social interactions, public profiles,
+  share links, AI-generated lists, and payments out of scope.
+
+### Part 13 migration and database functions
+
+Create and retain exactly one version-controlled migration:
+
+`supabase/migrations/202607290001_part_13_private_custom_lists.sql`
+
+The migration creates the `lists` and `list_movies` tables, their constraints,
+indexes, updated-at triggers, authenticated privileges, and owner-derived RLS
+policies. It adds these authenticated security-invoker functions:
+
+- `public.watchflow_normalize_list_positions(uuid)`
+- `public.watchflow_move_list_item(uuid, text)`
+- `public.watchflow_add_movies_to_list(uuid, uuid[])`
+- `public.watchflow_remove_movie_from_list(uuid)`
+- `public.watchflow_set_movie_list_memberships(uuid, uuid[])`
+- `public.watchflow_list_summaries()`
+
+It also adds the internal
+`public.watchflow_compact_lists_after_membership_delete()` trigger function and
+`watchflow_list_movies_compact_after_delete` statement trigger so cascading
+personal-library deletion cannot leave gaps in surviving lists. Public and
+`anon` execution is revoked from the callable functions; only
+`authenticated` receives execute privileges.
+
+### Part 13 deployment and verification checklist
+
+- Confirm the five earlier incremental migrations are already represented in
+  the target project. Do not rerun older non-idempotent migrations blindly.
+- Apply only
+  `supabase/migrations/202607290001_part_13_private_custom_lists.sql` manually
+  in the Supabase SQL Editor. Do not execute it remotely from application code.
+- As a separate post-migration step, run
+  `notify pgrst, 'reload schema';`.
+- Verify both tables exist, RLS remains enabled, authenticated has exactly the
+  required table privileges, `anon` has none, all six callable functions exist,
+  and only authenticated can execute them.
+- With two confirmed accounts, create the same list name for both users while
+  rejecting case-insensitive duplicates for one user. Verify neither account
+  can read, update, delete, add to, remove from, reorder, or infer the existence
+  of the other account's lists or memberships.
+- Verify another user's `user_movies.id` cannot be added; list deletion removes
+  memberships only; personal-library deletion cascades memberships and
+  compacts surviving list positions without deleting shared `movies`.
+- Exercise empty, one-item, boundary, damaged-order, multi-add, duplicate,
+  stale selection, removal, and concurrent reorder cases. Confirm positions
+  remain sequential after refresh and one movie may remain in multiple lists.
+- Complete authenticated Playwright coverage for CRUD, picker, multi-add,
+  ordering persistence, movie-detail membership, list deletion retention,
+  two-user isolation, console/network failures, requested screenshots, and the
+  five target viewports.
+- Re-run all critical route and Part 12 regressions, especially
+  `/auth/sign-up`, individual and bulk library deletion, favourites, bulk
+  status, queue movement/normalization, scheduling, import, settings, exports,
+  and statistics behavior.
+- Run lint, direct TypeScript checking, the full unit/integration suite,
+  relevant list tests, Playwright, and production build after all Part 13 work
+  has converged. Record results only after each command completes.
+
+Known deployment limitations: no target migration application is evidenced;
+no authenticated QA storage state or two-user credentials are available; the
+picker has no pagination beyond its first 50 results; the movie-detail selector
+is capped at 500 private lists; and final authenticated responsive/browser
+verification remains pending.
+
 ## Next milestones
 
-1. Part 13 — Custom lists.
-2. Part 14 — Movie picker and recommendations.
-3. Part 15 — Testing and production hardening.
-4. Part 16 — Preview deployment.
-5. Part 17 — Public beta preparation.
-6. Part 18 — Notifications and calendar integration.
-7. Part 19 — Paid SaaS.
+1. Part 14 — Movie picker and recommendations.
+2. Part 15 — Testing and production hardening.
+3. Part 16 — Preview deployment.
+4. Part 17 — Public beta preparation.
+5. Part 18 — Notifications and calendar integration.
+6. Part 19 — Paid SaaS.

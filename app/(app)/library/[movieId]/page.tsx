@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowLeft, Clock, ExternalLink, UserRound } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
+import { getSafeListLoadError } from "@/components/lists/list-load-error";
+import { MovieListMembershipsForm } from "@/components/lists/movie-list-memberships-form";
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { MovieRating } from "@/components/movies/movie-rating";
 import { MovieManagementForm } from "@/components/movies/movie-management-form";
@@ -19,6 +21,8 @@ import {
   getMovieReleaseYear,
   getYouTubeTrailerUrl,
 } from "@/lib/movies/images";
+import { ListsAuthenticationError } from "@/lib/lists/errors";
+import { getMovieListMemberships } from "@/lib/lists/supabase-lists";
 import { getAuthContext } from "@/lib/supabase/auth";
 
 type MovieDetailPageProps = {
@@ -37,6 +41,80 @@ function DetailLoading() {
       </div>
     </div>
   );
+}
+
+function CustomListsLoading() {
+  return (
+    <section
+      aria-busy="true"
+      aria-labelledby="custom-lists-loading-heading"
+      className="mt-10 rounded-xl border bg-card p-5 shadow-sm sm:p-6"
+    >
+      <h2 id="custom-lists-loading-heading" className="text-xl font-semibold">
+        Custom Lists
+      </h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Loading private list memberships...
+      </p>
+    </section>
+  );
+}
+
+async function MovieCustomLists({
+  userMovieId,
+  movieId,
+  movieTitle,
+}: {
+  userMovieId: string;
+  movieId: string;
+  movieTitle: string;
+}) {
+  try {
+    const memberships = await getMovieListMemberships(userMovieId);
+
+    if (!memberships) {
+      return (
+        <section
+          aria-labelledby="custom-lists-heading"
+          className="mt-10 rounded-xl border bg-card p-5 shadow-sm sm:p-6"
+        >
+          <h2 id="custom-lists-heading" className="text-xl font-semibold">
+            Custom Lists
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground" role="status">
+            This movie is no longer in your personal library.
+          </p>
+        </section>
+      );
+    }
+
+    return (
+      <MovieListMembershipsForm
+        userMovieId={userMovieId}
+        movieId={movieId}
+        movieTitle={movieTitle}
+        memberships={memberships}
+      />
+    );
+  } catch (error) {
+    if (error instanceof ListsAuthenticationError) {
+      redirect("/auth/login");
+    }
+
+    return (
+      <section
+        aria-labelledby="custom-lists-heading"
+        className="mt-10 rounded-xl border bg-card p-5 shadow-sm sm:p-6"
+      >
+        <h2 id="custom-lists-heading" className="text-xl font-semibold">
+          Custom Lists
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground" role="alert">
+          {getSafeListLoadError(error)}
+        </p>
+      </section>
+    );
+  }
 }
 
 async function MovieDetail({ params }: MovieDetailPageProps) {
@@ -185,6 +263,14 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
             scheduledTime={scheduledTime}
           />
         </section>
+
+        <Suspense fallback={<CustomListsLoading />}>
+          <MovieCustomLists
+            userMovieId={item.libraryId}
+            movieId={movie.id}
+            movieTitle={movie.title}
+          />
+        </Suspense>
       </div>
     </article>
   );

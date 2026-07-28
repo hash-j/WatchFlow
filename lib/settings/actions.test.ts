@@ -154,6 +154,7 @@ describe("settings Server Actions", () => {
     ]) {
       expect(mocks.revalidatePath).toHaveBeenCalledWith(path);
     }
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists", "layout");
   });
 
   it("rejects unauthenticated library deletion", async () => {

@@ -6,6 +6,7 @@ export const PROTECTED_ROUTE_PREFIXES = [
   "/dashboard",
   "/search",
   "/library",
+  "/lists",
   "/import",
   "/watch-next",
   "/schedule",

@@ -30,6 +30,7 @@ function revalidateMovieViews() {
   revalidatePath("/library", "layout");
   revalidatePath("/watch-next");
   revalidatePath("/schedule");
+  revalidatePath("/lists", "layout");
 }
 
 function revalidateMovieDetail(movieId: string) {

@@ -287,6 +287,138 @@ Changing status does not invent a watched date and preserves latent scheduling
 metadata. Deletion removes only personal relationships and never shared movie
 metadata.
 
+## Part 13 private custom-list architecture
+
+Part 13 adds `/lists` and `/lists/[listId]` inside the existing authenticated
+`(app)` route group. `/lists` is also covered by the proxy's protected-prefix
+set and the shared application layout. Each server-side lists boundary performs
+a fresh `auth.getUser()` through `authenticateLists()` before reading or
+mutating private data. Invalid UUIDs and lists that are missing or owned by
+another user converge on the same not-found behavior.
+
+```text
+authenticated list page or movie detail
+  -> Zod-validated route/action input
+  -> auth.getUser()
+  -> cookie-bound Supabase SSR client
+  -> explicit owner filter + RLS
+  -> direct owned-list metadata mutation
+     or authenticated security-invoker ordering RPC
+  -> targeted Next.js path revalidation
+```
+
+The focused server-only adapter is `lib/lists/supabase-lists.ts`; list types,
+defensive result mapping, validation, and safe error classification remain in
+the other `lib/lists/*` modules. Server Components perform private reads.
+Client Components are limited to dialogs, pending form state, checkbox
+selection, confirmation, and accessible up/down controls. No custom-list path
+uses the Supabase admin client.
+
+### Ownership and membership boundary
+
+`lists.user_id` is supplied only from the user returned by `auth.getUser()`.
+Browser forms never supply or choose a user ID. A membership stores
+`list_movies.user_movie_id`, which is the UUID primary key
+`public.user_movies.id`. It never stores shared `movies.id`, TMDB ID, an array
+index, or a card position. RLS permits a membership only when both the parent
+list and referenced personal-library row belong to `auth.uid()`.
+
+Deleting a list directly through the authenticated client removes that list and
+its memberships through `lists -> list_movies on delete cascade`. The foreign
+key direction cannot delete `user_movies`, ratings, reviews, queue/schedule
+state, favourites, or shared movie metadata. Conversely, removing a personal
+library relationship cascades only its list memberships and leaves the
+remaining lists intact.
+
+The migration narrows authenticated privileges rather than granting arbitrary
+table writes. `lists` exposes table SELECT/DELETE, INSERT only for owner/name/
+description, and UPDATE only for name/description/triggered timestamp.
+`list_movies` exposes table SELECT/DELETE, INSERT only for its two references
+and position, and UPDATE only for position. Eight RLS policies independently
+cover SELECT, INSERT, UPDATE, and DELETE on both tables. `anon` receives no
+table or function access, and `visibility` is constrained to `private`.
+
+### Query and caching boundary
+
+`watchflow_list_summaries()` performs the `/lists` summary read in one private
+security-invoker query. It owner-filters first, counts memberships, and obtains
+at most four ordered non-null poster paths per list without a request per list
+or poster. List detail uses one nested, owner-filtered
+`list_movies -> user_movies -> movies` read ordered by saved position. The Add
+Movies picker reuses the Part 12 owner-scoped library RPC, caps a result page at
+50, and performs one membership lookup for those candidate IDs rather than one
+lookup per result.
+
+Movie detail first verifies the supplied `user_movies.id`, then loads up to 500
+of that owner's lists and the current reverse memberships. List names and
+membership state are never queried for another owner.
+
+Custom-list results are request/user scoped. The pages do not statically
+generate private list routes, use a cross-user persistent cache, place list data
+in public browser storage, or emit public metadata containing list names.
+Cookie-backed authentication makes these reads dynamic; successful mutations
+revalidate `/lists`, the affected `/lists/[listId]`, and relevant library/movie
+detail views.
+
+### Atomic ordering and membership RPCs
+
+Migration `202607290001_part_13_private_custom_lists.sql` adds six
+authenticated application RPCs:
+
+- `watchflow_normalize_list_positions(uuid)` returns JSONB success,
+  normalization, and item-count state.
+- `watchflow_move_list_item(uuid, text)` returns whether an item moved plus its
+  list and final position; a boundary move is a successful no-op.
+- `watchflow_add_movies_to_list(uuid, uuid[])` atomically validates and appends
+  up to 100 unique personal-library rows in submitted order, reporting matched,
+  added, and skipped counts.
+- `watchflow_remove_movie_from_list(uuid)` deletes only one membership and
+  reports removal plus the surviving count.
+- `watchflow_set_movie_list_memberships(uuid, uuid[])` atomically reconciles a
+  movie's desired membership across up to 500 lists, preserving existing order
+  and reporting added, removed, and unchanged counts. An empty desired array
+  removes every current membership.
+- `watchflow_list_summaries()` returns the owner-only list-card rowset described
+  above.
+
+Every RPC is `security invoker`, has a fixed
+`search_path = public, pg_temp`, derives the caller from `auth.uid()`, and is
+executable only by `authenticated`. Missing/foreign objects share a
+nonrevealing not-found or selection-changed result. Mixed stale/foreign batch
+input causes no partial mutation.
+
+When an operation needs both object families, it first takes the Part 12
+per-user advisory mutation lock, then locks owned `user_movies` rows in Part
+12's queue-position/creation-time/UUID order, affected per-list advisory locks
+in list-UUID order, parent `lists` rows, and ordered `list_movies` rows. This
+matches the Part 12 bulk-deletion path and prevents a list-add/bulk-delete lock
+inversion. Each list advisory key is namespaced from the list UUID. The legacy
+direct full-library DELETE does not take the shared advisory lock, so concurrent
+full-library deletion remains a live stress-test item rather than a proven
+cross-feature guarantee.
+
+Saved positions are positive, contiguous, and one based. The unique
+`(list_id, position)` constraint is deferrable but initially immediate.
+Normalization locks the list, defers that named constraint, writes a positive
+temporary range, then writes final `1..N` values ordered by previous position,
+creation time, and UUID. Moves use a temporary `N + 1` slot before swapping
+adjacent rows. Append RPCs normalize once, read the locked maximum, and preserve
+input ordinality. The separate non-deferrable unique
+`(list_id, user_movie_id)` constraint is the duplicate-membership
+`ON CONFLICT` arbiter.
+
+An AFTER DELETE statement trigger receives deleted memberships through a
+transition table. Its non-public security-invoker helper collects distinct
+surviving parent lists, takes their advisory locks in stable order, updates list
+activity, and compacts positions in the same transaction. This covers explicit
+membership removal and cascades from Part 12 individual, bulk, or full-library
+deletion. A list-parent cascade has no surviving parent to normalize.
+
+The migration reuses `watchflow_set_updated_at()` for list and membership audit
+triggers. It is version controlled but is a manual Supabase SQL Editor step and
+is not known to be applied. Source-level tests do not replace live two-user RLS,
+foreign-ID, cascade, or concurrent add/move/delete verification.
+
 ## Browser QA architecture
 
 `playwright.config.ts` runs headless Chrome against `PLAYWRIGHT_BASE_URL` or

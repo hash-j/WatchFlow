@@ -71,6 +71,7 @@ function revalidateLibraryViews() {
   revalidatePath("/statistics");
   revalidatePath("/watch-next");
   revalidatePath("/schedule");
+  revalidatePath("/lists", "layout");
 }
 
 function revalidateMovieDetail(movieId: FormDataEntryValue | null) {

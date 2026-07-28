@@ -5,6 +5,8 @@ test.describe("logged-out route protection", () => {
     "/dashboard",
     "/search",
     "/library",
+    "/lists",
+    "/lists/11111111-1111-4111-8111-111111111111",
     "/watch-next",
     "/schedule",
     "/import",

@@ -5,9 +5,9 @@
 The deployed Supabase database already contains `profiles`, `movies`, and
 `user_movies`, with RLS enabled. The repository does not contain the original
 base-schema migration, schema dump, or generated database types. It does contain
-reviewed Phase 3 and Part 10B incremental migrations, so this document combines
-the previously verified deployed contract with those version-controlled
-changes.
+reviewed Phase 3, Part 10B, Part 12, and Part 13 incremental migrations, so this
+document combines the previously verified deployed contract with those
+version-controlled changes.
 
 The live Supabase schema remains authoritative. A read-only OpenAPI inspection
 before Phase 3 confirmed the base columns documented below. Incremental
@@ -18,18 +18,9 @@ base tables.
 
 ```text
 auth.users
-    1
-    |
-    1
-profiles
-    1
-    |
-    many
-user_movies
-    many
-    |
-    1
-movies
+  |-- 1:1 profiles
+  |-- 1:many user_movies -- many:1 movies
+  `-- 1:many lists -- 1:many list_movies -- many:1 user_movies
 ```
 
 ## Tables
@@ -145,6 +136,56 @@ from 0 through 5.
 Favourite is personal relationship state. It belongs only on `user_movies` and
 must never be added to shared `movies` or inferred from a rating.
 
+### `lists`
+
+Purpose: one private, named custom collection owned by an Auth user. Part 13
+creates this table in
+`202607290001_part_13_private_custom_lists.sql`.
+
+| Column | Contract |
+|---|---|
+| `id` | UUID primary key, default `gen_random_uuid()` |
+| `user_id` | Required UUID foreign key to `auth.users(id)` with `on delete cascade` |
+| `name` | Required text; its trimmed length must be 1 through 80 |
+| `description` | Nullable text; at most 500 characters |
+| `visibility` | Required text, default `private`; a check currently permits only `private` |
+| `created_at` | Required `timestamptz`, default `now()` |
+| `updated_at` | Required `timestamptz`, default `now()`, maintained by the reusable `watchflow_set_updated_at()` trigger function |
+
+`lists_user_normalized_name_key` is a per-owner expression unique index on
+`(user_id, lower(regexp_replace(btrim(name), '[[:space:]]+', ' ', 'g')))`.
+It treats differences in case, outer whitespace, and repeated internal
+whitespace as the same list name for one owner. Different owners may use the
+same normalized name.
+
+### `list_movies`
+
+Purpose: an ordered membership between one private list and one personal
+library relationship.
+
+| Column | Contract |
+|---|---|
+| `id` | UUID primary key, default `gen_random_uuid()` |
+| `list_id` | Required UUID foreign key to `lists(id)` with `on delete cascade` |
+| `user_movie_id` | Required UUID foreign key to `user_movies(id)` with `on delete cascade` |
+| `position` | Required integer with `position >= 1` |
+| `created_at` | Required `timestamptz`, default `now()` |
+| `updated_at` | Required `timestamptz`, default `now()`, maintained by `watchflow_set_updated_at()` |
+
+`user_movie_id` is deliberately the UUID `public.user_movies.id`. It is never
+`movies.id`, `user_movies.movie_id`, a TMDB ID, a card position, or a
+browser-provided user ID. This makes custom-list membership dependent on a
+personal-library relationship and lets deleting that relationship cascade only
+its list memberships.
+
+`list_movies_list_user_movie_key` makes `(list_id, user_movie_id)` unique, so a
+personal movie appears once in one list while remaining eligible for any number
+of other lists. `list_movies_list_position_key` makes `(list_id, position)`
+unique and is `deferrable initially immediate`; ordering RPCs defer it only
+inside their transaction while they use conflict-safe temporary positions.
+Deleting a list cascades only its `list_movies` rows. It cannot delete
+`user_movies`, personal metadata, schedules, queue state, or shared `movies`.
+
 ### Queue invariant
 
 Only `watch_next` rows receive a queue position. Positions are contiguous and
@@ -174,11 +215,15 @@ security properties are:
 
 - Members can access only their own `profiles` row.
 - Members can access only their own associations in `user_movies`.
+- Members can select, create, update, and delete only their own `lists`.
+- A `list_movies` row is accessible only when both its parent list and its
+  referenced `user_movies` row belong to the current `auth.uid()`.
 - Access to shared `movies` rows follows the deployed read policies; the
   server-only secret-key client is used only for authenticated TMDB metadata
   upserts into this shared table.
-- All `profiles` and `user_movies` operations use the member's cookie-bound
-  client and JWT. Security-invoker functions remain subject to RLS.
+- All `profiles`, `user_movies`, `lists`, and `list_movies` operations use the
+  member's cookie-bound client and JWT. Security-invoker functions remain
+  subject to RLS.
 
 These are security expectations, not a replacement for reviewing the deployed
 policy SQL before Phase 2 writes are introduced.
@@ -231,6 +276,352 @@ The 2026-07-28 logged-out Playwright pass does not establish that this migration
 is applied. It never invokes these authenticated functions and therefore does
 not verify grants, RLS, result counts, mixed-owner rejection, queue compaction,
 or index behavior.
+
+## Part 13 private custom-list contract
+
+Migration `202607290001_part_13_private_custom_lists.sql` creates the private
+custom-list schema and ordering architecture. It is version controlled but is
+**manual and not known to be applied** to the target Supabase project. Do not
+run it remotely automatically or infer deployment from source-level tests.
+
+### Indexes and query justification
+
+| Index or constraint-backed index | Columns/expression | Query supported and justification |
+|---|---|---|
+| `lists_user_normalized_name_key` | `user_id`, normalized lowercase/trimmed/collapsed-whitespace name | Enforces case-insensitive duplicate-name prevention per owner and supports an owner/name conflict lookup |
+| `lists_user_updated_at_idx` | `user_id, updated_at desc` | Supports `/lists` owner filtering and most-recently-updated ordering |
+| `list_movies_list_user_movie_key` | Unique `(list_id, user_movie_id)` | Prevents duplicate membership and supports already-in-list checks; a separate index with the same leading columns would be redundant |
+| `list_movies_list_position_key` | Deferrable unique `(list_id, position)` | Supports ordered list-detail reads and guarantees one saved position per list; a separate `(list_id, position)` index would be redundant |
+| `list_movies_user_movie_id_idx` | `user_movie_id` | Supports reverse membership reads on movie detail and the `user_movies` delete cascade |
+
+Primary keys supply their normal UUID indexes. No direct `movies` or TMDB index
+is needed because membership intentionally starts from `user_movies`.
+
+### RLS and scoped privileges
+
+RLS is enabled on both new tables. The migration creates exactly eight
+authenticated policies:
+
+| Policy | Operation | Ownership rule |
+|---|---|---|
+| `watchflow_lists_select_own` | SELECT | Parent `lists.user_id = auth.uid()` |
+| `watchflow_lists_insert_own` | INSERT | New `lists.user_id = auth.uid()` |
+| `watchflow_lists_update_own` | UPDATE | Both old and new list rows belong to `auth.uid()` |
+| `watchflow_lists_delete_own` | DELETE | Parent `lists.user_id = auth.uid()` |
+| `watchflow_list_movies_select_own` | SELECT | Both the parent list and referenced `user_movies` row belong to `auth.uid()` |
+| `watchflow_list_movies_insert_own` | INSERT | Both the proposed parent list and proposed `user_movies` row belong to `auth.uid()` |
+| `watchflow_list_movies_update_own` | UPDATE | Both ownership checks apply to the old and new membership |
+| `watchflow_list_movies_delete_own` | DELETE | Both the parent list and referenced `user_movies` row belong to `auth.uid()` |
+
+All table privileges are revoked from `PUBLIC`, `anon`, and `authenticated`
+before the following narrow authenticated grants are applied:
+
+- `lists`: table-level SELECT and DELETE; column INSERT for `user_id`, `name`,
+  and `description`; column UPDATE for `name`, `description`, and
+  trigger-controlled `updated_at`.
+- `list_movies`: table-level SELECT and DELETE; column INSERT for `list_id`,
+  `user_movie_id`, and `position`; column UPDATE for `position`.
+- `anon` receives no list table or function privilege.
+
+These grants keep IDs, visibility, ownership references, and creation audit
+fields outside normal direct updates. `visibility` also has a database check
+that restricts it to `private`.
+
+### Atomic RPC contract
+
+All six application RPCs are `security invoker`, use
+`search_path = public, pg_temp`, derive identity from `auth.uid()`, remain
+subject to RLS and scoped table privileges, revoke execution from `PUBLIC` and
+`anon`, and grant execution only to `authenticated`. None accepts `user_id`.
+
+| Signature | Result and behavior |
+|---|---|
+| `watchflow_normalize_list_positions(uuid)` | JSONB `{ success, normalized, item_count }`, or a nonrevealing `reason: "not_found"` result. Locks the owned list and its items, orders damaged values by position with nulls last then creation/UUID ties, and restores `1..N`. |
+| `watchflow_move_list_item(uuid, text)` | JSONB `{ success, moved, list_id, final_position }`. Accepts `up` or `down`; first-up and last-down are successful no-ops. |
+| `watchflow_add_movies_to_list(uuid, uuid[])` | JSONB `{ success, list_id, requested, matched, added_count, skipped_count, reason? }`. Accepts 1 through 100 unique, non-null `user_movies.id` values, rejects a mixed stale/foreign selection without partial mutation, skips existing memberships, and appends new rows in submitted ordinality. |
+| `watchflow_remove_movie_from_list(uuid)` | JSONB `{ success, removed, list_id, final_count, reason? }`. Deletes one owned `list_movies` row only; the delete trigger compacts the list before the statement returns. |
+| `watchflow_set_movie_list_memberships(uuid, uuid[])` | JSONB `{ success, requested, added_count, removed_count, unchanged_count, reason? }`. Accepts an empty desired set and up to 500 unique list IDs, preserves existing order, removes deselected memberships, and appends newly selected memberships. |
+| `watchflow_list_summaries()` | A private rowset containing `list_id`, name, description, visibility, timestamps, `movie_count`, and up to four ordered non-null poster paths. It returns all owner summaries in one query and avoids one request per list/poster. |
+
+The global mutation lock order is deliberate: membership changes first take
+the same per-user advisory lock as Part 12, then lock owned `user_movies` rows
+in Part 12's queue-position/creation-time/UUID order, followed by affected
+per-list advisory locks in stable UUID order, parent `lists` rows, and ordered
+`list_movies` rows. This matches Part 12 bulk relationship deletion, whose
+foreign-key cascade reaches list compaction while its `user_movies` rows are
+already locked, and avoids the opposite-order deadlock between bulk library
+deletion and list additions. Concurrent full-library account-control deletion
+still requires live stress verification because its legacy direct DELETE does
+not participate in the shared advisory lock.
+
+Normalization defers `list_movies_list_position_key`, assigns every affected
+row a positive temporary position, then writes final sequential positions in a
+second stage. Adjacent moves use one temporary `N + 1` slot. The non-deferrable
+`list_movies_list_user_movie_key` remains the explicit `ON CONFLICT` arbiter
+for duplicate membership; the deferrable position constraint is never used as
+an upsert arbiter.
+
+`watchflow_list_movies_compact_after_delete` is an AFTER DELETE,
+statement-level transition-table trigger. Its non-public helper,
+`watchflow_compact_lists_after_membership_delete()`, collects distinct
+surviving affected lists, locks them in stable order, updates their activity
+timestamp, and normalizes each once. It covers explicit membership removal and
+the `user_movies on delete cascade` path used by individual, bulk, and
+full-library deletion. A parent-list cascade finds no surviving list and never
+touches `user_movies` or shared `movies`.
+
+The existing `watchflow_set_updated_at()` function is reused by
+`watchflow_lists_updated_at` and `watchflow_list_movies_updated_at`; Part 13
+does not create a competing timestamp function.
+
+### Manual Part 13 verification SQL
+
+Run this read-only verification after manually applying
+`supabase/migrations/202607290001_part_13_private_custom_lists.sql`. Expected
+results are two resolved tables with RLS enabled, the documented columns and
+constraints, eight policies, all expected indexes/triggers, authenticated-only
+execution on the six public RPCs, and the scoped privilege matrix.
+
+```sql
+-- Tables and columns.
+select
+  to_regclass('public.lists') as lists_table,
+  to_regclass('public.list_movies') as list_movies_table;
+
+select
+  table_name,
+  ordinal_position,
+  column_name,
+  data_type,
+  is_nullable,
+  column_default
+from information_schema.columns
+where table_schema = 'public'
+  and table_name in ('lists', 'list_movies')
+order by table_name, ordinal_position;
+
+-- RLS must be enabled on both tables.
+select
+  c.relname as table_name,
+  c.relrowsecurity as rls_enabled,
+  c.relforcerowsecurity as rls_forced
+from pg_class as c
+inner join pg_namespace as n on n.oid = c.relnamespace
+where n.nspname = 'public'
+  and c.relname in ('lists', 'list_movies')
+order by c.relname;
+
+-- PK/FK/check/unique definitions, including cascades and deferrability.
+select
+  conrelid::regclass as table_name,
+  conname,
+  contype,
+  condeferrable,
+  condeferred,
+  pg_get_constraintdef(oid) as definition
+from pg_constraint
+where conrelid in (
+  'public.lists'::regclass,
+  'public.list_movies'::regclass
+)
+order by conrelid::regclass::text, conname;
+
+-- Explicit and constraint-backed indexes.
+select tablename, indexname, indexdef
+from pg_indexes
+where schemaname = 'public'
+  and tablename in ('lists', 'list_movies')
+order by tablename, indexname;
+
+-- Exactly four ownership policies per table.
+select
+  tablename,
+  policyname,
+  roles,
+  cmd,
+  qual,
+  with_check
+from pg_policies
+where schemaname = 'public'
+  and tablename in ('lists', 'list_movies')
+order by tablename, policyname;
+
+-- Timestamp and cascade-compaction triggers.
+select
+  c.relname as table_name,
+  t.tgname as trigger_name,
+  pg_get_triggerdef(t.oid) as definition
+from pg_trigger as t
+inner join pg_class as c on c.oid = t.tgrelid
+inner join pg_namespace as n on n.oid = c.relnamespace
+where n.nspname = 'public'
+  and c.relname in ('lists', 'list_movies')
+  and not t.tgisinternal
+order by c.relname, t.tgname;
+
+-- All six application RPC signatures must resolve.
+with expected(signature) as (
+  values
+    ('public.watchflow_normalize_list_positions(uuid)'),
+    ('public.watchflow_move_list_item(uuid,text)'),
+    ('public.watchflow_add_movies_to_list(uuid,uuid[])'),
+    ('public.watchflow_remove_movie_from_list(uuid)'),
+    ('public.watchflow_set_movie_list_memberships(uuid,uuid[])'),
+    ('public.watchflow_list_summaries()')
+)
+select signature, to_regprocedure(signature) as resolved_function
+from expected
+order by signature;
+
+-- Authenticated can execute each public RPC; anon and PUBLIC cannot.
+with expected(signature) as (
+  values
+    ('public.watchflow_normalize_list_positions(uuid)'),
+    ('public.watchflow_move_list_item(uuid,text)'),
+    ('public.watchflow_add_movies_to_list(uuid,uuid[])'),
+    ('public.watchflow_remove_movie_from_list(uuid)'),
+    ('public.watchflow_set_movie_list_memberships(uuid,uuid[])'),
+    ('public.watchflow_list_summaries()')
+),
+resolved as (
+  select signature, to_regprocedure(signature) as function_oid
+  from expected
+)
+select
+  resolved.signature,
+  has_function_privilege(
+    'authenticated',
+    resolved.function_oid,
+    'EXECUTE'
+  ) as authenticated_execute,
+  has_function_privilege(
+    'anon',
+    resolved.function_oid,
+    'EXECUTE'
+  ) as anon_execute,
+  not exists (
+    select 1
+    from pg_proc as p
+    cross join lateral aclexplode(
+      coalesce(p.proacl, acldefault('f', p.proowner))
+    ) as acl
+    where p.oid = resolved.function_oid
+      and acl.grantee = 0
+      and acl.privilege_type = 'EXECUTE'
+  ) as public_execute_revoked
+from resolved
+order by resolved.signature;
+
+-- The trigger helper exists but is not callable by authenticated or anon.
+select
+  to_regprocedure(
+    'public.watchflow_compact_lists_after_membership_delete()'
+  ) as compact_trigger_helper,
+  has_function_privilege(
+    'authenticated',
+    'public.watchflow_compact_lists_after_membership_delete()',
+    'EXECUTE'
+  ) as authenticated_execute,
+  has_function_privilege(
+    'anon',
+    'public.watchflow_compact_lists_after_membership_delete()',
+    'EXECUTE'
+  ) as anon_execute;
+
+-- Only SELECT/DELETE are table-level authenticated privileges.
+with expected(table_name, privilege_type, should_have) as (
+  values
+    ('lists', 'SELECT', true),
+    ('lists', 'DELETE', true),
+    ('lists', 'INSERT', false),
+    ('lists', 'UPDATE', false),
+    ('list_movies', 'SELECT', true),
+    ('list_movies', 'DELETE', true),
+    ('list_movies', 'INSERT', false),
+    ('list_movies', 'UPDATE', false)
+)
+select
+  table_name,
+  privilege_type,
+  should_have,
+  has_table_privilege(
+    'authenticated',
+    format('public.%I', table_name),
+    privilege_type
+  ) as authenticated_has_privilege,
+  has_table_privilege(
+    'anon',
+    format('public.%I', table_name),
+    privilege_type
+  ) as anon_has_privilege
+from expected
+order by table_name, privilege_type;
+
+-- Allowed and representative denied column privileges must match.
+with expected(
+  table_name,
+  column_name,
+  privilege_type,
+  should_have
+) as (
+  values
+    ('lists', 'user_id', 'INSERT', true),
+    ('lists', 'name', 'INSERT', true),
+    ('lists', 'description', 'INSERT', true),
+    ('lists', 'name', 'UPDATE', true),
+    ('lists', 'description', 'UPDATE', true),
+    ('lists', 'updated_at', 'UPDATE', true),
+    ('lists', 'id', 'INSERT', false),
+    ('lists', 'id', 'UPDATE', false),
+    ('lists', 'user_id', 'UPDATE', false),
+    ('lists', 'visibility', 'INSERT', false),
+    ('lists', 'visibility', 'UPDATE', false),
+    ('lists', 'created_at', 'INSERT', false),
+    ('lists', 'created_at', 'UPDATE', false),
+    ('list_movies', 'list_id', 'INSERT', true),
+    ('list_movies', 'user_movie_id', 'INSERT', true),
+    ('list_movies', 'position', 'INSERT', true),
+    ('list_movies', 'position', 'UPDATE', true),
+    ('list_movies', 'id', 'INSERT', false),
+    ('list_movies', 'id', 'UPDATE', false),
+    ('list_movies', 'list_id', 'UPDATE', false),
+    ('list_movies', 'user_movie_id', 'UPDATE', false),
+    ('list_movies', 'created_at', 'INSERT', false),
+    ('list_movies', 'updated_at', 'UPDATE', false)
+)
+select
+  table_name,
+  column_name,
+  privilege_type,
+  should_have,
+  has_column_privilege(
+    'authenticated',
+    format('public.%I', table_name),
+    column_name,
+    privilege_type
+  ) as authenticated_has_privilege,
+  has_column_privilege(
+    'anon',
+    format('public.%I', table_name),
+    column_name,
+    privilege_type
+  ) as anon_has_privilege
+from expected
+order by table_name, column_name, privilege_type;
+```
+
+After the migration transaction commits and the verification above is
+satisfactory, run the PostgREST schema refresh as a **separate manual step**:
+
+```sql
+notify pgrst, 'reload schema';
+```
+
+Source-level migration, validation, and adapter tests do not prove that the SQL
+is applied. Live sign-off still requires two authenticated users to exercise
+all eight RLS policies, stale/foreign identifiers, normalized duplicate names,
+multi-add order, boundary moves, simultaneous reorders/adds/deletes, the
+`user_movies` cascade trigger, and preservation of shared movie metadata.
 
 ## Schema-change policy
 

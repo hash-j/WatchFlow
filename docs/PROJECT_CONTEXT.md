@@ -3,9 +3,9 @@
 Last updated: 2026-07-29
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 12 implemented and the single-movie removal regression fixed locally; authenticated two-user browser verification remains; Part 13 is next
-Current branch: `master` at `fa235de` (`library-improvements-v1`); the single-removal fix is uncommitted
-Local status: Part 12 code is committed; the removal fix, focused tests, safe logging update, and this handoff update are local changes; no database schema or target data was modified
+Current phase: Part 13 private custom lists implemented locally; manual migration application and authenticated two-user browser/RLS verification remain; Part 14 is next
+Current branch: `master` at `3cc82cb` (`part-12-complete`); Part 13 is uncommitted
+Local status: The baseline was clean and already included the Part 12 single-removal fix; Part 13 application, migration, tests, and documentation are local changes; no remote database schema or target data was modified
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
@@ -20,9 +20,10 @@ The implemented flow is:
 3. Add a shared movie record to a private, RLS-protected personal library.
 4. Track status, rating, review, priority, watched date, and rewatch intent.
 5. Order a Watch Next queue or schedule a local date/time and IANA timezone.
-6. Import a downloaded CSV, export private data, and manage account settings.
+6. Organize personal-library movies into ordered private custom lists.
+7. Import a downloaded CSV, export private data, and manage account settings.
 
-The product currently supports authentication, profiles, title search, private libraries, movie management, queueing, scheduling, favourites, CSV import, CSV/JSON export, settings, and basic dashboard summaries. It does **not** contain a statistics page, charts, custom lists, recommendations, notification delivery, calendar sync, or payments.
+The product currently supports authentication, profiles, title search, private libraries, movie management, queueing, scheduling, favourites, private custom lists, CSV import, CSV/JSON export, settings, and basic dashboard summaries. It does **not** contain a statistics page, charts, public/shared lists, recommendations, notification delivery, calendar sync, or payments.
 
 The direction remains a production-oriented SaaS, but paid launch is deferred. The repository contains no billing implementation or proof of a production deployment.
 
@@ -37,11 +38,11 @@ The direction remains a production-oriented SaaS, but paid launch is deferred. T
 | Components | Radix primitives, shadcn-style local components, Lucide icons, `next-themes` |
 | Auth/data | Supabase Auth, PostgreSQL, and RLS through `@supabase/ssr 0.12.3` and `@supabase/supabase-js 2.110.7` |
 | Movie data | Server-only TMDB API v3 adapter with provider-neutral internal types |
-| Validation | Zod `4.4.3` for settings; typed custom validators for library/import/TMDB inputs |
+| Validation | Zod `4.4.3` for settings and custom lists; typed custom validators for library/import/TMDB inputs |
 | CSV parsing | Custom parser in `lib/import/csv.ts`; no third-party CSV package |
 | Charts | None; no charting dependency exists |
 | Tests | Vitest `4.1.10`, Node environment, React server rendering for limited markup tests |
-| Browser E2E | `@playwright/test 1.62.0`, headless Chrome, three specs under `e2e/` |
+| Browser E2E | `@playwright/test 1.62.0`, headless Chrome, logged-out specs under `e2e/`; no authenticated storage state |
 | Deployment | Vercel is the intended target inferred from runtime variables/starter UI; no `vercel.json` or deployment record exists |
 | Package manager | npm with `package-lock.json` lockfile version 3 |
 
@@ -52,16 +53,17 @@ Notable version risks: Next.js is installed at `16.2.12`, while `eslint-config-n
 | Path | Purpose |
 |---|---|
 | `app/` | The only App Router root; public/auth routes and protected `(app)` route group |
-| `app/(app)/actions/` | Library, management, and CSV-import Server Actions |
-| `components/` | Auth, shell, movie, import, settings, Part 12 library controls, and reusable UI components |
+| `app/(app)/actions/` | Library, management, CSV-import, and Part 13 list Server Actions |
+| `components/` | Auth, shell, movie, import, settings, Part 12 library controls, Part 13 list UI, and reusable UI components |
 | `lib/auth/` | Safe redirect validation and auth route contracts |
 | `lib/movies/` | Provider contract, TMDB adapter/mapper, movie types, validation |
 | `lib/library/` | Legacy/detail library service plus Part 12 query parsing, URL state, mapping, selection, mutations, queue, schedule, and Supabase adapters |
 | `lib/import/` | CSV parsing, mapping, validation, matching, confirmation, persistence |
 | `lib/settings/` | Settings adapters/types, formatting, exports, and data controls |
+| `lib/lists/` | Part 13 list types, Zod validation, defensive mapping, safe errors, authenticated queries/mutations, and tests |
 | `lib/supabase/` | Browser, server, proxy, auth-context, admin, and safe-error modules |
 | `docs/` | Architecture, database, product, implementation plan, and this canonical context |
-| `supabase/migrations/` | Five incremental SQL migrations; the original base schema is absent |
+| `supabase/migrations/` | Six incremental SQL migrations; the original base schema is absent |
 | `lib/**/*.test.ts` | Vitest unit, adapter, route/source, and migration-contract tests |
 | `e2e/`, `playwright.config.ts` | Logged-out auth, protected-route, keyboard, and responsive browser regression tests |
 | `app/*.{ico,png}` | Favicon and social metadata images |
@@ -87,7 +89,9 @@ The `(app)` directory is a route group and does not appear in URLs.
 | `/dashboard` | Page | Protected dashboard and viewing summaries |
 | `/search` | Page | Protected server-side TMDB title search; query key `q` |
 | `/library` | Page | Protected server-query library; canonical URL keys `q`, `status`, `watched`, `favourite`, `genre`, `director`, `year`, `yearFrom`, `yearTo`, `ratingMin`, `ratingMax`, `sort`, `view`, `page`, `perPage`; legacy `filter` is accepted |
-| `/library/[movieId]` | Dynamic page | Protected stored movie detail, personal management, and favourite toggle |
+| `/library/[movieId]` | Dynamic page | Protected stored movie detail, personal management, favourite toggle, and private custom-list membership editor |
+| `/lists` | Page | Protected private custom-list summaries, count, create/edit/delete actions, and poster previews |
+| `/lists/[listId]` | Dynamic page | Protected owned-list detail, library picker, ordering, and membership-only removal; invalid/missing/foreign UUIDs share one not-found result |
 | `/import` | Page | Protected seven-step CSV import |
 | `/watch-next` | Page | Protected ordered queue |
 | `/schedule` | Page | Protected scheduler and Today/Upcoming/Past groups |
@@ -155,6 +159,8 @@ Important limitation: there is no original base migration, schema dump, generate
 | `movies` | Shared TMDB-derived metadata | Shared ID, unique `tmdb_id`, titles, overview, poster/backdrop, release date/year, runtime, JSONB genres/cast/countries, director, language, public rating, trailer, metadata timestamp | Documented enabled; shared read policy not versioned |
 | `user_movies` | User-owned relationship between a user and shared movie | UUID `id`, `user_id`, bigint `movie_id`, status, `favourite`, rating, review, priority, queue, schedule, watched/rewatch, audit timestamps | Enabled; ownership is `auth.uid() = user_id` |
 | `user_preferences` | User-owned one-row-per-Auth-user defaults/preferences | UUID `user_id` PK/FK to `auth.users` with delete cascade, application/display/search/notification fields, audit timestamps | Enabled with explicit own-row policies |
+| `lists` | User-owned private custom-list metadata | UUID `id`, Auth `user_id`, normalized unique name per user, optional 500-character description, private-only visibility, audit timestamps | Enabled; own SELECT/INSERT/UPDATE/DELETE |
+| `list_movies` | Ordered membership from a list to a personal-library relationship | UUID `id`, cascading `list_id`, cascading UUID `user_movie_id`, positive unique-per-list position, audit timestamps | Enabled; every policy requires both owned parent list and owned `user_movies` row |
 
 `movies.tmdb_id` and `user_movies (user_id, movie_id)` are confirmed unique guards. Exact base FK DDL for `profiles`/`user_movies` is absent; confirm account-deletion cascades before production use.
 
@@ -168,6 +174,8 @@ Personal data placement is mandatory:
 - Status, `favourite`, `personal_rating`, review, priority, queue, schedule, watched data, and rewatch intent belong on `user_movies`.
 - Profile identity-adjacent presentation fields belong on `profiles`.
 - Application/display/search/notification choices belong on `user_preferences`.
+- Private collection metadata belongs on `lists`; ordered membership references
+  `user_movies.id` through `list_movies`, never `movies.id` or a TMDB ID.
 - `favourite` is never inferred from ratings and must never be moved to shared `movies`.
 
 ## 9. RLS and Database Privileges
@@ -178,7 +186,10 @@ Personal data placement is mandatory:
 | `movies` | Shared reads follow deployed policy; only the protected secret client performs metadata upserts |
 | `user_movies` | Existing own SELECT/UPDATE policies remain; Part 12 narrowly grants authenticated SELECT/UPDATE on `favourite`; existing INSERT/DELETE policies and base grants remain unversioned |
 | `user_preferences` | Own SELECT, INSERT, UPDATE policies; no normal DELETE policy |
+| `lists` | Own SELECT/INSERT/UPDATE/DELETE policies. Authenticated gets table SELECT/DELETE plus scoped INSERT (`user_id`, `name`, `description`) and UPDATE (`name`, `description`, `updated_at`) privileges |
+| `list_movies` | SELECT/INSERT/UPDATE/DELETE policies each require an owned parent list and owned referenced `user_movies` row. Authenticated gets table SELECT/DELETE plus scoped membership INSERT and position-only UPDATE privileges |
 | Query/queue/library RPCs | Security invoker, derive `auth.uid()`, accept no browser user ID, execute revoked from public/anon and granted to authenticated |
+| Part 13 list RPCs | Security invoker with fixed `public, pg_temp` search path, `auth.uid()`, per-list locks, public/anon execute revocation, authenticated execute only |
 
 Historical issue: `user_preferences` had correct RLS but only SELECT privilege for `authenticated`. The fix grants `SELECT`, `INSERT`, and `UPDATE`, never `DELETE`. RLS policies and SQL privileges are both required.
 
@@ -193,6 +204,7 @@ Nuance: `202607220003_user_settings.sql` used column-level preference grants, bu
 | `202607220003_user_settings.sql` | Ensures profile settings columns; creates preferences, checks, RLS, triggers/backfill, grants, and preference-aware add RPC | Unknown; deployment checklist still calls for manual application |
 | `202607230001_user_preferences_privileges.sql` | Grants authenticated SELECT/INSERT/UPDATE and backfills preference rows; no DELETE | Unknown; repository has no remote history |
 | `202607280001_part_12_library_improvements.sql` | Adds private `favourite`, five owner/query indexes, private row/facet query functions, and transactional bulk-status/bulk-delete functions | Deployed API exposes the bulk-removal function and the user reports Part 12 working; full migration parity/grants still need authenticated inspection |
+| `202607290001_part_13_private_custom_lists.sql` | Creates private `lists`/`list_movies`, constraints/indexes/triggers, eight RLS policies, scoped grants, one summary query, five atomic membership/order RPCs, and cascade-delete compaction | Created locally only; do not execute automatically. Apply manually after all five prior migrations and reload PostgREST |
 
 Original creation migrations for `profiles`, `movies`, and `user_movies` are absent. Contract tests inspect SQL text only; they do not prove remote application or multi-user isolation.
 
@@ -247,7 +259,7 @@ Status describes repository implementation, not unverified remote migrations.
 | Pagination | Complete | `/library`, `lib/library/supabase-query.ts` | Exact filtered count and server range; preferences/URL sizes 12/24/48/96 |
 | Multi-select | Complete | `components/library/library-selection-workspace.tsx` | Current visible page only; resets on URL scope change |
 | Bulk actions | Complete | Part 12 actions/RPCs | Status (scheduled excluded) and relationship deletion; atomic queue normalization |
-| Custom lists | Not started | None | Part 13 roadmap |
+| Private custom lists | Complete locally | `/lists`, `/lists/[listId]`, movie detail, `lib/lists/*` | Create/edit/delete, one-query summaries, library-only multi-add, confirmed membership removal, atomic up/down ordering, and multi-list movie membership; manual migration/live QA pending |
 | Recommendations | Not started | None | Part 14 roadmap |
 | Notifications | Deferred | Preferences only | Delivery planned for Part 18 |
 | Calendar integration | Deferred | None | Part 18 roadmap |
@@ -358,6 +370,16 @@ filter by both `user_movies.id` and verified `user_id`. Bulk requests accept at
 most 100 unique UUIDs, never a user ID; transactional RPCs reject a stale or
 foreign mixed selection before mutation and normalize the caller's queue.
 
+Part 13 list actions use the cookie-bound server client plus fresh
+`auth.getUser()`. The browser submits list, `list_movies`, and `user_movies`
+UUIDs only; it never submits a user ID. Every membership references
+`public.user_movies.id`, and each RLS predicate proves both parent-list and
+personal-library ownership. Mutations use security-invoker RPCs with a stable
+user-movie-then-list lock order. Deleting a list cascades membership rows only;
+deleting a library relationship cascades memberships and a statement trigger
+compacts every surviving affected list. Shared `movies` rows are never deleted
+or directly referenced by list membership.
+
 ## 18. Testing and Quality Commands
 
 | Command | Purpose |
@@ -377,7 +399,7 @@ foreign mixed selection before mutation and normalize the caller's queue.
 mocked-adapter, server-markup, route/source, and migration contracts; none use
 live Supabase. `playwright.config.ts` runs Chrome against the existing or
 auto-started local server. Current specs do not store authenticated state or
-test live Part 12 data.
+test live Part 12 or Part 13 data.
 
 The 2026-07-28 Playwright MCP pass exercised `/`, all public auth/error routes,
 and logged-out redirects for dashboard, search, library, Watch Next, schedule,
@@ -388,17 +410,28 @@ failure occurred. `/statistics` correctly exposed the repository's known 404.
 The generated signup fallback could not yield a confirmed QA session, so no
 authenticated or destructive library flow was attempted.
 
+The 2026-07-29 Part 13 Playwright MCP pass confirmed that anonymous `/lists`
+and a UUID `/lists/[listId]` redirect to `/auth/login`, while
+`/auth/sign-up` remains public and loads. Its development-server console
+reported repeated blocked HMR WebSocket handshakes for the `127.0.0.1` origin;
+no failed non-static application request was reported. The repository
+Playwright run supplies the reliable five-viewport public sign-up result. Authenticated list
+screenshots and mutation/isolation flows remain blocked by the unapplied
+migration and absence of two confirmed QA sessions.
+
 ### Last verified
 
 | Check | Status | Latest evidence |
 |---|---|---|
-| Lint | Passed | `npm run lint`, 2026-07-28 |
-| TypeScript | Passed | `npx tsc --noEmit`, 2026-07-28 |
-| Unit/contract tests | Passed | `npm test`: 35 files, 281 tests, 2026-07-29 |
-| Focused deletion/Part 12 tests | Passed | 7 files, 113 tests, 2026-07-29 |
-| Production route smoke | Passed | Logged-out `/auth/sign-up` and `/auth/login` returned 200; `/library`, `/dashboard`, `/settings` returned 307 to `/auth/login` |
-| Playwright public/protection E2E | Passed | `npm run test:e2e`: 3 files, 22 tests, 2026-07-29; auth semantics/errors, critical routes, keyboard order, and five viewports |
-| Authenticated Part 12 E2E/live RLS | Not verified | Playwright MCP redirects to login and no QA credentials/storage state exist; destructive single/bulk, status-specific, queue, stale/foreign, filter, and final-page scenarios were not run |
+| Lint | Passed | `npm run lint`, 2026-07-29 |
+| TypeScript | Passed | `npx tsc --noEmit`, 2026-07-29 |
+| Unit/contract tests | Passed | `npm test`: 41 files, 356 tests, 2026-07-29 |
+| Focused Part 13 tests | Passed | `npx vitest run lib/lists`: 6 files, 75 tests, 2026-07-29 |
+| Focused Part 13/Part 12 regressions | Passed | 13 files, 184 tests covering lists plus removal/query/bulk contracts, 2026-07-29 |
+| Live database integration | Not run | No local Supabase/PostgreSQL harness or applied Part 13 migration; source contracts and mocked adapters do not prove RLS, grants, cascades, or concurrency |
+| Production route smoke | Passed | Playwright MCP: `/auth/sign-up` loaded; anonymous `/lists` and UUID detail redirected to login |
+| Playwright public/protection E2E | Passed | `npm run test:e2e`: 3 files, 24 tests, 2026-07-29; auth semantics/errors, list protection, keyboard order, and five public sign-up viewports |
+| Authenticated Part 12/13 E2E/live RLS | Not verified | No QA credentials/storage states or applied Part 13 migration; destructive/list CRUD, membership, ordering, isolation, and requested authenticated screenshots were not run |
 | Production dependency audit | Failed | Three high transitive advisories remain under Next.js/PostCSS/sharp; no safe non-major npm fix is offered |
 | Production build | Passed | `npm run build` on Next.js `16.2.12`, 2026-07-29 |
 
@@ -428,9 +461,13 @@ Mark Passed only after that exact command succeeds.
 | Active | Import failure-report CSV quotes cells but does not neutralize formula-leading imported titles/messages |
 | Resolved locally | `/library` previously fetched every row before filtering/slicing; Part 12 now filters, counts, sorts, and ranges through a private database function |
 | Migration-dependent | Part 12 requires `202607280001_part_12_library_improvements.sql`; without it `/library` and favourite/bulk actions show a safe migration-required error |
+| Migration-dependent | Part 13 requires `202607290001_part_13_private_custom_lists.sql`; missing table, column/schema-cache, RPC, permission, validation, constraint, and generic database failures have distinct safe handling |
 | Active limitation | Part 12 literal substring search scans the authenticated member's joined library; it targets several hundred to about 1,000 movies and has no trigram/full-text index |
 | Active limitation | Selection is intentionally current-page only and clears on search/filter/sort/view/page changes; bulk `scheduled` is excluded because no date may be invented |
 | Operational unknown | Part 12 SQL/source and mocked adapters pass, but no approved QA identity or applied-migration evidence exists; authenticated search/filter/sort/pagination, favourites, selection, bulk actions, two-user RLS, native-dialog focus, and index plans remain browser-unverified |
+| Operational unknown | Part 13 SQL/source and mocked adapters pass, but the migration has not been applied here and no two confirmed QA identities/storage states exist; live RLS, grants, cascades, concurrency, authenticated CRUD/reorder/membership flows, and requested screenshots remain unverified |
+| Active limitation | The Add Movies picker returns at most 50 owner-scoped results per search and movie-detail membership reconciliation accepts at most 500 desired list UUIDs; list summaries are not paginated |
+| Active limitation | Part 13 membership writes share the Part 12 per-user advisory lock and row order, but the legacy full-library settings DELETE does not take that advisory lock; concurrent full-library deletion versus a list batch remains a live stress-test item |
 | Active security debt | `npm audit --omit=dev` reports three high transitive advisories through Next.js/PostCSS/sharp after updating to Next.js 16.2.12; do not apply npm's unsafe major/downgrade suggestion blindly |
 | Launch blocker | No TMDB attribution UI or resolved commercial movie-data licensing |
 | Troubleshooting note | Browser login “Failed to fetch” is not reproduced here; check public env names, Supabase URL/Auth redirect config, network/CORS, and browser extensions |
@@ -439,28 +476,27 @@ Migrations 1 and parts of 2 are not safely repeatable; never rerun old SQL blind
 
 ## 20. Current Project State
 
-- Latest implemented milestone: **Part 12 — search and library improvements (local code complete)**.
+- Latest implemented milestone: **Part 13 — private custom movie lists (local code complete)**.
 - Part 11 statistics/dashboard upgrade: **not evidenced in the repository**.
-- Next milestone: **Part 13 — custom lists**.
-- Branch/base HEAD: `master`, `fa235de` (`library-improvements-v1`); the single-removal fix is uncommitted. Tags `settings-v1` and misleading `statistics-v1` remain on `8f92cbe`.
-- Latest migration: `202607280001_part_12_library_improvements.sql`.
-- Latest feature set: private server search/facets, filters, stable sorts, pagination, grid/list views, favourites, current-page selection, and atomic bulk status/deletion.
-- Baseline Git state was clean; Part 12 files are now uncommitted.
-- Manual Supabase action: inspect base policies/grants and full Part 12 migration parity without rerunning old SQL blindly, then exercise RLS/queue behavior with two QA users.
-- Playwright MCP and the 22-test suite confirm public `/auth/sign-up`, invalid-login feedback, callback failure handling, protected-route redirects, keyboard order, and public responsive behavior; authenticated Part 12 coverage is blocked as described above.
+- Next milestone: **Part 14 — Movie Picker and Recommendations**.
+- Branch/base HEAD: `master`, `3cc82cb` (`part-12-complete`); Part 13 is uncommitted. Tags `settings-v1` and misleading `statistics-v1` remain on `8f92cbe`.
+- Latest migration: `202607290001_part_13_private_custom_lists.sql`.
+- Latest feature set: private list CRUD, scalable summaries, personal-library multi-add, atomic ordering/removal, cascade compaction, and movie-detail multi-list membership in addition to the completed Part 12 library tools.
+- Baseline Git state was clean; only Part 13 and related list-aware revalidation/documentation changes are now uncommitted.
+- Manual Supabase action: confirm the prior five migrations, apply only the Part 13 SQL file, reload PostgREST, run the documented verification SQL, and exercise RLS/order/cascade behavior with two QA users.
+- Logged-out Playwright coverage protects `/lists` and UUID detail URLs; authenticated Part 12/13 coverage is blocked as described above.
 - Missing `/statistics` is unimplemented functionality, not a runtime failure.
 
 ## 21. Next Development Queue
 
 This is the roadmap, not completed functionality.
 
-1. **Part 13 — Custom lists**
-2. **Part 14 — Movie picker and recommendations**
-3. **Part 15 — Testing and production hardening**
-4. **Part 16 — Preview deployment**
-5. **Part 17 — Public beta preparation**
-6. **Part 18 — Notifications and calendar integration**
-7. **Part 19 — Paid SaaS**
+1. **Part 14 — Movie Picker and Recommendations**
+2. **Part 15 — Testing and production hardening**
+3. **Part 16 — Preview deployment**
+4. **Part 17 — Public beta preparation**
+5. **Part 18 — Notifications and calendar integration**
+6. **Part 19 — Paid SaaS**
 
 ## 22. Part 12 Implementation Notes
 
@@ -477,7 +513,51 @@ Implemented contract:
 - Individual removal validates `userMovieId` as a UUID and passes a one-item selection through that same authenticated bulk-removal RPC. The RPC derives `auth.uid()`, rejects a stale or foreign ID without mutation, deletes only `user_movies`, and deliberately normalizes the queue after every successful removal.
 - Five indexes support added-date, status, favourite, personal-rating, and watched-date queries; shared title/genre/trigram indexes are deferred.
 
-## 23. Agent Handoff Protocol
+## 23. Part 13 Implementation Notes
+
+Implemented contract:
+
+- Routes: protected `/lists` summaries/CRUD and `/lists/[listId]` detail; the
+  stored-movie detail page now includes a private Custom Lists membership
+  editor. `My Lists` is in the authenticated shell and `/lists` is a protected
+  proxy prefix.
+- Main module: `lib/lists/{types,validation,errors,mapping,supabase-lists}.ts`;
+  Server Actions: `app/(app)/actions/lists.ts`; UI:
+  `components/lists/*`.
+- `lists` owns private name/description metadata. The normalized
+  case/whitespace-insensitive name index is unique per user. Visibility is
+  constrained to `private`.
+- `list_movies.user_movie_id` references the UUID `user_movies.id`. A movie can
+  be in multiple lists but only once per list. Deleting a list removes only its
+  memberships; deleting a personal-library row cascades memberships and
+  compacts surviving lists.
+- One owner-scoped summary RPC returns counts and at most four posters per list.
+  Detail rows use one joined request. The Add Movies picker reuses the Part 12
+  library query, caps results at 50, labels existing memberships, and submits
+  one ordered batch of at most 100 UUIDs.
+- Ordering uses a unique `(list_id, position)` constraint, the Part 12 per-user
+  advisory lock for cross-feature membership writes, per-list advisory locks,
+  Part 12's queue/creation/UUID relationship-row order, and deferred two-stage
+  positive positions. First-up and last-down are successful no-ops. Multi-list
+  movie-detail saves lock lists in stable order, preserve existing positions,
+  append new memberships, and compact removed lists atomically.
+- All list reads/mutations use the authenticated SSR client and fresh
+  `auth.getUser()` where required. No list operation imports the admin client,
+  accepts a browser user ID, exposes raw Postgres errors, caches private data
+  globally, or writes public metadata.
+- Tests:
+  `lib/lists/{validation,mapping,supabase-lists,actions,migration-contract,ui}.test.ts`;
+  route-protection coverage also includes `/lists` and one UUID detail URL.
+- Migration:
+  `supabase/migrations/202607290001_part_13_private_custom_lists.sql`. It is
+  intentionally unapplied by this work and must be applied manually after the
+  prior migrations, followed by a separate PostgREST schema reload.
+- Scaling limits: summaries are currently unpaginated, picker results are
+  capped at 50, movie batches at 100, and the movie-detail desired-list set at
+  500. Source/mocked tests do not prove live PostgreSQL RLS, privileges,
+  cascades, or concurrency.
+
+## 24. Agent Handoff Protocol
 
 Before starting any task, every coding agent must:
 
@@ -503,6 +583,38 @@ context elsewhere, or add secrets/actual environment values. Keep this document
 concise, internally consistent, and grounded in repository evidence.
 
 ## Context Change Log
+
+### 2026-07-29 - Codex Part 13 private custom movie lists
+
+- Added: protected `/lists` and `/lists/[listId]`, authenticated navigation,
+  private list create/edit/delete dialogs, one-query count/poster summaries,
+  personal-library search/filter/multi-add, accessible persisted up/down order,
+  confirmed membership-only removal, and movie-detail multi-list membership.
+- Database:
+  `supabase/migrations/202607290001_part_13_private_custom_lists.sql` creates
+  `lists`/`list_movies`, five justified index/index-backed structures, updated
+  timestamp triggers, eight RLS policies, scoped authenticated privileges, six
+  callable security-invoker functions, and statement-level cascade
+  compaction. The migration was created only, not applied remotely.
+- Security: membership always references `user_movies.id`; `auth.getUser()`
+  supplies identity; no browser user ID or admin client is used. Missing
+  table/column/RPC/schema cache, permission, validation, constraint, stale, and
+  generic database failures have distinct safe handling and logging remains
+  limited to `message`, `code`, `details`, and `hint`.
+- Preservation: Part 12 relationship deletions now revalidate list routes, and
+  the database membership-delete trigger keeps surviving list positions
+  sequential without modifying Part 12 queue RPCs or shared `movies`.
+- Tests: Part 13 focused 6 files/75 tests passed; focused Part 13 plus Part 12
+  deletion/query regressions 13 files/184 tests passed; full Vitest 41
+  files/356 tests, logged-out Playwright 24 tests, lint, direct TypeScript, and
+  production build passed.
+- Browser limitation: Playwright MCP verified logged-out list protection and
+  public sign-up only. The requested authenticated screenshots, CRUD/order,
+  two-user isolation, and live database/concurrency checks were not run because
+  the migration is intentionally unapplied and no QA credentials/storage
+  states exist.
+- Milestone: Part 13 is implemented locally; Part 14 Movie Picker and
+  Recommendations is next.
 
 ### 2026-07-29 - Codex single-movie removal fix
 
