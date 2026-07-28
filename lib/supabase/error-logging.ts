@@ -30,5 +30,5 @@ export function logSupabaseError(
     hint: typeof error.hint === "string" ? error.hint : null,
   };
 
-  console.error(`[WatchFlow] ${operation}`, safeError);
+  console.error(`[WatchFlow] ${operation} ${JSON.stringify(safeError)}`);
 }

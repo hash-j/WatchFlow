@@ -31,10 +31,6 @@ export interface LibraryDependencies {
     session: AuthenticatedLibrarySession,
     movieId: string,
   ): Promise<LibraryMovie | null>;
-  removeUserMovie(
-    session: AuthenticatedLibrarySession,
-    libraryId: string,
-  ): Promise<boolean>;
 }
 
 async function requireSession(dependencies: LibraryDependencies) {
@@ -75,17 +71,4 @@ export async function getLibraryMovie(
   }
 
   return dependencies.getUserMovie(session, movieId);
-}
-
-export async function removeMovieFromLibrary(
-  libraryId: string,
-  dependencies: LibraryDependencies,
-) {
-  const session = await requireSession(dependencies);
-
-  if (!isDatabaseIdentifier(libraryId)) {
-    return false;
-  }
-
-  return dependencies.removeUserMovie(session, libraryId);
 }

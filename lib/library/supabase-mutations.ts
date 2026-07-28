@@ -176,15 +176,15 @@ async function bulkUpdateStatus(
   return mapBulkResult(data, "updated");
 }
 
-async function bulkRemove(
+async function removeUserMovies(
   session: AuthenticatedLibrarySession,
-  libraryIds: string[],
+  userMovieIds: string[],
 ) {
   const { client } = mutationClient(session);
   const { data, error } = await client.rpc(
     "watchflow_bulk_remove_library_movies",
     {
-      p_user_movie_ids: libraryIds,
+      p_user_movie_ids: userMovieIds,
     },
   );
 
@@ -200,7 +200,6 @@ export function createSupabaseLibraryMutationDependencies(): LibraryMutationDepe
     authenticate,
     setFavourite,
     bulkUpdateStatus,
-    bulkRemove,
+    removeUserMovies,
   };
 }
-

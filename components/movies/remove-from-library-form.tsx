@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button";
 import { initialLibraryActionState } from "@/lib/library/action-state";
 
 type RemoveFromLibraryFormProps = {
-  libraryId: string;
+  userMovieId: string;
+  movieId: string;
   redirectAfterRemoval?: boolean;
 };
 
 export function RemoveFromLibraryForm({
-  libraryId,
+  userMovieId,
+  movieId,
   redirectAfterRemoval = false,
 }: RemoveFromLibraryFormProps) {
   const router = useRouter();
@@ -25,11 +27,28 @@ export function RemoveFromLibraryForm({
   );
 
   useEffect(() => {
-    if (state.status === "success" && redirectAfterRemoval) {
+    if (state.status !== "success") {
+      return;
+    }
+
+    setIsConfirming(false);
+
+    if (redirectAfterRemoval) {
       router.replace("/library");
       router.refresh();
+      return;
     }
+
+    router.refresh();
   }, [redirectAfterRemoval, router, state.status]);
+
+  if (state.status === "success") {
+    return (
+      <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300" role="status">
+        {state.message}
+      </p>
+    );
+  }
 
   if (!isConfirming) {
     return (
@@ -47,7 +66,8 @@ export function RemoveFromLibraryForm({
 
   return (
     <form action={action} className="space-y-2">
-      <input type="hidden" name="libraryId" value={libraryId} />
+      <input type="hidden" name="userMovieId" value={userMovieId} />
+      <input type="hidden" name="movieId" value={movieId} />
       <p className="text-xs font-medium">Remove this movie from your library?</p>
       <div className="flex flex-wrap gap-2">
         <Button type="submit" size="sm" variant="destructive" disabled={isPending}>

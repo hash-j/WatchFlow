@@ -366,6 +366,33 @@ describe("library pagination calculation", () => {
     });
   });
 
+  it("preserves query state when deletion clamps an emptied final page", () => {
+    const state = parseLibrarySearchParams({
+      q: "matrix",
+      status: "watched",
+      favourite: "favourites",
+      genre: "Science Fiction",
+      director: "Lana Wachowski",
+      sort: "title_asc",
+      view: "list",
+      page: "3",
+      perPage: "12",
+    }).state;
+    const pagination = getLibraryPagination(24, state.page, state.perPage);
+    const url = buildLibraryUrl(state, { page: pagination.page });
+
+    expect(pagination.page).toBe(2);
+    expect(url).toContain("q=matrix");
+    expect(url).toContain("status=watched");
+    expect(url).toContain("favourite=favourites");
+    expect(url).toContain("genre=Science+Fiction");
+    expect(url).toContain("director=Lana+Wachowski");
+    expect(url).toContain("sort=title_asc");
+    expect(url).toContain("view=list");
+    expect(url).toContain("perPage=12");
+    expect(url).toContain("page=2");
+  });
+
   it("handles an empty result set", () => {
     expect(getLibraryPagination(0, 4, 24)).toEqual({
       page: 1,
@@ -377,4 +404,3 @@ describe("library pagination calculation", () => {
     });
   });
 });
-

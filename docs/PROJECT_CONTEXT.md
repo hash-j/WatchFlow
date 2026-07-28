@@ -1,11 +1,11 @@
 # WatchFlow Project Context
 
-Last updated: 2026-07-28  
+Last updated: 2026-07-29
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 12 implemented locally; logged-out browser QA passed, while migration application and authenticated two-user verification remain; Part 13 is next
-Current branch: `master` based on `e3a72e9`; Part 12 changes are currently uncommitted
-Local status: Part 12 code, migration, tests, docs, and a Playwright suite are present; the target Supabase project was not modified
+Current phase: Part 12 implemented and the single-movie removal regression fixed locally; authenticated two-user browser verification remains; Part 13 is next
+Current branch: `master` at `fa235de` (`library-improvements-v1`); the single-removal fix is uncommitted
+Local status: Part 12 code is committed; the removal fix, focused tests, safe logging update, and this handoff update are local changes; no database schema or target data was modified
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
@@ -192,7 +192,7 @@ Nuance: `202607220003_user_settings.sql` used column-level preference grants, bu
 | `202607220002_schedule_queue_fixes.sql` | Adds `schedule_timezone`, checks, unique queue/schedule indexes, own SELECT/UPDATE policies, and atomic `move_watch_queue_item` RPC | Unknown; repository has no remote history |
 | `202607220003_user_settings.sql` | Ensures profile settings columns; creates preferences, checks, RLS, triggers/backfill, grants, and preference-aware add RPC | Unknown; deployment checklist still calls for manual application |
 | `202607230001_user_preferences_privileges.sql` | Grants authenticated SELECT/INSERT/UPDATE and backfills preference rows; no DELETE | Unknown; repository has no remote history |
-| `202607280001_part_12_library_improvements.sql` | Adds private `favourite`, five owner/query indexes, private row/facet query functions, and transactional bulk-status/bulk-delete functions | Not applied automatically; manual target-project application required |
+| `202607280001_part_12_library_improvements.sql` | Adds private `favourite`, five owner/query indexes, private row/facet query functions, and transactional bulk-status/bulk-delete functions | Deployed API exposes the bulk-removal function and the user reports Part 12 working; full migration parity/grants still need authenticated inspection |
 
 Original creation migrations for `profiles`, `movies`, and `user_movies` are absent. Contract tests inspect SQL text only; they do not prove remote application or multi-user isolation.
 
@@ -221,7 +221,7 @@ Status describes repository implementation, not unverified remote migrations.
 | Profiles | Complete | `/settings/profile` | Existing profile row required |
 | Movie search | Complete | `/search`, `lib/movies/*` | Title search only |
 | Add to library | Complete | `actions/library.ts`, `lib/library/service.ts` | Defaults read from preferences |
-| Remove from library | Complete | `/library/[movieId]` | Authenticated RPC and confirmation |
+| Remove from library | Complete locally | `/library`, `/library/[movieId]` | Single and bulk removal share the authenticated Part 12 relationship-delete RPC; live authenticated retest still needs a QA session |
 | Movie status | Complete | Movie detail form | Seven statuses |
 | Personal rating | Complete | Movie detail form | Decimal 0–10 |
 | Review | Complete | Movie detail form | Private, max 5,000 characters |
@@ -394,13 +394,13 @@ authenticated or destructive library flow was attempted.
 |---|---|---|
 | Lint | Passed | `npm run lint`, 2026-07-28 |
 | TypeScript | Passed | `npx tsc --noEmit`, 2026-07-28 |
-| Unit/contract tests | Passed | `npm test`: 34 files, 271 tests, 2026-07-28 |
-| Focused Part 12 tests | Passed | 9 files, 119 tests, 2026-07-28 |
+| Unit/contract tests | Passed | `npm test`: 35 files, 281 tests, 2026-07-29 |
+| Focused deletion/Part 12 tests | Passed | 7 files, 113 tests, 2026-07-29 |
 | Production route smoke | Passed | Logged-out `/auth/sign-up` and `/auth/login` returned 200; `/library`, `/dashboard`, `/settings` returned 307 to `/auth/login` |
-| Playwright public/protection E2E | Passed | 3 files, 22 tests; auth semantics/errors, critical routes, keyboard order, and five viewports |
-| Authenticated Part 12 E2E/live RLS | Not verified | No approved QA credentials/storage state; signup requires an unavailable confirmation channel; migration application is unknown |
+| Playwright public/protection E2E | Passed | `npm run test:e2e`: 3 files, 22 tests, 2026-07-29; auth semantics/errors, critical routes, keyboard order, and five viewports |
+| Authenticated Part 12 E2E/live RLS | Not verified | Playwright MCP redirects to login and no QA credentials/storage state exist; destructive single/bulk, status-specific, queue, stale/foreign, filter, and final-page scenarios were not run |
 | Production dependency audit | Failed | Three high transitive advisories remain under Next.js/PostCSS/sharp; no safe non-major npm fix is offered |
-| Production build | Passed | `npm run build` on Next.js `16.2.12`, 2026-07-28 |
+| Production build | Passed | `npm run build` on Next.js `16.2.12`, 2026-07-29 |
 
 Mark Passed only after that exact command succeeds.
 
@@ -415,6 +415,7 @@ Mark Passed only after that exact command succeeds.
 | Operational unknown | Preference backfill exists in SQL; existing profile/preference rows and onboarding triggers still require target-project verification |
 | Preserved boundary | Shared movie writes require the authenticated-first, server-only admin path; never weaken this to solve RLS errors |
 | Resolved/guarded | Empty FormData values previously caused numeric/date update errors; current validators map optional rating/date/text values safely |
+| Resolved locally | Individual removal called the undeployed legacy `watchflow_remove_library_movie(p_library_id)` RPC and failed with `PGRST202`; it now submits one validated `user_movies.id` UUID through the working Part 12 removal RPC shared with bulk deletion |
 | Migration-dependent | Queue reordering requires `move_watch_queue_item`; missing RPC errors are mapped to a migration message |
 | Migration-dependent | Scheduling requires `schedule_timezone`/`schedule_note`; missing columns are detected and reported |
 | Active | Detail-form schedule editing can use the wrong zone and fails to persist zone/note; use/fix the dedicated schedule contract |
@@ -441,11 +442,11 @@ Migrations 1 and parts of 2 are not safely repeatable; never rerun old SQL blind
 - Latest implemented milestone: **Part 12 — search and library improvements (local code complete)**.
 - Part 11 statistics/dashboard upgrade: **not evidenced in the repository**.
 - Next milestone: **Part 13 — custom lists**.
-- Branch/base HEAD: `master`, `e3a72e9`; tags `settings-v1` and misleading `statistics-v1` remain on `8f92cbe`; Part 12 is uncommitted.
+- Branch/base HEAD: `master`, `fa235de` (`library-improvements-v1`); the single-removal fix is uncommitted. Tags `settings-v1` and misleading `statistics-v1` remain on `8f92cbe`.
 - Latest migration: `202607280001_part_12_library_improvements.sql`.
 - Latest feature set: private server search/facets, filters, stable sorts, pagination, grid/list views, favourites, current-page selection, and atomic bulk status/deletion.
 - Baseline Git state was clean; Part 12 files are now uncommitted.
-- Manual Supabase action: inspect base policies/grants/equivalent indexes, apply only the new migration after prior migrations are confirmed, then exercise RLS/queue behavior with two users.
+- Manual Supabase action: inspect base policies/grants and full Part 12 migration parity without rerunning old SQL blindly, then exercise RLS/queue behavior with two QA users.
 - Playwright MCP and the 22-test suite confirm public `/auth/sign-up`, invalid-login feedback, callback failure handling, protected-route redirects, keyboard order, and public responsive behavior; authenticated Part 12 coverage is blocked as described above.
 - Missing `/statistics` is unimplemented functionality, not a runtime failure.
 
@@ -473,6 +474,7 @@ Implemented contract:
 - Favourite belongs to `public.user_movies`; direct updates use the authenticated client plus relationship/owner filters.
 - Bulk status excludes `scheduled`, appends new Watch Next rows in display order, compacts departures, never invents `watched_at`, and preserves latent schedules.
 - Bulk deletion removes only selected owned `user_movies`, never `movies`, and compacts the queue transactionally; mixed stale/foreign selections cause no mutation.
+- Individual removal validates `userMovieId` as a UUID and passes a one-item selection through that same authenticated bulk-removal RPC. The RPC derives `auth.uid()`, rejects a stale or foreign ID without mutation, deletes only `user_movies`, and deliberately normalizes the queue after every successful removal.
 - Five indexes support added-date, status, favourite, personal-rating, and watched-date queries; shared title/genre/trigram indexes are deferred.
 
 ## 23. Agent Handoff Protocol
@@ -501,6 +503,15 @@ context elsewhere, or add secrets/actual environment values. Keep this document
 concise, internally consistent, and grounded in repository evidence.
 
 ## Context Change Log
+
+### 2026-07-29 - Codex single-movie removal fix
+
+- Diagnosed: the card already submitted `user_movies.id`; the original deployed error was `PGRST202` because `watchflow_remove_library_movie(p_library_id)` was absent from the PostgREST schema cache, whose hint named the available Part 12 bulk-removal function.
+- Changed: retired the legacy single-delete adapter, renamed the browser boundary to `userMovieId`, routed one-item removal through the shared authenticated Part 12 helper, added specific safe messages, exact affected-route revalidation, refresh/success behavior, and persisted safe Supabase error fields only.
+- Database/queue: no migration or target-data change; deletion remains `user_movies`-only and the existing transactional Part 12 RPC deliberately normalizes the caller's queue after all removals.
+- Tests: focused deletion/Part 12 tests passed (7 files, 113 tests); full Vitest passed (35 files, 281 tests); logged-out/public Playwright passed (22 tests); lint, direct TypeScript, and production build passed.
+- Browser limitation: Playwright MCP had no authenticated session or QA credentials, so the requested destructive status/queue/two-user/filter/pagination matrix was not executed and is not claimed as passed.
+- Part 12 status: local implementation and automated regression coverage are complete; authenticated destructive QA remains before final live sign-off.
 
 ### 2026-07-28 - Codex browser QA hardening
 

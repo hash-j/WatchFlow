@@ -8,10 +8,12 @@ import {
   bulkRemoveLibraryMovies,
   bulkUpdateLibraryStatus,
   MAX_LIBRARY_BULK_SIZE,
+  removeLibraryMovie,
   setLibraryMovieFavourite,
   validateBulkLibraryStatus,
   validateFavourite,
   validateLibrarySelection,
+  validateUserMovieId,
   type LibraryMutationDependencies,
 } from "./mutations";
 
@@ -36,7 +38,7 @@ function dependencies(
       failed: 0,
       reason: null,
     }),
-    bulkRemove: vi.fn().mockResolvedValue({
+    removeUserMovies: vi.fn().mockResolvedValue({
       success: true,
       requested: 2,
       matched: 2,
@@ -60,6 +62,9 @@ describe("bulk library input validation", () => {
   it("rejects an invalid selected ID", () => {
     expect(() => validateLibrarySelection(["movie-42"])).toThrow(
       LibraryValidationError,
+    );
+    expect(() => validateUserMovieId("movie-42")).toThrow(
+      "The selected library record was invalid.",
     );
   });
 
@@ -117,9 +122,12 @@ describe("authenticated library mutations", () => {
     await expect(
       bulkRemoveLibraryMovies([firstId], deps),
     ).rejects.toBeInstanceOf(AuthenticationRequiredError);
+    await expect(
+      removeLibraryMovie(firstId, deps),
+    ).rejects.toBeInstanceOf(AuthenticationRequiredError);
     expect(deps.setFavourite).not.toHaveBeenCalled();
     expect(deps.bulkUpdateStatus).not.toHaveBeenCalled();
-    expect(deps.bulkRemove).not.toHaveBeenCalled();
+    expect(deps.removeUserMovies).not.toHaveBeenCalled();
   });
 
   it("adds and removes a favourite on the user_movies record ID", async () => {
@@ -163,10 +171,21 @@ describe("authenticated library mutations", () => {
 
     await bulkRemoveLibraryMovies([firstId, secondId], deps);
 
-    expect(deps.bulkRemove).toHaveBeenCalledWith(
+    expect(deps.removeUserMovies).toHaveBeenCalledWith(
       expect.objectContaining({ userId: "verified-user" }),
       [firstId, secondId],
     );
   });
-});
 
+  it("removes one validated user_movies UUID through the shared deletion helper", async () => {
+    const deps = dependencies();
+
+    await removeLibraryMovie(firstId, deps);
+
+    expect(deps.removeUserMovies).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "verified-user" }),
+      [firstId],
+    );
+    expect(deps.removeUserMovies).toHaveBeenCalledTimes(1);
+  });
+});

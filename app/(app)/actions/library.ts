@@ -19,12 +19,10 @@ import {
 import {
   bulkRemoveLibraryMovies,
   bulkUpdateLibraryStatus,
+  removeLibraryMovie,
   setLibraryMovieFavourite,
 } from "@/lib/library/mutations";
-import {
-  addMovieToLibrary,
-  removeMovieFromLibrary,
-} from "@/lib/library/service";
+import { addMovieToLibrary } from "@/lib/library/service";
 import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
 import { createSupabaseLibraryMutationDependencies } from "@/lib/library/supabase-mutations";
 import {
@@ -70,6 +68,7 @@ function getActionErrorMessage(error: unknown) {
 function revalidateLibraryViews() {
   revalidatePath("/dashboard");
   revalidatePath("/library", "layout");
+  revalidatePath("/statistics");
   revalidatePath("/watch-next");
   revalidatePath("/schedule");
 }
@@ -110,23 +109,39 @@ export async function removeMovieAction(
   _previousState: LibraryActionState,
   formData: FormData,
 ): Promise<LibraryActionState> {
-  const libraryId = formData.get("libraryId");
-
   try {
-    const removed = await removeMovieFromLibrary(
-      typeof libraryId === "string" ? libraryId : "",
-      createSupabaseLibraryDependencies(),
+    const result = await removeLibraryMovie(
+      formData.get("userMovieId"),
+      createSupabaseLibraryMutationDependencies(),
     );
 
-    if (!removed) {
-      return { status: "error", message: "That library item was not found." };
+    if (!result.success || result.matched !== 1 || result.affected !== 1) {
+      return {
+        status: "error",
+        message: "This movie is no longer in your library.",
+      };
     }
 
+    revalidateMovieDetail(formData.get("movieId"));
     revalidateLibraryViews();
 
     return { status: "success", message: "Removed from your library." };
   } catch (error) {
-    return { status: "error", message: getActionErrorMessage(error) };
+    if (error instanceof AuthenticationRequiredError) {
+      return { status: "error", message: "Please sign in again." };
+    }
+
+    if (error instanceof LibraryValidationError) {
+      return {
+        status: "error",
+        message: "The selected library record was invalid.",
+      };
+    }
+
+    return {
+      status: "error",
+      message: "The movie could not be removed. Please try again.",
+    };
   }
 }
 

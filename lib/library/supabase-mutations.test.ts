@@ -203,7 +203,7 @@ describe("Supabase bulk library RPCs", () => {
     const client = { rpc } as unknown as SupabaseClient;
 
     await expect(
-      createSupabaseLibraryMutationDependencies().bulkRemove(
+      createSupabaseLibraryMutationDependencies().removeUserMovies(
         { userId: "verified-user-id", client },
         [libraryId],
       ),
@@ -230,17 +230,16 @@ describe("Supabase bulk library RPCs", () => {
     const dependencies = createSupabaseLibraryMutationDependencies();
 
     await expect(
-      dependencies.bulkRemove(
+      dependencies.removeUserMovies(
         { userId: "verified-user-id", client: unauthorized },
         [libraryId],
       ),
     ).rejects.toBeInstanceOf(LibraryAuthorizationError);
     await expect(
-      dependencies.bulkRemove(
+      dependencies.removeUserMovies(
         { userId: "verified-user-id", client: missing },
         [libraryId],
       ),
     ).rejects.toBeInstanceOf(LibrarySchemaError);
   });
 });
-

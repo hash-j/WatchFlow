@@ -43,9 +43,9 @@ export interface LibraryMutationDependencies {
     libraryIds: string[],
     status: BulkLibraryStatus,
   ): Promise<BulkLibraryMutationResult>;
-  bulkRemove(
+  removeUserMovies(
     session: AuthenticatedLibrarySession,
-    libraryIds: string[],
+    userMovieIds: string[],
   ): Promise<BulkLibraryMutationResult>;
 }
 
@@ -101,10 +101,10 @@ export function validateFavourite(value: unknown) {
   return result.data === true || result.data === "true";
 }
 
-function validateLibraryUuid(value: unknown) {
+export function validateUserMovieId(value: unknown) {
   const result = uuidSchema.safeParse(value);
   if (!result.success) {
-    throw new LibraryValidationError("That library item is invalid.");
+    throw new LibraryValidationError("The selected library record was invalid.");
   }
 
   return result.data;
@@ -129,7 +129,7 @@ export async function setLibraryMovieFavourite(
   const session = await requireMutationSession(dependencies);
   return dependencies.setFavourite(
     session,
-    validateLibraryUuid(libraryId),
+    validateUserMovieId(libraryId),
     validateFavourite(favourite),
   );
 }
@@ -152,9 +152,18 @@ export async function bulkRemoveLibraryMovies(
   dependencies: LibraryMutationDependencies,
 ) {
   const session = await requireMutationSession(dependencies);
-  return dependencies.bulkRemove(
+  return dependencies.removeUserMovies(
     session,
     validateLibrarySelection(libraryIds),
   );
 }
 
+export async function removeLibraryMovie(
+  userMovieId: unknown,
+  dependencies: LibraryMutationDependencies,
+) {
+  const session = await requireMutationSession(dependencies);
+  return dependencies.removeUserMovies(session, [
+    validateUserMovieId(userMovieId),
+  ]);
+}

@@ -40,7 +40,6 @@ function createDependencies(
     insertUserMovie: vi.fn().mockResolvedValue("added"),
     listUserMovies: vi.fn().mockResolvedValue([]),
     getUserMovie: vi.fn().mockResolvedValue(null),
-    removeUserMovie: vi.fn().mockResolvedValue(true),
     ...overrides,
   };
 }

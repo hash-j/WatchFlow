@@ -62,7 +62,7 @@ export function LibraryMovieCard({ item }: { item: LibraryMovieSummary }) {
       </Link>
       <div className="mt-auto border-t px-1 pt-3">
         <LibraryItemActions
-          libraryId={item.libraryId}
+          userMovieId={item.libraryId}
           movieId={item.movie.id}
           title={item.movie.title}
           favourite={item.favourite}

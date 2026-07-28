@@ -9,12 +9,12 @@ import {
 } from "./library-selection-workspace";
 
 export function LibraryItemActions({
-  libraryId,
+  userMovieId,
   movieId,
   title,
   favourite,
 }: {
-  libraryId: string;
+  userMovieId: string;
   movieId: string;
   title: string;
   favourite: boolean;
@@ -23,15 +23,20 @@ export function LibraryItemActions({
 
   return (
     <div className="flex flex-wrap items-start gap-2">
-      <LibrarySelectionCheckbox libraryId={libraryId} title={title} />
+      <LibrarySelectionCheckbox libraryId={userMovieId} title={title} />
       <FavouriteToggleForm
-        libraryId={libraryId}
+        libraryId={userMovieId}
         movieId={movieId}
         title={title}
         favourite={favourite}
         compact
       />
-      {!isSelecting ? <RemoveFromLibraryForm libraryId={libraryId} /> : null}
+      {!isSelecting ? (
+        <RemoveFromLibraryForm
+          userMovieId={userMovieId}
+          movieId={movieId}
+        />
+      ) : null}
     </div>
   );
 }

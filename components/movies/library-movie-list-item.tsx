@@ -42,7 +42,7 @@ export function LibraryMovieListItem({ item }: { item: LibraryMovieSummary }) {
       </div>
       <div className="min-w-0 sm:min-w-48">
         <LibraryItemActions
-          libraryId={item.libraryId}
+          userMovieId={item.libraryId}
           movieId={item.movie.id}
           title={item.movie.title}
           favourite={item.favourite}

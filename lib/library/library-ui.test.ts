@@ -160,6 +160,37 @@ describe("Part 12 library UI contracts", () => {
     expect(actions).toBeGreaterThan(linkEnd);
   });
 
+  it("submits the personal relationship UUID separately from the shared movie ID", () => {
+    const card = source("components/movies/library-movie-card.tsx");
+    const listItem = source("components/movies/library-movie-list-item.tsx");
+    const actions = source("components/library/library-item-actions.tsx");
+    const removeForm = source(
+      "components/movies/remove-from-library-form.tsx",
+    );
+
+    expect(card).toContain("userMovieId={item.libraryId}");
+    expect(listItem).toContain("userMovieId={item.libraryId}");
+    expect(actions).toContain("userMovieId={userMovieId}");
+    expect(removeForm).toContain(
+      'name="userMovieId" value={userMovieId}',
+    );
+    expect(removeForm).toContain('name="movieId" value={movieId}');
+    expect(removeForm).not.toContain('name="libraryId"');
+  });
+
+  it("uses the Part 12 user_movies deletion architecture for single removal", () => {
+    const legacyAdapter = source("lib/library/supabase-library.ts");
+    const mutationAdapter = source("lib/library/supabase-mutations.ts");
+    const action = source("app/(app)/actions/library.ts");
+
+    expect(legacyAdapter).not.toContain("watchflow_remove_library_movie");
+    expect(action).toContain("removeLibraryMovie");
+    expect(mutationAdapter).toContain(
+      '"watchflow_bulk_remove_library_movies"',
+    );
+    expect(mutationAdapter).not.toContain('.from("movies").delete');
+  });
+
   it("provides keyboard-operable current-page selection and confirmations", () => {
     const selection = source(
       "components/library/library-selection-workspace.tsx",
