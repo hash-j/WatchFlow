@@ -320,11 +320,146 @@ picker has no pagination beyond its first 50 results; the movie-detail selector
 is capped at 500 private lists; and final authenticated responsive/browser
 verification remains pending.
 
+## Part 14: random movie picker and rule-based recommendations
+
+Part 14 adds two protected, private-library discovery routes without changing
+the database schema:
+
+- `/picker` filters the authenticated member's stored library and chooses one
+  eligible movie on the server.
+- `/recommendations` scores and groups eligible unwatched movies using explicit
+  metadata and personal-library rules.
+
+The authenticated navigation and proxy include both routes. Logged-out requests
+redirect to `/auth/login`, and the `(app)` layout remains the defense-in-depth
+authentication boundary.
+
+### Part 14 module and query plan
+
+- Add `lib/discovery/types.ts` for the bounded discovery dataset and picker,
+  mood, seed, score, reason, section, and cold-start types.
+- Add `lib/discovery/moods.ts` for normalized genres and the centralized eight
+  mood definitions.
+- Add `lib/discovery/picker.ts` for URL parsing, filter matching, exclusion
+  validation, secure random selection, and match explanations.
+- Add `lib/discovery/recommendations.ts` for seed fallback, genre/director
+  insights, scoring, stable tie-breaking, deduplication, soft diversity,
+  reasons, and cold starts.
+- Add `lib/discovery/mapping.ts`, `errors.ts`, and
+  `supabase-discovery.ts` for defensive result mapping, safe error
+  classification, and the only database read boundary.
+- Keep pages as Server Components and use small Client Components only for
+  pending picker state, the bounded recent-pick exclusion list, recommendation
+  refresh, and existing mutation forms.
+
+`getDiscoveryDataset()` uses a fresh `auth.getUser()` result, the normal
+authenticated SSR client, an explicit owner filter, and RLS. It selects only
+the required `user_movies` and joined `movies` columns, obtains an exact total,
+orders deterministically, and processes at most rows 0 through 999. It returns
+an honest truncation flag and never selects or accepts `user_id`.
+
+The query is request scoped. Do not add global caching, static generation,
+public metadata, local/session storage, an admin-client read, a TMDB call, or a
+full-library Client Component payload.
+
+### Picker implementation contract
+
+- Preserve filters through validated URL parameters: `genre`, `maxRuntime`,
+  `minRating`, `mood`, `period`, `watched`, `watchNext`, and `favourite`.
+- Default to Unwatched. Watch Next-only requires exact `watch_next` status and
+  overrides conflicting watched state without reordering the queue.
+- Offer only normalized genres represented in the bounded private dataset.
+- Support runtime maxima of 90, 120, 150, and 180 minutes; public-rating
+  decimals from 0 through 10; and Before 1980 plus decade periods through the
+  2020s.
+- Exclude missing runtime, public rating, or year only when its corresponding
+  filter is active.
+- Apply explicit genre and mood filters cumulatively.
+- Keep at most 50 valid, unique recent `user_movies.id` UUIDs in component
+  memory. Choose securely from unseen eligible records and reset the cycle only
+  when every eligible record has been seen.
+- Show exact filter reasons, a no-match state, clear-filter actions, stored
+  movie details, and existing Watch Next/favourite/custom-list shortcuts
+  without mutating merely because a movie was picked.
+
+Centralized moods are:
+
+- Exciting: Action or Adventure
+- Relaxing: Animation, Comedy, or Romance, runtime at most 130 minutes
+- Funny: Comedy
+- Emotional: Drama or Romance
+- Dark: Crime, Horror, or Thriller
+- Intense: Action, Crime, Thriller, or War
+- Mind-Bending: Mystery, Science Fiction, or Thriller
+- Family-oriented: Adventure, Animation, or Family, with an explicit
+  certification-data caution
+
+### Recommendation implementation contract
+
+- Candidate statuses are `want_to_watch`, `watch_next`, `scheduled`, and
+  `on_hold`. Exclude `currently_watching`, `watched`, and `dropped`.
+- Prefer seeds with personal rating at least 8. Progressively supplement them
+  with favourite watched movies, watched movies rated at least 7, supported
+  genre history, directors with at least two ratings averaging 7 or higher,
+  and publicly highly rated eligible movies. Keep at most five seeds, render
+  the strongest three seed sections, and show at most three results per seed.
+- Score shared genres at +4 each capped at +12; same director +3; release years
+  within 10 years +1; runtimes within 30 minutes +1; candidate favourite +1;
+  Watch Next +1; public rating 7+/8+ at +1/+2; and seed personal rating 9/10 at
+  +1/+2.
+- Treat missing metadata as absent evidence, not low quality. Never recommend a
+  seed to itself.
+- Use stable ties, deduplicate across all sections, and apply soft
+  genre/director diversity or refresh ordering only within two points of the
+  current top score.
+- Render at most 16 total results with concrete reasons. Show only supported
+  per-seed, highly rated genre, highly rated director, Watch Next, or public
+  rating sections.
+- Distinguish empty library, no eligible candidates, no ratings, and no
+  suitable recommendations with useful navigation actions.
+- Label the page and explanation as rule-based; do not use AI or predictive
+  claims.
+
+### Database and integration decision
+
+Create no Part 14 migration. Do not add a recommendation-results table,
+feedback table, index, RPC, trigger, policy, or grant. The bounded query uses
+existing Part 12 indexes and the deployed shared metadata.
+
+Reuse `bulkUpdateStatusAction` and
+`watchflow_bulk_update_library_status(uuid[], text)` for a one-movie Watch Next
+shortcut. Reuse the existing favourite action and the stored movie-detail
+custom-list membership workflow. Add `/picker` and `/recommendations`
+revalidation to library add/remove/favourite/bulk mutations, management
+changes, CSV import, and full-library deletion.
+
+### Part 14 quality and QA checklist
+
+- Add pure picker parsing/matching/randomness/mood tests, recommendation
+  seed/scoring/diversity/reason/cold-start tests, defensive mapping tests, and
+  authenticated-adapter/source security contracts.
+- Add logged-out route-protection tests for both new routes and retain the
+  canonical `/auth/sign-up` non-404 guard.
+- With confirmed QA users, exercise picker filters, every mood, repeat
+  avoidance, no-match behavior, URL refresh, recommendation seed/fallback
+  sections, reasons, mutation shortcuts, and two-user isolation.
+- Exercise 375x667, 390x844, 768x1024, 1366x768, and 1440x900 viewports and
+  capture the requested picker/recommendation screenshots.
+- Inspect browser console, hydration, failed requests, HTTP failures, image
+  handling, keyboard order, focus movement, and horizontal overflow.
+- Re-run lint, direct TypeScript, the full unit/integration suite, focused
+  discovery tests, Playwright, production build, and practical existing-route
+  regressions. Record outcomes only after the commands complete.
+
+Known MVP limits: one request processes at most the newest 1,000 owned
+relationships, recent picker exclusions are capped at 50 and remain in
+component memory, recommendation output is capped at 16, and authenticated
+two-user browser verification still depends on available confirmed sessions.
+
 ## Next milestones
 
-1. Part 14 — Movie picker and recommendations.
-2. Part 15 — Testing and production hardening.
-3. Part 16 — Preview deployment.
-4. Part 17 — Public beta preparation.
-5. Part 18 — Notifications and calendar integration.
-6. Part 19 — Paid SaaS.
+1. Part 15 — Testing and production hardening.
+2. Part 16 — Preview deployment.
+3. Part 17 — Public beta preparation.
+4. Part 18 — Notifications and calendar integration.
+5. Part 19 — Paid SaaS.

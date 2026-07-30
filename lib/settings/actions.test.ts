@@ -150,6 +150,8 @@ describe("settings Server Actions", () => {
       "/library",
       "/watch-next",
       "/schedule",
+      "/picker",
+      "/recommendations",
       "/settings/data",
     ]) {
       expect(mocks.revalidatePath).toHaveBeenCalledWith(path);

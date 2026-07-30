@@ -31,6 +31,8 @@ function revalidateMovieViews() {
   revalidatePath("/watch-next");
   revalidatePath("/schedule");
   revalidatePath("/lists", "layout");
+  revalidatePath("/picker");
+  revalidatePath("/recommendations");
 }
 
 function revalidateMovieDetail(movieId: string) {

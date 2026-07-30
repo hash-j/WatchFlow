@@ -3,9 +3,9 @@
 Last updated: 2026-07-29
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 13 private custom lists implemented locally; manual migration application and authenticated two-user browser/RLS verification remain; Part 14 is next
-Current branch: `master` at `3cc82cb` (`part-12-complete`); Part 13 is uncommitted
-Local status: The baseline was clean and already included the Part 12 single-removal fix; Part 13 application, migration, tests, and documentation are local changes; no remote database schema or target data was modified
+Current phase: Part 14 random movie picker and rule-based recommendations implemented locally; authenticated two-user browser verification remains
+Current branch: `master` at `3987a65` (`part-13-complete`, `part-13-custom-lists`); Part 14 is uncommitted
+Local status: The inspected baseline was clean and already included Parts 12 and 13; Part 14 application, tests, and documentation are local changes; no remote database schema or target data was modified
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
@@ -21,9 +21,16 @@ The implemented flow is:
 4. Track status, rating, review, priority, watched date, and rewatch intent.
 5. Order a Watch Next queue or schedule a local date/time and IANA timezone.
 6. Organize personal-library movies into ordered private custom lists.
-7. Import a downloaded CSV, export private data, and manage account settings.
+7. Pick a filtered random library movie or review transparent, rule-based
+   recommendations from the private library.
+8. Import a downloaded CSV, export private data, and manage account settings.
 
-The product currently supports authentication, profiles, title search, private libraries, movie management, queueing, scheduling, favourites, private custom lists, CSV import, CSV/JSON export, settings, and basic dashboard summaries. It does **not** contain a statistics page, charts, public/shared lists, recommendations, notification delivery, calendar sync, or payments.
+The product currently supports authentication, profiles, title search, private
+libraries, movie management, queueing, scheduling, favourites, private custom
+lists, a random picker, rule-based recommendations, CSV import, CSV/JSON
+export, settings, and basic dashboard summaries. It does **not** contain a
+statistics page, charts, public/shared lists, AI recommendations, notification
+delivery, calendar sync, or payments.
 
 The direction remains a production-oriented SaaS, but paid launch is deferred. The repository contains no billing implementation or proof of a production deployment.
 
@@ -53,14 +60,15 @@ Notable version risks: Next.js is installed at `16.2.12`, while `eslint-config-n
 | Path | Purpose |
 |---|---|
 | `app/` | The only App Router root; public/auth routes and protected `(app)` route group |
-| `app/(app)/actions/` | Library, management, CSV-import, and Part 13 list Server Actions |
-| `components/` | Auth, shell, movie, import, settings, Part 12 library controls, Part 13 list UI, and reusable UI components |
+| `app/(app)/actions/` | Library, management, CSV-import, Part 13 list, and Part 14 picker Server Actions |
+| `components/` | Auth, shell, movie, import, settings, library/list UI, Part 14 discovery UI, and reusable UI components |
 | `lib/auth/` | Safe redirect validation and auth route contracts |
 | `lib/movies/` | Provider contract, TMDB adapter/mapper, movie types, validation |
 | `lib/library/` | Legacy/detail library service plus Part 12 query parsing, URL state, mapping, selection, mutations, queue, schedule, and Supabase adapters |
 | `lib/import/` | CSV parsing, mapping, validation, matching, confirmation, persistence |
 | `lib/settings/` | Settings adapters/types, formatting, exports, and data controls |
 | `lib/lists/` | Part 13 list types, Zod validation, defensive mapping, safe errors, authenticated queries/mutations, and tests |
+| `lib/discovery/` | Part 14 private dataset adapter, mapping, picker validation/matching, mood rules, recommendation scoring/diversity, errors, types, and tests |
 | `lib/supabase/` | Browser, server, proxy, auth-context, admin, and safe-error modules |
 | `docs/` | Architecture, database, product, implementation plan, and this canonical context |
 | `supabase/migrations/` | Six incremental SQL migrations; the original base schema is absent |
@@ -92,6 +100,8 @@ The `(app)` directory is a route group and does not appear in URLs.
 | `/library/[movieId]` | Dynamic page | Protected stored movie detail, personal management, favourite toggle, and private custom-list membership editor |
 | `/lists` | Page | Protected private custom-list summaries, count, create/edit/delete actions, and poster previews |
 | `/lists/[listId]` | Dynamic page | Protected owned-list detail, library picker, ordering, and membership-only removal; invalid/missing/foreign UUIDs share one not-found result |
+| `/picker` | Page | Protected random picker using explicit private-library filters, URL filter state, and session-memory repeat avoidance |
+| `/recommendations` | Page | Protected transparent rule-based recommendations from eligible unwatched private-library movies |
 | `/import` | Page | Protected seven-step CSV import |
 | `/watch-next` | Page | Protected ordered queue |
 | `/schedule` | Page | Protected scheduler and Today/Upcoming/Past groups |
@@ -113,7 +123,9 @@ No `/statistics` or `/api/*` route exists. Loading, error, not-found, layout, fa
 - Server client: `lib/supabase/server.ts`; one request-scoped client using `cookies()`.
 - Session proxy: root `proxy.ts` delegates to `lib/supabase/proxy.ts`, preserves every Supabase cookie mutation, calls `auth.getClaims()`, and redirects anonymous protected prefixes to `/auth/login`.
 - The protected `app/(app)/layout.tsx` repeats the verified-claims boundary through `lib/supabase/auth.ts` and owner-filters the profile by `claims.sub`.
-- Settings, library mutations, imports, exports, and destructive operations use fresh `auth.getUser()` checks where current Auth-server data is required.
+- Settings, library mutations, imports, exports, discovery reads, and
+  destructive operations use fresh `auth.getUser()` checks where current
+  Auth-server data is required.
 - Login calls `signInWithPassword()`, then replaces navigation with `/dashboard` and refreshes Server Components.
 - Signup calls `signUp()` with an email redirect to `/auth/callback?next=/dashboard`, then shows `/auth/sign-up-success`.
 - `/auth/callback` supports PKCE `code` exchange and token-hash OTP verification;
@@ -260,7 +272,8 @@ Status describes repository implementation, not unverified remote migrations.
 | Multi-select | Complete | `components/library/library-selection-workspace.tsx` | Current visible page only; resets on URL scope change |
 | Bulk actions | Complete | Part 12 actions/RPCs | Status (scheduled excluded) and relationship deletion; atomic queue normalization |
 | Private custom lists | Complete locally | `/lists`, `/lists/[listId]`, movie detail, `lib/lists/*` | Create/edit/delete, one-query summaries, library-only multi-add, confirmed membership removal, atomic up/down ordering, and multi-list movie membership; manual migration/live QA pending |
-| Recommendations | Not started | None | Part 14 roadmap |
+| Random movie picker | Complete locally | `/picker`, `lib/discovery/*` | URL filters, eight moods, secure server selection, capped session-memory repeat avoidance; authenticated browser QA pending |
+| Rule-based recommendations | Complete locally | `/recommendations`, `lib/discovery/*` | Transparent seeds, scoring, concrete reasons, diversity, refresh, and cold starts; authenticated two-user QA pending |
 | Notifications | Deferred | Preferences only | Delivery planned for Part 18 |
 | Calendar integration | Deferred | None | Part 18 roadmap |
 | Payments | Deferred | None | Part 19 only after separate design/licensing |
@@ -399,7 +412,7 @@ or directly referenced by list membership.
 mocked-adapter, server-markup, route/source, and migration contracts; none use
 live Supabase. `playwright.config.ts` runs Chrome against the existing or
 auto-started local server. Current specs do not store authenticated state or
-test live Part 12 or Part 13 data.
+test live Part 12, Part 13, or Part 14 data.
 
 The 2026-07-28 Playwright MCP pass exercised `/`, all public auth/error routes,
 and logged-out redirects for dashboard, search, library, Watch Next, schedule,
@@ -419,19 +432,30 @@ Playwright run supplies the reliable five-viewport public sign-up result. Authen
 screenshots and mutation/isolation flows remain blocked by the unapplied
 migration and absence of two confirmed QA sessions.
 
+The 2026-07-29 Part 14 Playwright MCP pass confirmed anonymous `/picker` and
+`/recommendations` redirect to `/auth/login`; `/auth/sign-up` remained public,
+rendered its `Sign up` heading at 390x844, matched the 390px document width, and
+kept inspected controls inside the viewport. No non-static failed request or
+application/hydration error was observed. The MCP development connection again
+reported only its repeated HMR WebSocket handshake failure. The repository has
+no QA credentials or authenticated storage states, so none of the requested
+authenticated picker/recommendation/two-user flows or discovery screenshots
+were run.
+
 ### Last verified
 
 | Check | Status | Latest evidence |
 |---|---|---|
 | Lint | Passed | `npm run lint`, 2026-07-29 |
 | TypeScript | Passed | `npx tsc --noEmit`, 2026-07-29 |
-| Unit/contract tests | Passed | `npm test`: 41 files, 356 tests, 2026-07-29 |
+| Unit/contract tests | Passed | `npm test`: 48 files, 469 tests, 2026-07-29 |
+| Focused Part 14 tests | Passed | `npx vitest run lib/discovery`: 7 files, 113 tests covering moods, picker parsing/matching/randomness, recommendation rules, mapping, authenticated adapter, action, and UI/security contracts |
 | Focused Part 13 tests | Passed | `npx vitest run lib/lists`: 6 files, 75 tests, 2026-07-29 |
 | Focused Part 13/Part 12 regressions | Passed | 13 files, 184 tests covering lists plus removal/query/bulk contracts, 2026-07-29 |
 | Live database integration | Not run | No local Supabase/PostgreSQL harness or applied Part 13 migration; source contracts and mocked adapters do not prove RLS, grants, cascades, or concurrency |
-| Production route smoke | Passed | Playwright MCP: `/auth/sign-up` loaded; anonymous `/lists` and UUID detail redirected to login |
-| Playwright public/protection E2E | Passed | `npm run test:e2e`: 3 files, 24 tests, 2026-07-29; auth semantics/errors, list protection, keyboard order, and five public sign-up viewports |
-| Authenticated Part 12/13 E2E/live RLS | Not verified | No QA credentials/storage states or applied Part 13 migration; destructive/list CRUD, membership, ordering, isolation, and requested authenticated screenshots were not run |
+| Production route smoke | Passed | Playwright MCP: `/auth/sign-up` loaded at 390x844 without overflow; anonymous `/picker` and `/recommendations` redirected to login |
+| Playwright public/protection E2E | Passed | `npm run test:e2e`: 3 files, 26 tests, 2026-07-29; auth semantics/errors, list/discovery protection, keyboard order, and five public sign-up viewports |
+| Authenticated Part 12-14 E2E/live RLS | Not verified | No QA credentials/storage states or applied Part 13 migration; destructive/list/discovery mutation, ordering, isolation, responsive authenticated layouts, and requested screenshots were not run |
 | Production dependency audit | Failed | Three high transitive advisories remain under Next.js/PostCSS/sharp; no safe non-major npm fix is offered |
 | Production build | Passed | `npm run build` on Next.js `16.2.12`, 2026-07-29 |
 
@@ -468,6 +492,9 @@ Mark Passed only after that exact command succeeds.
 | Operational unknown | Part 13 SQL/source and mocked adapters pass, but the migration has not been applied here and no two confirmed QA identities/storage states exist; live RLS, grants, cascades, concurrency, authenticated CRUD/reorder/membership flows, and requested screenshots remain unverified |
 | Active limitation | The Add Movies picker returns at most 50 owner-scoped results per search and movie-detail membership reconciliation accepts at most 500 desired list UUIDs; list summaries are not paginated |
 | Active limitation | Part 13 membership writes share the Part 12 per-user advisory lock and row order, but the legacy full-library settings DELETE does not take that advisory lock; concurrent full-library deletion versus a list batch remains a live stress-test item |
+| Active limitation | Part 14 processes at most the 1,000 most recently added `user_movies` relationships per request, keeps at most 50 recent picker IDs in component memory, and renders at most 16 recommendations |
+| Operational unknown | Part 14 pure rules, mocked authenticated adapter, route contracts, and logged-out browser protection pass, but no two confirmed QA sessions exist; authenticated discovery screens, mutations, screenshots, responsive layouts, and live cross-user isolation remain browser-unverified |
+| Browser tooling note | Playwright MCP reports repeated development HMR WebSocket handshake failures for its `127.0.0.1` origin; the repository Playwright run completed without application request failures |
 | Active security debt | `npm audit --omit=dev` reports three high transitive advisories through Next.js/PostCSS/sharp after updating to Next.js 16.2.12; do not apply npm's unsafe major/downgrade suggestion blindly |
 | Launch blocker | No TMDB attribution UI or resolved commercial movie-data licensing |
 | Troubleshooting note | Browser login “Failed to fetch” is not reproduced here; check public env names, Supabase URL/Auth redirect config, network/CORS, and browser extensions |
@@ -476,27 +503,31 @@ Migrations 1 and parts of 2 are not safely repeatable; never rerun old SQL blind
 
 ## 20. Current Project State
 
-- Latest implemented milestone: **Part 13 — private custom movie lists (local code complete)**.
+- Latest implemented milestone: **Part 14 — random movie picker and rule-based recommendations (local code complete)**.
 - Part 11 statistics/dashboard upgrade: **not evidenced in the repository**.
-- Next milestone: **Part 14 — Movie Picker and Recommendations**.
-- Branch/base HEAD: `master`, `3cc82cb` (`part-12-complete`); Part 13 is uncommitted. Tags `settings-v1` and misleading `statistics-v1` remain on `8f92cbe`.
+- Next milestone: **Part 15 — Testing and Production Hardening**.
+- Branch/base HEAD: `master`, `3987a65` (`part-13-complete`, `part-13-custom-lists`); Part 14 is uncommitted. Tags `settings-v1` and misleading `statistics-v1` remain on `8f92cbe`.
 - Latest migration: `202607290001_part_13_private_custom_lists.sql`.
-- Latest feature set: private list CRUD, scalable summaries, personal-library multi-add, atomic ordering/removal, cascade compaction, and movie-detail multi-list membership in addition to the completed Part 12 library tools.
-- Baseline Git state was clean; only Part 13 and related list-aware revalidation/documentation changes are now uncommitted.
-- Manual Supabase action: confirm the prior five migrations, apply only the Part 13 SQL file, reload PostgREST, run the documented verification SQL, and exercise RLS/order/cascade behavior with two QA users.
-- Logged-out Playwright coverage protects `/lists` and UUID detail URLs; authenticated Part 12/13 coverage is blocked as described above.
+- Latest feature set: private custom lists plus a URL-filtered random picker,
+  eight explicit moods, bounded in-session repeat avoidance, and transparent
+  scored/deduplicated/diversified private-library recommendations.
+- Baseline Git state was clean; only Part 14 discovery, cross-feature
+  revalidation, tests, and documentation changes are now uncommitted.
+- Part 14 requires no Supabase action. The existing manual Part 13 migration
+  application and live verification remain outstanding.
+- Logged-out Playwright coverage protects `/picker` and `/recommendations`;
+  authenticated Part 12-14 coverage is blocked as described above.
 - Missing `/statistics` is unimplemented functionality, not a runtime failure.
 
 ## 21. Next Development Queue
 
 This is the roadmap, not completed functionality.
 
-1. **Part 14 — Movie Picker and Recommendations**
-2. **Part 15 — Testing and production hardening**
-3. **Part 16 — Preview deployment**
-4. **Part 17 — Public beta preparation**
-5. **Part 18 — Notifications and calendar integration**
-6. **Part 19 — Paid SaaS**
+1. **Part 15 — Testing and production hardening**
+2. **Part 16 — Preview deployment**
+3. **Part 17 — Public beta preparation**
+4. **Part 18 — Notifications and calendar integration**
+5. **Part 19 — Paid SaaS**
 
 ## 22. Part 12 Implementation Notes
 
@@ -557,7 +588,83 @@ Implemented contract:
   500. Source/mocked tests do not prove live PostgreSQL RLS, privileges,
   cascades, or concurrency.
 
-## 24. Agent Handoff Protocol
+## 24. Part 14 Implementation Notes
+
+Implemented contract:
+
+- Routes: protected `/picker` and `/recommendations`; both appear in the
+  authenticated shell and proxy prefix set. Anonymous requests redirect to
+  `/auth/login`. The private pages remain request-scoped Server Components
+  under Suspense and expose neither private metadata nor user IDs through
+  public route metadata.
+- Main module:
+  `lib/discovery/{types,moods,picker,recommendations,mapping,errors,supabase-discovery}.ts`;
+  picker Server Action: `app/(app)/actions/discovery.ts`; UI:
+  `components/discovery/*`.
+- Dataset: one exact-column `user_movies -> movies!inner` query through the
+  normal cookie-bound SSR client after fresh `auth.getUser()`. RLS and an
+  explicit verified-user filter both apply. The query is stable, bounded to
+  rows 0-999, returns an exact count/truncation flag, calls neither TMDB nor an
+  admin client, and never selects or returns `user_id`. The picker action
+  projects out recommendation-only `personal_rating` before its one selected
+  movie crosses the Client Component boundary.
+- Picker filters: represented genre; maximum runtime 90/120/150/180; minimum
+  **public** rating from `movies.public_rating`; eight explicit moods; decade
+  period; watched/unwatched/any; Watch Next only; and favourite only. Runtime,
+  public-rating, and year nulls remain eligible with no corresponding filter
+  and are excluded when that filter is active. Default Unwatched follows the
+  requested `status !== "watched"` definition, including Dropped; Watch Next
+  requires the exact `watch_next` status and overrides watched-state display.
+- Mood rules: Exciting = Action/Adventure; Relaxing =
+  Animation/Comedy/Romance plus runtime <=130; Funny = Comedy; Emotional =
+  Drama/Romance; Dark = Crime/Horror/Thriller; Intense =
+  Action/Crime/Thriller/War; Mind-Bending =
+  Mystery/Science Fiction/Thriller; Family-oriented =
+  Adventure/Animation/Family. Family-oriented copy explicitly states that
+  incomplete certification metadata cannot establish child suitability.
+- Picker selection: all filters apply before secure server randomness.
+  Excluded values must be at most 50 valid `user_movies.id` UUIDs and only
+  subtract from the newly authenticated owned candidate set. The Client
+  Component keeps exclusions in memory only, avoids repeats while alternatives
+  remain, resets after exhausting the eligible pool, and preserves validated
+  filters—not private IDs—in the URL.
+- Recommendation seeds: personal rating >=8 first, then watched favourites,
+  then watched rating >=7; at most five seeds and three rendered seed groups.
+  Rated-genre weights are divided across a movie's genres. A director pattern
+  needs at least two ratings averaging >=7.
+- Recommendation candidates: only `want_to_watch`, `watch_next`, `scheduled`,
+  and `on_hold`; `currently_watching`, `watched`, and `dropped` are excluded.
+  Seeds are excluded from output. Recommendations are globally deduplicated
+  and capped at 16.
+- Score weights: +4 per shared genre capped at +12, +3 same director, +1
+  release years within 10, +1 runtime within 30 minutes, +1 favourite, +1
+  Watch Next, +1 public rating >=7 or +2 >=8, and seed weight +1 at rating 9
+  or +2 at 10. Missing metadata adds no quality penalty. Stable ties use public
+  rating, title, and relationship UUID. Soft genre/director diversity may
+  select within two points of the current best; refresh only changes
+  equal-score presentation after the diversity penalty.
+- Every displayed item has a concrete stored-signal reason. Cold starts
+  distinguish empty library, no eligible candidates, no ratings, and no
+  suitable recommendations. The UI says Rule-based recommendations and makes
+  no AI, prediction, psychological, or family-safety claim.
+- Integration: result cards reuse Part 12 favourite and one-item Watch Next
+  mutations and link to the Part 13 movie-detail membership editor. Viewing or
+  picking is read-only. Library/management/import/full-library deletion paths
+  revalidate both discovery routes.
+- Database: no Part 14 migration, index, table, RPC, policy, grant, trigger, or
+  stored recommendation result. No dependency or environment variable was
+  added.
+- Tests:
+  `lib/discovery/{moods,picker,recommendations,mapping,supabase-discovery,actions,ui}.test.ts`;
+  logged-out E2E route protection also covers both routes.
+- Browser limitation: repository Playwright passed the public/protection suite,
+  and MCP confirmed both new routes redirect to login plus `/auth/sign-up`
+  remains public at 390x844 with no overflow. No confirmed QA sessions or
+  storage states exist, so authenticated picker/recommendation flows,
+  mutation shortcuts, two-user isolation, five-viewport discovery layouts,
+  and requested discovery screenshots were not run and are not claimed.
+
+## 25. Agent Handoff Protocol
 
 Before starting any task, every coding agent must:
 
@@ -583,6 +690,30 @@ context elsewhere, or add secrets/actual environment values. Keep this document
 concise, internally consistent, and grounded in repository evidence.
 
 ## Context Change Log
+
+### 2026-07-29 - Codex Part 14 picker and rule-based recommendations
+
+- Added protected `/picker` and `/recommendations`, authenticated navigation,
+  URL-backed picker filters, eight documented moods, server random selection,
+  in-memory repeat avoidance, transparent seed/scoring/diversity rules,
+  concrete recommendation reasons, cold starts, refresh ordering, and safe
+  favourite/Watch Next/custom-list integrations.
+- Security/data: one fresh-`getUser`, owner-filtered, RLS-protected,
+  exact-column dataset query handles at most 1,000 relationships. No browser
+  user ID, full-library Client Component payload, admin client, TMDB/AI call,
+  global cache, public metadata, or stored result was added.
+- Database: no Part 14 migration, table, index, RPC, policy, privilege, trigger,
+  dependency, or environment variable.
+- Tests: seven focused Part 14 files/113 tests and the full 48-file/469-test
+  Vitest suite passed. Logged-out/public Playwright passed 26 tests, including
+  both new redirects and the sign-up regression at five public viewports.
+  Lint, direct TypeScript, and production build passed.
+- Browser limitation: MCP confirmed logged-out protection and the public
+  390x844 sign-up layout only. Authenticated discovery flows, two-user
+  isolation, mutation shortcuts, discovery-responsive screenshots, and live
+  database behavior remain unverified because no confirmed QA sessions exist.
+- Milestone: Part 14 is implemented locally; Part 15 Testing and Production
+  Hardening is next.
 
 ### 2026-07-29 - Codex Part 13 private custom movie lists
 

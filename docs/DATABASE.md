@@ -623,6 +623,72 @@ all eight RLS policies, stale/foreign identifiers, normalized duplicate names,
 multi-add order, boundary moves, simultaneous reorders/adds/deletes, the
 `user_movies` cascade trigger, and preservation of shared movie metadata.
 
+## Part 14 read-only discovery contract
+
+Part 14 requires **no database migration**. It creates no recommendation or
+picker table, feedback table, stored result, index, trigger, policy, grant, or
+RPC. Generated picks, recommendation sections, refresh order, and recent-pick
+history are not persisted.
+
+`lib/discovery/supabase-discovery.ts` performs one bounded authenticated read
+for both `/picker` and `/recommendations`. `getDiscoveryDataset()`:
+
+1. creates the normal cookie-bound Supabase SSR client;
+2. calls `supabase.auth.getUser()` and rejects an expired or missing session;
+3. queries `public.user_movies` with both RLS and an explicit
+   `user_id = authenticatedUser.id` filter;
+4. inner-joins the existing shared `public.movies` row;
+5. orders relationships by `created_at desc, id asc`; and
+6. reads rows 0 through 999 while requesting an exact total count.
+
+The application never accepts a discovery `user_id` from search parameters,
+FormData, JSON, route parameters, or Client Component state. It does not select
+or return `user_id` in the discovery dataset.
+
+### Selected columns
+
+The query intentionally selects only fields used by picker filtering,
+recommendation scoring, reasons, and limited result cards:
+
+| Source | Columns |
+|---|---|
+| `user_movies` | `id`, `status`, `favourite`, `personal_rating` |
+| `movies` | `id`, `title`, `original_title`, `poster_path`, `release_year`, `runtime_minutes`, `genres`, `director`, `public_rating` |
+
+`created_at` is used only for query ordering and is not selected.
+
+Reviews, schedule notes, profile data, list names, cast, overview, trailers,
+provider credentials, Auth tokens, and other unrelated private fields are not
+part of this read.
+
+`movies.genres` remains the existing required JSONB field. Defensive mapping
+accepts either string labels or object values with a `name`, normalizes
+whitespace, ignores blanks and malformed items, deduplicates labels without
+case sensitivity, and sorts them. Invalid runtime, year, rating, status, or
+relationship identifiers are safely nulled or omitted rather than trusted.
+
+### Existing indexes and authorization
+
+The current target is several hundred to approximately 1,000 relationships per
+member, processed once per private request. The existing `user_movies` owner,
+status/created-at, favourite/created-at, personal-rating, and watched-at
+indexes from Part 12 already support the relationship side of this workload.
+No measured query plan justifies an additional JSONB genre, shared rating,
+runtime, release-year, or director index for this bounded MVP query.
+
+Discovery uses the normal authenticated client and existing RLS; it never
+constructs the admin client. The adapter logs database failures only through
+the existing safe helper and distinguishes expired authentication, missing
+schema/columns, relationship/schema-cache failures, permission/RLS denial, and
+general database failure.
+
+The optional “Add to Watch Next” control reuses
+`watchflow_bulk_update_library_status(uuid[], text)` with one validated
+`user_movies.id`, so all existing queue locking and normalization rules remain
+authoritative. Custom-list management continues through the Part 13
+membership architecture. Merely viewing, picking, or refreshing a
+recommendation performs no database mutation.
+
 ## Schema-change policy
 
 Schema changes are represented as reviewable migrations, preserve RLS, include

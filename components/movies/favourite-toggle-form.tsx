@@ -14,6 +14,7 @@ type FavouriteToggleFormProps = {
   title: string;
   favourite: boolean;
   compact?: boolean;
+  className?: string;
 };
 
 export function FavouriteToggleForm({
@@ -22,6 +23,7 @@ export function FavouriteToggleForm({
   title,
   favourite,
   compact = false,
+  className,
 }: FavouriteToggleFormProps) {
   const [state, action, isPending] = useActionState(
     setFavouriteAction,
@@ -43,7 +45,7 @@ export function FavouriteToggleForm({
         disabled={isPending}
         aria-label={label}
         aria-pressed={favourite}
-        className={cn(favourite && "font-semibold")}
+        className={cn(favourite && "font-semibold", className)}
       >
         <Star
           className={cn("size-4", favourite && "fill-current")}
@@ -75,4 +77,3 @@ export function FavouriteToggleForm({
     </form>
   );
 }
-

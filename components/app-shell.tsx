@@ -2,12 +2,14 @@ import Link from "next/link";
 import {
   CalendarDays,
   Clapperboard,
+  Dices,
   FileUp,
   LayoutDashboard,
   Library,
   ListPlus,
   Search,
   Settings,
+  Sparkles,
 } from "lucide-react";
 
 import { LogoutButton } from "@/components/logout-button";
@@ -18,6 +20,8 @@ const navigation = [
   { href: "/search", label: "Search Movies", icon: Search },
   { href: "/library", label: "My Library", icon: Library },
   { href: "/lists", label: "My Lists", icon: ListPlus },
+  { href: "/picker", label: "Movie Picker", icon: Dices },
+  { href: "/recommendations", label: "Recommendations", icon: Sparkles },
   { href: "/import", label: "Import Movies", icon: FileUp },
   { href: "/watch-next", label: "Watch Next", icon: Clapperboard },
   { href: "/schedule", label: "Schedule", icon: CalendarDays },

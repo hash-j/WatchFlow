@@ -369,6 +369,145 @@ baseline.
 - Poster collages show at most four available posters. Missing posters retain
   an accessible empty preview.
 
+## Part 14: random movie picker and rule-based recommendations
+
+Part 14 adds two protected discovery experiences:
+
+- `/picker` chooses one movie from the authenticated member's own WatchFlow
+  library after applying explicit filters.
+- `/recommendations` ranks a bounded set of that member's unwatched movies
+  using documented metadata and personal-library rules.
+
+Both routes are private. They use the normal cookie-bound Supabase client after
+a fresh `auth.getUser()` check, remain subject to RLS, and never accept a user
+ID from the browser. Neither route calls TMDB, an LLM, or another external
+recommendation provider. WatchFlow describes the output as **rule-based
+recommendations**, not AI, prediction, or psychological analysis.
+
+### Random movie picker
+
+The picker supports one genre, maximum runtime, minimum public rating, mood,
+release period, watched state, Watch Next only, and favourite only. Its default
+watched state is Unwatched.
+
+- Genre choices are normalized, deduplicated labels represented in the
+  member's library. A requested genre must match one of those labels.
+- Maximum runtime choices are 90, 120, 150, or 180 minutes. A movie with no
+  runtime remains eligible only when no maximum is active.
+- Minimum public rating is a validated decimal from 0 through 10 and reads
+  `movies.public_rating`. It never means `user_movies.personal_rating`. A movie
+  with no public rating remains eligible only when no minimum is active.
+- Release periods are Before 1980, the 1980s, 1990s, 2000s, 2010s, or 2020s.
+  Missing release years are eligible only when Any period is selected.
+- Watched means `status = 'watched'`; Unwatched means every other status.
+- Watch Next only requires `status = 'watch_next'` and overrides a conflicting
+  watched-state choice without changing queue order.
+- Favourite only reads the private `user_movies.favourite` boolean and never
+  infers favourite state from a rating.
+- An explicit genre and mood are cumulative: the movie must satisfy both.
+
+Validated filters use the URL keys `genre`, `maxRuntime`, `minRating`, `mood`,
+`period`, `watched`, `watchNext`, and `favourite`, so they survive refresh.
+Invalid values fall back safely with a visible warning. A bounded Client
+Component retains at most 50 recently returned `user_movies.id` values during
+the current picker interaction. The server validates those UUIDs, applies every
+filter first, and chooses securely from unseen eligible rows. It resets the
+exclusion cycle only after every eligible movie has been seen.
+
+Picking is read-only. It does not alter status, queue order, favourite state,
+ratings, schedules, or list memberships. The result explains every active rule
+it matched and may reuse existing authenticated actions for Watch Next,
+favourites, custom-list management, and stored movie details.
+
+### Mood rules
+
+Moods are explicit genre/runtime rules centralized in
+`lib/discovery/moods.ts`:
+
+| Mood | Rule |
+|---|---|
+| Exciting | Action or Adventure |
+| Relaxing | Animation, Comedy, or Romance, with runtime at most 130 minutes |
+| Funny | Comedy |
+| Emotional | Drama or Romance |
+| Dark | Crime, Horror, or Thriller |
+| Intense | Action, Crime, Thriller, or War |
+| Mind-Bending | Mystery, Science Fiction, or Thriller |
+| Family-oriented | Adventure, Animation, or Family |
+
+Family-oriented is deliberately cautious wording. WatchFlow does not store
+complete certification data and does not promise that a matching movie is
+suitable for every child.
+
+### Rule-based recommendations
+
+Recommendation candidates must be owned by the authenticated member and have
+one of these statuses:
+
+- `want_to_watch`
+- `watch_next`
+- `scheduled`
+- `on_hold`
+
+The general recommendation pool excludes `currently_watching`, `watched`, and
+`dropped`. A seed movie is also excluded from its own candidate set.
+
+The strongest seed source is a personal rating of 8 or higher. WatchFlow keeps
+at most five seeds, renders the strongest three seed sections, and shows at
+most three recommendations for each rendered seed. When that does not supply
+enough seeds or suggestions, WatchFlow progressively uses favourite watched
+movies, watched movies rated 7 or higher, genres supported by the member's
+rated/watched/favourite history, directors supported by at least two ratings
+averaging 7 or higher, and finally publicly highly rated eligible movies. The
+interface states which fallback supplied the results and never fabricates
+preference data.
+
+Per-seed scoring is transparent:
+
+| Signal | Points |
+|---|---:|
+| Each shared genre | +4, capped at +12 |
+| Same normalized director | +3 |
+| Release years within 10 years | +1 |
+| Runtimes within 30 minutes | +1 |
+| Candidate is a favourite | +1 |
+| Candidate is in Watch Next | +1 |
+| Candidate public rating at least 7 / at least 8 | +1 / +2 |
+| Seed personal rating at least 9 / exactly 10 | +1 / +2 |
+
+Missing metadata contributes no points but is not treated as evidence that a
+movie is poor. Stable score, shared-genre, director, public-rating, title, and
+relationship-ID tie-breaks keep the default order deterministic. Candidate IDs
+are deduplicated across seed and aggregate sections. Soft genre/director
+diversity and refresh ordering operate only inside a window no more than two
+points below the current best item, so one prolific signal does not occupy
+every slot without discarding score quality. At most 16 recommendations are
+rendered.
+
+Sections appear only when supported by the member's data. They may include
+“Because you rated …”, “Genres you rate highly”, “From directors you rate
+highly”, “From your Watch Next queue”, and “Highly rated in your unwatched
+library.” Every item includes at least one concrete reason such as shared
+genres, the same director, a similar runtime/release period, or Watch Next and
+public-rating state.
+
+### Cold starts and scope
+
+Useful empty states distinguish an empty library, no eligible unwatched
+candidates, no ratings, and no suitable scored recommendations. They direct the
+member to Search Movies, My Library, Watch Next, or Import Movies as
+appropriate.
+
+The discovery dataset processes at most the newest 1,000 personal-library
+relationships in one request and reports when a larger library was truncated.
+This is the documented MVP boundary. Part 14 creates no recommendation table,
+feedback table, migration, index, or database function and does not persist
+generated results or refresh history.
+
+Public recommendations, shareable result pages, AI recommendations, social
+feedback, “not interested” training, and recommendation-model learning remain
+out of scope.
+
 ## Next milestone
 
-Part 14 - Movie Picker and Recommendations.
+Part 15 - Testing and Production Hardening.

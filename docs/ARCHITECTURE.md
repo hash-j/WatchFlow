@@ -419,6 +419,160 @@ triggers. It is version controlled but is a manual Supabase SQL Editor step and
 is not known to be applied. Source-level tests do not replace live two-user RLS,
 foreign-ID, cascade, or concurrent add/move/delete verification.
 
+## Part 14 private discovery architecture
+
+Part 14 adds `/picker` and `/recommendations` inside the authenticated `(app)`
+route group and the proxy's protected-prefix set. Both pages use the shared
+authenticated layout, perform private reads in Server Components, and place
+only one picker result or the bounded rendered recommendation results across a
+Client Component boundary.
+
+```text
+protected picker or recommendations route
+  -> request-scoped Supabase SSR client
+  -> auth.getUser()
+  -> explicit user_movies.user_id filter + RLS
+  -> one bounded user_movies -> movies query
+  -> defensive mapping and normalized genres
+  -> pure picker filtering/random selection
+     or pure seed/scoring/diversity/reason generation
+  -> limited private result UI
+```
+
+The focused module is `lib/discovery/`:
+
+- `types.ts` defines the picker, mood, seed, score, reason, section, and
+  cold-start contracts.
+- `moods.ts` owns genre normalization and the eight explicit mood definitions.
+- `picker.ts` parses URL state, matches filters, validates exclusions, performs
+  secure random selection, and explains the match.
+- `recommendations.ts` selects seeds and candidates, derives genre/director
+  insights, calculates documented scores, deduplicates, applies soft diversity,
+  generates reasons, and chooses a cold-start state.
+- `mapping.ts` converts untrusted PostgREST rows into the bounded internal
+  `DiscoveryMovie` shape.
+- `supabase-discovery.ts` is the only database adapter and is marked
+  `server-only`.
+- `errors.ts` maps authentication, schema, relationship, permission, and
+  general persistence failures to safe application errors.
+
+The pure mood, picker, and recommendation modules do not import Supabase,
+Next.js, TMDB, or browser storage. This makes rule behavior independently
+testable and keeps the database boundary small.
+
+The shared request dataset includes `personal_rating` for server-side seed
+analysis. `pickRandomMovie()` projects that recommendation-only field out
+before the single picker result crosses to the Client Component.
+
+### Private data query
+
+`getDiscoveryDataset()` creates the normal request-scoped cookie-bound client,
+calls `auth.getUser()`, and passes only that verified Auth UUID to the query
+adapter. The browser cannot supply or choose an owner. The query starts from
+`public.user_movies`, includes an exact count, applies
+`user_movies.user_id = authenticatedUser.id`, orders by `created_at desc` then
+relationship UUID, and ranges from 0 through 999.
+
+Only these fields are selected:
+
+- `user_movies`: `id`, `status`, `favourite`, and `personal_rating`
+- inner `movies`: `id`, `title`, `original_title`, `poster_path`,
+  `release_year`, `runtime_minutes`, `genres`, `director`, and `public_rating`
+
+`created_at` remains an ordering column but does not need to cross the result
+boundary.
+
+The query does not select or map `user_id`, review text, schedule notes, cast,
+overview, trailer data, or other unrelated private fields. It returns
+`{ movies, totalCount, truncated }`; `truncated` is true when the exact count
+exceeds the 1,000-row MVP processing cap. Genre mapping accepts the stored JSON
+forms already supported by the application, normalizes whitespace, removes
+blank/malformed values, deduplicates case-insensitively, and sorts labels.
+
+The authenticated client and existing RLS remain the authorization layers. No
+discovery read or mutation uses the Supabase admin client. The pages do not
+statically generate private data, use `unstable_cache` or a cross-user cache,
+write recommendation state to browser storage, or call TMDB. Cookie access and
+authenticated reads keep the work request scoped under the project's
+Cache-Components configuration.
+
+### Picker state and random selection
+
+Picker URL parsing accepts `genre`, `maxRuntime`, `minRating`, `mood`, `period`,
+`watched`, `watchNext`, and `favourite`. Unsupported values return safe
+defaults plus user-visible warnings. Genre is canonicalized against the
+authenticated dataset. Runtime is limited to 90/120/150/180 minutes; minimum
+public rating is a decimal from 0 through 10; release periods are fixed decade
+options; and Unwatched is the default state.
+
+All filters run before selection. Missing runtime, public rating, or release
+year excludes a movie only when that corresponding filter is active. Watch
+Next-only requires the exact `watch_next` status and overrides a conflicting
+watched-state choice. An explicit genre and a mood both have to match.
+
+The recent-pick exclusion list exists only in the small picker Client
+Component. The server accepts at most 50 unique valid `user_movies.id` UUIDs,
+uses them only after independently rebuilding the authenticated candidate
+pool, and chooses from unseen matches with `crypto.getRandomValues()`. Once all
+eligible movies have been seen, the cycle resets rather than producing a false
+no-match result. Tests inject a deterministic random source; production does
+not use predictable module-global state.
+
+### Recommendation scoring and diversity
+
+General recommendation candidates are limited to `want_to_watch`,
+`watch_next`, `scheduled`, and `on_hold`. `currently_watching`, `watched`, and
+`dropped` are excluded, and a seed cannot recommend itself.
+
+Seed priority is personal rating 8 or higher, followed by favourite watched
+movies and watched movies rated at least 7. When direct seeds cannot support
+enough results, aggregate rules use rated, watched, or favourite genre history;
+directors require at least two rated movies averaging 7 or higher before being
+treated as a pattern; publicly highly rated eligible movies are the final
+cold-start fallback. Seed selection is capped at five; only the strongest three
+seed sections render, with at most three candidates per seed.
+
+Per-seed scores use one documented calculation:
+
+- +4 per shared genre, capped at +12
+- +3 for the same normalized director
+- +1 for release years within 10 years
+- +1 for runtimes within 30 minutes
+- +1 when the candidate is a favourite
+- +1 when the candidate is in Watch Next
+- +1 for public rating at least 7, or +2 at least 8
+- +1 for a seed personal rating at least 9, or +2 for 10
+
+Missing metadata adds no points and is not interpreted as negative quality.
+Stable shared-genre, director, public-rating, title, and relationship-ID
+tie-breaks make equal scores deterministic. A movie is assigned only once to
+the highest-priority supported section. Soft genre/director diversity and the
+optional refresh hash operate only within two points of the current top score,
+so variety never promotes clearly lower-quality candidates. The complete page
+is capped at 16 recommendations.
+
+Every recommendation carries concrete `RecommendationReason` values derived
+from the same score or aggregate insight that placed it. The UI never emits a
+generic AI claim. Empty-library, no-candidate, no-rating, and
+no-suitable-result states remain distinct.
+
+### Existing mutation integration and database impact
+
+Viewing or refreshing discovery pages is read-only. Favourite actions reuse
+the existing owner-scoped favourite action. “Add to Watch Next” submits one
+validated relationship UUID through the Part 12 bulk-status action and its
+atomic queue RPC; it does not create a second status mutation path. Custom-list
+management links to the existing stored-movie detail membership workflow
+instead of querying lists once per recommendation.
+
+Library add/remove/favourite/bulk actions, management changes, CSV imports, and
+full-library deletion revalidate both discovery routes so cached route output
+does not retain stale candidate state.
+
+Part 14 adds no migration, table, persisted recommendation row, index, RLS
+policy, grant, trigger, or RPC. It reuses the current schema and existing
+authenticated mutation architecture.
+
 ## Browser QA architecture
 
 `playwright.config.ts` runs headless Chrome against `PLAYWRIGHT_BASE_URL` or

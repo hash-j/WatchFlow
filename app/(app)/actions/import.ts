@@ -170,6 +170,8 @@ export async function confirmCsvImportAction(input: {
     revalidatePath("/library", "layout");
     revalidatePath("/watch-next");
     revalidatePath("/schedule");
+    revalidatePath("/picker");
+    revalidatePath("/recommendations");
     return { ok: true, data: result };
   } catch (error) {
     return { ok: false, message: friendlyImportError(error) };

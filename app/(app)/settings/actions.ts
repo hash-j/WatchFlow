@@ -198,6 +198,8 @@ export async function deleteLibraryDataAction(
     "/watch-next",
     "/schedule",
     "/lists",
+    "/picker",
+    "/recommendations",
     "/settings/data",
   ]) {
     revalidatePath(path);

@@ -97,6 +97,8 @@ describe("Part 12 library Server Actions", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith("/statistics");
     expect(revalidatePathMock).toHaveBeenCalledWith("/watch-next");
     expect(revalidatePathMock).toHaveBeenCalledWith("/schedule");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/picker");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/recommendations");
   });
 
   it("does not treat a stale, missing, or foreign user_movies ID as success", async () => {
@@ -202,6 +204,8 @@ describe("Part 12 library Server Actions", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith("/statistics");
     expect(revalidatePathMock).toHaveBeenCalledWith("/watch-next");
     expect(revalidatePathMock).toHaveBeenCalledWith("/schedule");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/picker");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/recommendations");
   });
 
   it("reports another user's or stale favourite record without claiming success", async () => {
@@ -247,6 +251,8 @@ describe("Part 12 library Server Actions", () => {
       mutationDependencies,
     );
     expect([...formData.keys()]).not.toContain("user_id");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/picker");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/recommendations");
   });
 
   it("reports a stale or mixed-ownership bulk selection without revalidation", async () => {
@@ -303,5 +309,7 @@ describe("Part 12 library Server Actions", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith("/statistics");
     expect(revalidatePathMock).toHaveBeenCalledWith("/watch-next");
     expect(revalidatePathMock).toHaveBeenCalledWith("/schedule");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/picker");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/recommendations");
   });
 });

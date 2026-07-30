@@ -72,6 +72,8 @@ function revalidateLibraryViews() {
   revalidatePath("/watch-next");
   revalidatePath("/schedule");
   revalidatePath("/lists", "layout");
+  revalidatePath("/picker");
+  revalidatePath("/recommendations");
 }
 
 function revalidateMovieDetail(movieId: FormDataEntryValue | null) {
@@ -95,8 +97,7 @@ export async function addMovieAction(
       createSupabaseLibraryDependencies(),
     );
 
-    revalidatePath("/dashboard");
-    revalidatePath("/library");
+    revalidateLibraryViews();
 
     return result === "duplicate"
       ? { status: "success", message: "This movie is already in your library." }

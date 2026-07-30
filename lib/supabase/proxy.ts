@@ -7,6 +7,8 @@ export const PROTECTED_ROUTE_PREFIXES = [
   "/search",
   "/library",
   "/lists",
+  "/picker",
+  "/recommendations",
   "/import",
   "/watch-next",
   "/schedule",
