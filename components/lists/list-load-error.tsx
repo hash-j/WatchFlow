@@ -1,5 +1,7 @@
 import { AlertTriangle } from "lucide-react";
+import Link from "next/link";
 
+import { buttonVariants } from "@/components/ui/button";
 import {
   ListsAuthorizationError,
   ListsMissingColumnError,
@@ -38,6 +40,17 @@ export function ListLoadError({ message }: { message: string }) {
       <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
         {message}
       </p>
+      <div className="mt-5 flex flex-wrap justify-center gap-2">
+        <Link href="/lists" className={buttonVariants()}>
+          Try again
+        </Link>
+        <Link
+          href="/library"
+          className={buttonVariants({ variant: "outline" })}
+        >
+          Open Library
+        </Link>
+      </div>
     </div>
   );
 }

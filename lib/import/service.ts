@@ -1,5 +1,5 @@
-import type { MovieDetails } from "../movies/types";
 import { AuthenticationRequiredError, LibraryValidationError } from "../library/errors";
+import type { SharedMovieReference } from "../movies/shared-metadata";
 import { validateTmdbId } from "../movies/validation";
 import { canMatchImportRow } from "./mapping";
 import type {
@@ -23,10 +23,17 @@ export type ImportInsertResult =
 
 export interface MovieImportDependencies {
   authenticate(): Promise<ImportAuthentication | null>;
-  getMovieDetails(tmdbId: number): Promise<MovieDetails>;
+  findOwnedMovie(
+    session: ImportAuthentication,
+    tmdbId: number,
+  ): Promise<{ matchedTitle: string } | null>;
+  resolveSharedMovie(
+    session: ImportAuthentication,
+    tmdbId: number,
+  ): Promise<SharedMovieReference>;
   saveMovie(
     session: ImportAuthentication,
-    movie: MovieDetails,
+    movie: SharedMovieReference,
     row: ConfirmedImportMovie,
     queuePosition: number | null,
   ): Promise<ImportInsertResult>;
@@ -162,6 +169,7 @@ export async function importConfirmedMovies(
   }
   let queueChanged = false;
   const warnings: string[] = [];
+  const sharedMovieCache = new Map<number, Promise<SharedMovieReference>>();
 
   for (const item of confirmed) {
     if (item.status === "watch_next" && !queueAvailable) {
@@ -179,10 +187,30 @@ export async function importConfirmedMovies(
       item.status === "watch_next" ? queuePosition : null;
 
     try {
-      const movie = await dependencies.getMovieDetails(item.tmdbId);
+      const ownedMovie = await dependencies.findOwnedMovie(
+        session,
+        item.tmdbId,
+      );
+      if (ownedMovie) {
+        results.push({
+          rowId: item.row.id,
+          rowNumber: item.row.rowNumber,
+          importedTitle: item.row.title,
+          matchedTitle: ownedMovie.matchedTitle,
+          status: "already_in_library",
+          message: "Already in library.",
+        });
+        continue;
+      }
+
+      let sharedMovie = sharedMovieCache.get(item.tmdbId);
+      if (!sharedMovie) {
+        sharedMovie = dependencies.resolveSharedMovie(session, item.tmdbId);
+        sharedMovieCache.set(item.tmdbId, sharedMovie);
+      }
       const saved = await dependencies.saveMovie(
         session,
-        movie,
+        await sharedMovie,
         item,
         assignedQueuePosition,
       );

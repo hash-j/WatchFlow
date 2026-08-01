@@ -1,11 +1,11 @@
 # WatchFlow Project Context
 
-Last updated: 2026-07-29
+Last updated: 2026-07-30
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 14 random movie picker and rule-based recommendations implemented locally; authenticated two-user browser verification remains
-Current branch: `master` at `3987a65` (`part-13-complete`, `part-13-custom-lists`); Part 14 is uncommitted
-Local status: The inspected baseline was clean and already included Parts 12 and 13; Part 14 application, tests, and documentation are local changes; no remote database schema or target data was modified
+Current phase: Part 15 hardening and test architecture are implemented locally; the required authenticated workflow matrix and live Preview verification remain incomplete because migrations are unapplied and disposable QA credentials were unavailable
+Current branch: `master` at `6d5352a` (`feat: add random movie picker and rule-based recommendations`); Part 15 is uncommitted
+Local status: The inspected Part 14 baseline was clean; Part 15 application, test, SQL-verification, dependency, and documentation changes are local only; no remote database schema, account, or target data was modified
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
@@ -38,7 +38,7 @@ The direction remains a production-oriented SaaS, but paid launch is deferred. T
 
 | Area | Actual repository choice |
 |---|---|
-| Framework | Next.js App Router; `next` declared as `latest`, installed/resolved as `16.2.12` |
+| Framework | Next.js App Router; `next` pinned and installed as `16.2.12` |
 | UI runtime | React and React DOM `19.2.7` installed (`^19.0.0` declared) |
 | Language | TypeScript `5.9.3`, strict mode, path alias `@/*` |
 | Styling | Tailwind CSS `3.4.19`, PostCSS, Autoprefixer, `tailwindcss-animate` |
@@ -48,12 +48,15 @@ The direction remains a production-oriented SaaS, but paid launch is deferred. T
 | Validation | Zod `4.4.3` for settings and custom lists; typed custom validators for library/import/TMDB inputs |
 | CSV parsing | Custom parser in `lib/import/csv.ts`; no third-party CSV package |
 | Charts | None; no charting dependency exists |
-| Tests | Vitest `4.1.10`, Node environment, React server rendering for limited markup tests |
-| Browser E2E | `@playwright/test 1.62.0`, headless Chrome, logged-out specs under `e2e/`; no authenticated storage state |
+| Tests | Vitest `4.1.10`; 55 unit/contract files plus a guarded real-Supabase integration configuration |
+| Browser E2E | `@playwright/test 1.62.0`, headless Chrome, safe in-memory QA contexts, public regressions, and credential-gated authenticated/two-user/account-deletion suites |
 | Deployment | Vercel is the intended target inferred from runtime variables/starter UI; no `vercel.json` or deployment record exists |
 | Package manager | npm with `package-lock.json` lockfile version 3 |
 
-Notable version risks: Next.js is installed at `16.2.12`, while `eslint-config-next` is pinned to `15.3.1`; the latest production `npm audit` still reports three high transitive Next.js/PostCSS/sharp advisories with no safe non-major npm fix.
+Part 15 aligns `eslint-config-next` with Next `16.2.12`, migrates ESLint to
+the native flat configuration, and overrides Next's internal PostCSS/sharp
+versions to audited compatible releases. Final production-only and full
+`npm audit` runs both report zero vulnerabilities.
 
 ## 4. Repository Structure
 
@@ -63,17 +66,20 @@ Notable version risks: Next.js is installed at `16.2.12`, while `eslint-config-n
 | `app/(app)/actions/` | Library, management, CSV-import, Part 13 list, and Part 14 picker Server Actions |
 | `components/` | Auth, shell, movie, import, settings, library/list UI, Part 14 discovery UI, and reusable UI components |
 | `lib/auth/` | Safe redirect validation and auth route contracts |
-| `lib/movies/` | Provider contract, TMDB adapter/mapper, movie types, validation |
+| `lib/movies/` | Provider contract, TMDB adapter/mapper, authenticated rate limiting, shared metadata cache, movie types, and validation |
 | `lib/library/` | Legacy/detail library service plus Part 12 query parsing, URL state, mapping, selection, mutations, queue, schedule, and Supabase adapters |
 | `lib/import/` | CSV parsing, mapping, validation, matching, confirmation, persistence |
 | `lib/settings/` | Settings adapters/types, formatting, exports, and data controls |
 | `lib/lists/` | Part 13 list types, Zod validation, defensive mapping, safe errors, authenticated queries/mutations, and tests |
 | `lib/discovery/` | Part 14 private dataset adapter, mapping, picker validation/matching, mood rules, recommendation scoring/diversity, errors, types, and tests |
 | `lib/supabase/` | Browser, server, proxy, auth-context, admin, and safe-error modules |
-| `docs/` | Architecture, database, product, implementation plan, and this canonical context |
-| `supabase/migrations/` | Six incremental SQL migrations; the original base schema is absent |
+| `docs/` | Architecture, database, product, testing/security/readiness reports, implementation plan, and this canonical context |
+| `supabase/migrations/` | Seven incremental SQL migrations; the original base schema is absent |
+| `supabase/verification/` | Read-only database readiness and production security audit scripts |
+| `integration/`, `vitest.integration.config.ts` | Guarded, read-only, two-user real-Supabase RLS verification |
+| `scripts/` | Post-build client-secret-pattern scanner |
 | `lib/**/*.test.ts` | Vitest unit, adapter, route/source, and migration-contract tests |
-| `e2e/`, `playwright.config.ts` | Logged-out auth, protected-route, keyboard, and responsive browser regression tests |
+| `e2e/`, `playwright.config.ts` | Public auth/protection/responsive tests plus guarded in-memory QA fixtures, two-user isolation, controlled mutation, CSV, and disposable deletion coverage |
 | `app/*.{ico,png}` | Favicon and social metadata images |
 
 There is no `src/app/`, `features/`, or `public/` directory. Extend the existing root `app/` tree; never create a second App Router root.
@@ -112,7 +118,7 @@ The `(app)` directory is a route group and does not appear in URLs.
 | `/settings/data` | Page | Protected exports and destructive data controls |
 | `/settings/data/export/csv` | GET Route Handler | Protected private CSV attachment |
 | `/settings/data/export/json` | GET Route Handler | Protected private JSON attachment |
-| `/protected` | Page | Protected leftover Supabase-starter claims/tutorial page; noncanonical product UI |
+| `/protected` | Page | Protected compatibility route that redirects to `/dashboard`; it no longer renders starter claims/tutorial content |
 
 No `/statistics` or `/api/*` route exists. Loading, error, not-found, layout, favicon, and metadata-image files are framework boundaries/assets, not routes.
 
@@ -132,9 +138,20 @@ No `/statistics` or `/api/*` route exists. Loading, error, not-found, layout, fa
   `/auth/confirm` supports token-hash links.
 - `lib/auth/safe-redirect.ts` accepts only internal single-slash paths and rejects missing, protocol-relative, or backslash-containing redirect values.
 - Recovery uses `/auth/callback?next=/auth/update-password`; the reset/update page verifies claims before the browser calls `updateUser()`.
-- Sign-out redirects only after Supabase succeeds.
+- Callback OTP types are allowlisted and callback failures use stable reason
+  codes rather than provider messages in URLs.
+- Sign-out is a cookie-aware Server Action, checks fresh Auth state, clears the
+  local session, disables repeat submission while pending, and redirects only
+  after Supabase succeeds.
+- Browser Supabase configuration is validated before client construction;
+  public auth forms map configuration, network, and provider failures to
+  controlled messages and never expose a configuration-related `Failed to
+  fetch`.
 - Auth cards expose page-level `h1` headings; form/provider errors use `role="alert"`, and forgot-password success uses `role="status"`.
-- Playwright MCP and repository E2E tests confirmed public auth semantics, invalid-login feedback, callback failures, keyboard order, and `/auth/sign-up` route stability.
+- The final Playwright MCP/repository E2E pass confirmed public auth semantics,
+  controlled callback failures, keyboard order, and `/auth/sign-up` route
+  stability. The real invalid-provider-login case was guarded and skipped in
+  that final run; source tests still enforce controlled auth-error mapping.
 
 Authorization warning: use verified `auth.getUser()` for fresh user-sensitive mutation/deletion boundaries; verified `auth.getClaims()` is the established proxy/layout JWT check. Never use `getSession()` as authorization, accept `user_id` from browser input, or use an admin key for login/ordinary user mutations.
 
@@ -152,14 +169,28 @@ Names only are recorded here; values must never enter this file.
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable or legacy anon value under this exact name | Browser-safe public | Required |
 | `SUPABASE_SECRET_KEY` | Shared movie metadata upsert and final Auth-user deletion | Server-only secret | Required for full product |
 | `TMDB_READ_ACCESS_TOKEN` | TMDB Bearer token for search/details/import | Server-only secret | Required for movie workflows |
+| `NEXT_PUBLIC_APP_URL` | Reserved public application origin name; current source does not consume it | Browser-safe public | Optional |
 | `VERCEL_URL` | Platform-provided metadata base URL | Server/runtime | Optional; localhost fallback |
-| `VERCEL_ENV` | Displayed only by leftover `/protected` tutorial UI | Server/runtime | Optional |
-| `VERCEL_PROJECT_PRODUCTION_URL` | Displayed only by leftover tutorial UI | Server/runtime | Optional |
+| `VERCEL_ENV` | Referenced only by a dormant starter tutorial component; no current route renders it | Server/runtime | Optional |
+| `VERCEL_PROJECT_PRODUCTION_URL` | Referenced only by a dormant starter tutorial component; no current route renders it | Server/runtime | Optional |
 | `NODE_ENV` | Framework mode and development-only safe error logging | Runtime | Framework-provided |
 | `PLAYWRIGHT_BASE_URL` | Optional Playwright target override; defaults to `http://localhost:3000` | Test runtime | Optional |
+| `E2E_BASE_URL` | Preferred Playwright target override | Test runtime | Optional |
+| `E2E_WEB_SERVER_COMMAND` | Local command Playwright manages for the target | Test runtime | Optional |
+| `E2E_TARGET_ENV` | Must equal `development` before authenticated QA mutations are enabled | Test runtime | Required for authenticated QA |
+| `E2E_EXPECTED_SUPABASE_URL` | Exact disposable-development project pin; must match `NEXT_PUBLIC_SUPABASE_URL` | Test runtime | Required for authenticated QA and live integration |
+| `E2E_USER_A_EMAIL`, `E2E_USER_A_PASSWORD` | Disposable QA User A | Test secret | Required for authenticated QA |
+| `E2E_USER_B_EMAIL`, `E2E_USER_B_PASSWORD` | Disposable QA User B | Test secret | Required for isolation QA |
+| `E2E_DELETE_ACCOUNT_EMAIL`, `E2E_DELETE_ACCOUNT_PASSWORD` | Dedicated one-shot deletion account, distinct from A/B | Test secret | Required only for deletion QA |
+| `E2E_RUN_ACCOUNT_DELETION` | Explicit one-shot deletion opt-in | Test runtime | Required only for deletion QA |
+| `E2E_TEST_MOVIE_QUERY` | Controlled QA search title | Test runtime | Optional |
+| `RUN_SUPABASE_INTEGRATION_TESTS` | Explicit real-development-project RLS suite opt-in | Test runtime | Required for live integration |
 | `CI` | Enables CI retries, one worker, and strict `test.only` rejection | Test runtime | Optional |
 
-`.env.example` lists only the two public Supabase names and is incomplete. `NEXT_PUBLIC_APP_URL`, `TMDB_API_BASE_URL`, and `TMDB_IMAGE_BASE_URL` are not environment variables here; TMDB API/image bases are module constants.
+`.env.example` records these names and non-secret local placeholders only.
+Real values remain in ignored local/CI configuration. `TMDB_API_BASE_URL` and
+`TMDB_IMAGE_BASE_URL` are not environment variables here; TMDB API/image bases
+remain fixed module constants.
 
 ## 8. Database Schema
 
@@ -217,6 +248,7 @@ Nuance: `202607220003_user_settings.sql` used column-level preference grants, bu
 | `202607230001_user_preferences_privileges.sql` | Grants authenticated SELECT/INSERT/UPDATE and backfills preference rows; no DELETE | Unknown; repository has no remote history |
 | `202607280001_part_12_library_improvements.sql` | Adds private `favourite`, five owner/query indexes, private row/facet query functions, and transactional bulk-status/bulk-delete functions | Deployed API exposes the bulk-removal function and the user reports Part 12 working; full migration parity/grants still need authenticated inspection |
 | `202607290001_part_13_private_custom_lists.sql` | Creates private `lists`/`list_movies`, constraints/indexes/triggers, eight RLS policies, scoped grants, one summary query, five atomic membership/order RPCs, and cascade-delete compaction | Created locally only; do not execute automatically. Apply manually after all five prior migrations and reload PostgREST |
+| `202607300001_part_15_tmdb_rate_limits.sql` | Adds durable authenticated TMDB rate-limit buckets/RPC, canonical shared-cache columns, browser write revocation for `movies`, transactional management/schedule RPC replacements, and preference-default repair | Created locally only; do not execute automatically. Apply manually after prior migrations, then reload PostgREST and run both Part 15 verification scripts |
 
 Original creation migrations for `profiles`, `movies`, and `user_movies` are absent. Contract tests inspect SQL text only; they do not prove remote application or multi-user isolation.
 
@@ -253,11 +285,11 @@ Status describes repository implementation, not unverified remote migrations.
 | Favourite field | Complete | `/library`, `/library/[movieId]`, Part 12 migration/actions | Private `user_movies.favourite`; migration-dependent |
 | Watch Next queue | Complete | `/watch-next` | One-based private queue |
 | Queue reordering | Complete | `move_watch_queue_item` | Migration-dependent up/down controls |
-| Scheduling | Partial | `/schedule`, movie detail | Dedicated flow works; detail edit has timezone/note persistence issues |
+| Scheduling | Complete locally | `/schedule`, movie detail, transactional management RPCs | Saved timezone/note are preserved; migration application and authenticated QA remain pending |
 | Watched/unwatched UI | Complete | `/library?watched=` | Unwatched means every non-watched status; legacy `filter` remains accepted |
 | CSV import | Complete | `/import`, `lib/import/*` | In-memory, review before write |
 | CSV export | Complete | `/settings/data/export/csv` | Private no-store attachment |
-| JSON export | Complete | `/settings/data/export/json` | Format version 1 |
+| JSON export | Complete | `/settings/data/export/json` | Format version 2 includes owned custom lists/memberships without internal IDs |
 | Profile settings | Complete | `/settings/profile` | Avatar upload deferred |
 | Application preferences | Complete | `/settings/preferences` | Applied to search/add/library/display |
 | Notification preferences | Complete | `/settings/notifications` | Storage only; no delivery |
@@ -305,7 +337,9 @@ Private reads use request-scoped cookie clients. `getAuthContext()` uses React `
 - Seven steps: Upload, Map, Preview, Match, Review, Confirm, Results.
 - Required mapping: title. Optional: year, director, cast, genres, rating, status, watched date, review, priority.
 - Validates year 1888–current UTC year + 5, rating 0–10, integer priority 0–5, review length, and ISO/unambiguous slash dates.
-- Status aliases map to seven statuses; unknown values require accepting `want_to_watch`, while empty defaults automatically.
+- Status aliases map to the six non-scheduled statuses; `scheduled` and other
+  unknown values require accepting `want_to_watch` because CSV has no schedule
+  instant/timezone fields. Empty status defaults automatically.
 - Matching scores title/original title/year, returns up to five candidates, caches lookups, and runs four searches maximum. Exact/probable may preselect; ambiguous requires choice. Director/cast/genres do not score.
 - Confirmation refetches details. Admin upserts shared metadata; authenticated owner writes use unique guards. Watch Next preserves CSV order.
 - Results: imported, already in library, skipped, invalid, unmatched, failed; partial success, retry, copy, and failure download exist.
@@ -325,7 +359,7 @@ Private reads use request-scoped cookie clients. `getAuthContext()` uses React `
 - Route: `/settings/data/export/json`.
 - Includes export time, email/profile, preferences, movie metadata, personal fields including favourite, queue positions, and derived schedules.
 - Excludes raw Auth records, relationship UUIDs, tokens, passwords, keys, and other users' data.
-- `metadata.formatVersion` is `1`.
+- `metadata.formatVersion` is `2`.
 - Filename: `watchflow-account-data-YYYY-MM-DD.json`.
 
 ## 15. Settings Architecture
@@ -356,7 +390,9 @@ Data and Privacy provides exports, `DELETE MOVIES` library deletion, and recent-
 - Date/time preferences affect settings/schedule displays; native HTML date inputs remain ISO.
 - Watched dates normalize to UTC midnight; the dashboard sorts them, but has no month grouping.
 
-Active caveat: movie detail initializes existing schedules with the current profile zone, not the saved zone, and omits `schedule_timezone`/`schedule_note` from its update payload. `/schedule` persists all fields.
+Movie detail and the dedicated schedule route prefer the row's saved timezone,
+persist timezone/note values, and use transactional RPCs so queue compaction
+cannot fail after the primary schedule/status mutation commits.
 
 ## 17. Security Boundaries
 
@@ -402,17 +438,22 @@ or directly referenced by list membership.
 | `npm run typecheck` | Scripted `tsc --noEmit` |
 | `npx tsc --noEmit` | Required direct TypeScript check |
 | `npm test` | All Vitest tests via `vitest run` |
+| `npm run test:integration` | Guarded real-development-Supabase RLS suite |
 | `npx vitest run <path>` | Focused Vitest file(s) |
 | `npm run test:e2e` | All Playwright specs via headless Chrome |
 | `npx playwright test <path>` | Focused Playwright spec(s) |
+| `npm run scan:client-secrets` | Scan browser/rendered build artifacts for server-secret patterns |
 | `npm run build` | Production Next.js build |
 | `npm start` | Serve a completed production build |
 
 `vitest.config.ts` includes `lib/**/*.test.ts` in Node. Those tests are unit,
 mocked-adapter, server-markup, route/source, and migration contracts; none use
-live Supabase. `playwright.config.ts` runs Chrome against the existing or
-auto-started local server. Current specs do not store authenticated state or
-test live Part 12, Part 13, or Part 14 data.
+live Supabase. The separate integration config is opt-in, read-only, and
+requires a confirmed development target and two QA identities.
+`playwright.config.ts` runs Chrome against an existing or auto-started local
+server. Authenticated specs create isolated in-memory contexts and never write
+storage state; they remain skipped until the development/credential guards are
+satisfied.
 
 The 2026-07-28 Playwright MCP pass exercised `/`, all public auth/error routes,
 and logged-out redirects for dashboard, search, library, Watch Next, schedule,
@@ -442,22 +483,30 @@ no QA credentials or authenticated storage states, so none of the requested
 authenticated picker/recommendation/two-user flows or discovery screenshots
 were run.
 
+The 2026-07-30 Part 15 production-server run passed 35 public/protection/auth/
+responsive tests with automatic safe console/network assertions and skipped 6
+credential-gated authenticated/destructive tests. A clean-restart Playwright
+MCP pass found zero public warnings/errors, no failed application request, no
+inline secret pattern, and no storage/cookie residue. It did not authenticate
+or mutate data.
+
 ### Last verified
 
 | Check | Status | Latest evidence |
 |---|---|---|
-| Lint | Passed | `npm run lint`, 2026-07-29 |
-| TypeScript | Passed | `npx tsc --noEmit`, 2026-07-29 |
-| Unit/contract tests | Passed | `npm test`: 48 files, 469 tests, 2026-07-29 |
+| Lint | Passed | `npm run lint`, 2026-07-30; Next 16 native flat config, no rule suppressions |
+| TypeScript | Passed | `npx tsc --noEmit`, 2026-07-30 |
+| Unit/contract tests | Passed | `npm test`: 55 files, 534 tests, 2026-07-30 |
 | Focused Part 14 tests | Passed | `npx vitest run lib/discovery`: 7 files, 113 tests covering moods, picker parsing/matching/randomness, recommendation rules, mapping, authenticated adapter, action, and UI/security contracts |
 | Focused Part 13 tests | Passed | `npx vitest run lib/lists`: 6 files, 75 tests, 2026-07-29 |
 | Focused Part 13/Part 12 regressions | Passed | 13 files, 184 tests covering lists plus removal/query/bulk contracts, 2026-07-29 |
-| Live database integration | Not run | No local Supabase/PostgreSQL harness or applied Part 13 migration; source contracts and mocked adapters do not prove RLS, grants, cascades, or concurrency |
-| Production route smoke | Passed | Playwright MCP: `/auth/sign-up` loaded at 390x844 without overflow; anonymous `/picker` and `/recommendations` redirected to login |
-| Playwright public/protection E2E | Passed | `npm run test:e2e`: 3 files, 26 tests, 2026-07-29; auth semantics/errors, list/discovery protection, keyboard order, and five public sign-up viewports |
-| Authenticated Part 12-14 E2E/live RLS | Not verified | No QA credentials/storage states or applied Part 13 migration; destructive/list/discovery mutation, ordering, isolation, responsive authenticated layouts, and requested screenshots were not run |
-| Production dependency audit | Failed | Three high transitive advisories remain under Next.js/PostCSS/sharp; no safe non-major npm fix is offered |
-| Production build | Passed | `npm run build` on Next.js `16.2.12`, 2026-07-29 |
+| Live database integration | Skipped | `npm run test:integration` loaded 1 file/5 tests, but all were skipped because the live development guard/QA credentials were absent |
+| Production route smoke | Passed, public only | Clean Playwright MCP: canonical signup, auth failure/not-found, protected redirects, mobile overflow/touch size, clean storage, safe console/network/HTML |
+| Playwright public/protection E2E | Passed | `npx playwright test --workers=1`: 35 passed, 6 credential-gated skipped, 2026-07-30 |
+| Authenticated Part 12-15 E2E/live RLS | Not verified | No confirmed QA credentials or applied-migration evidence; guarded suites exist but were not executed |
+| Client secret scan | Passed | 462 artifacts, no forbidden/configured-value leak; one reviewed Supabase SDK sentinel |
+| Dependency audits | Passed | Production-only and full `npm audit`: zero vulnerabilities |
+| Production build | Passed | `npm run build` on Next.js `16.2.12`; TypeScript and 34 static page generations completed, 2026-07-30 |
 
 Mark Passed only after that exact command succeeds.
 
@@ -467,7 +516,7 @@ Mark Passed only after that exact command succeeds.
 |---|---|
 | Resolved/guarded | `/auth/sign-up` was accidentally removed and returned 404; it now exists with a route-contract test |
 | Resolved/guarded | `CardTitle` rendered a `div` and auth errors rendered plain paragraphs; page titles are now `h1` and auth errors use `role="alert"` |
-| Operational unknown | Committed migrations do not prove remote application; all five incremental migration states must be checked |
+| Operational unknown | Committed migrations do not prove remote application; all seven incremental migration states must be checked |
 | Resolved locally | `user_preferences` had RLS but insufficient INSERT/UPDATE privileges; the latest patch grants SELECT/INSERT/UPDATE, no DELETE |
 | Operational unknown | Preference backfill exists in SQL; existing profile/preference rows and onboarding triggers still require target-project verification |
 | Preserved boundary | Shared movie writes require the authenticated-first, server-only admin path; never weaken this to solve RLS errors |
@@ -475,14 +524,14 @@ Mark Passed only after that exact command succeeds.
 | Resolved locally | Individual removal called the undeployed legacy `watchflow_remove_library_movie(p_library_id)` RPC and failed with `PGRST202`; it now submits one validated `user_movies.id` UUID through the working Part 12 removal RPC shared with bulk deletion |
 | Migration-dependent | Queue reordering requires `move_watch_queue_item`; missing RPC errors are mapped to a migration message |
 | Migration-dependent | Scheduling requires `schedule_timezone`/`schedule_note`; missing columns are detected and reported |
-| Active | Detail-form schedule editing can use the wrong zone and fails to persist zone/note; use/fix the dedicated schedule contract |
-| Active | The preference privilege patch is table-level and supersedes older column-grant claims in architecture/database docs |
+| Resolved/guarded | Detail-form schedule editing now defaults to its saved schedule zone and persists/clears zone and note through the dedicated contract |
+| Resolved/documented | The preference privilege patch is table-level; architecture/database/security verification now use that source-of-truth contract |
 | Active | Base profile/user-movie Auth-delete cascades are not versioned or verified; account deletion needs two-user testing |
-| Active | `.env.example` omits `SUPABASE_SECRET_KEY` and `TMDB_READ_ACCESS_TOKEN` names |
-| Active | `README.md` is still generic Supabase starter documentation |
-| Active | `/protected` is leftover starter UI and displays the signed-in member's claims JSON |
+| Resolved locally | `.env.example` lists server/test variable names without real secret values |
+| Resolved locally | `README.md` is WatchFlow-specific and documents guarded setup/migration/testing steps |
+| Resolved locally | `/protected` redirects to the dashboard and no longer renders claims JSON |
 | Active | `statistics-v1` points to the settings commit; there is no Part 11 statistics implementation |
-| Active | Import failure-report CSV quotes cells but does not neutralize formula-leading imported titles/messages |
+| Resolved/guarded | Shared CSV escaping neutralizes formula-leading values, including after whitespace or line breaks, in exports and import failure reports |
 | Resolved locally | `/library` previously fetched every row before filtering/slicing; Part 12 now filters, counts, sorts, and ranges through a private database function |
 | Migration-dependent | Part 12 requires `202607280001_part_12_library_improvements.sql`; without it `/library` and favourite/bulk actions show a safe migration-required error |
 | Migration-dependent | Part 13 requires `202607290001_part_13_private_custom_lists.sql`; missing table, column/schema-cache, RPC, permission, validation, constraint, and generic database failures have distinct safe handling |
@@ -495,39 +544,48 @@ Mark Passed only after that exact command succeeds.
 | Active limitation | Part 14 processes at most the 1,000 most recently added `user_movies` relationships per request, keeps at most 50 recent picker IDs in component memory, and renders at most 16 recommendations |
 | Operational unknown | Part 14 pure rules, mocked authenticated adapter, route contracts, and logged-out browser protection pass, but no two confirmed QA sessions exist; authenticated discovery screens, mutations, screenshots, responsive layouts, and live cross-user isolation remain browser-unverified |
 | Browser tooling note | Playwright MCP reports repeated development HMR WebSocket handshake failures for its `127.0.0.1` origin; the repository Playwright run completed without application request failures |
-| Active security debt | `npm audit --omit=dev` reports three high transitive advisories through Next.js/PostCSS/sharp after updating to Next.js 16.2.12; do not apply npm's unsafe major/downgrade suggestion blindly |
+| Resolved locally | Next `16.2.12`, aligned ESLint config, and compatible internal PostCSS/sharp overrides produce zero-vulnerability production-only and full audits |
 | Launch blocker | No TMDB attribution UI or resolved commercial movie-data licensing |
-| Troubleshooting note | Browser login “Failed to fetch” is not reproduced here; check public env names, Supabase URL/Auth redirect config, network/CORS, and browser extensions |
+| Resolved/guarded | Browser auth configuration/network failures map to controlled messages; source contracts guard the mapping, while the real invalid-provider Playwright case remains development-gated and was skipped in the final run |
+| Resolved/guarded | Credentialed QA previously trusted a loopback app URL without pinning its Supabase backend; authenticated/integration suites now require an exact expected-project URL match and credentialed Playwright never reuses an unknown listener |
+| Resolved/guarded | ASCII-only CSV title normalization collapsed distinct Urdu titles in matching and duplicate detection; shared Unicode normalization and regressions preserve letters/numbers |
+| Resolved/guarded | CSV accepted `scheduled` without an instant/timezone; it now requires explicit fallback to an unscheduled status |
+| Resolved locally | Per-user detail locales could churn the one-row-per-TMDB shared cache and expose preference-derived shared state; detail metadata is canonical English and preferred language remains search-only |
+| Resolved locally | Status/schedule updates could commit before a separate queue-normalization call failed; the Part 15 patch and application now use transactional owner-derived RPCs |
+| Resolved locally | The concise SQL security result could miss required policy operations or column-level privilege leaks; it now includes both checks |
 
 Migrations 1 and parts of 2 are not safely repeatable; never rerun old SQL blindly.
 
 ## 20. Current Project State
 
-- Latest implemented milestone: **Part 14 — random movie picker and rule-based recommendations (local code complete)**.
+- Latest work: **Part 15 testing and production hardening**. Its hardening and
+  test architecture are implemented locally; the required authenticated
+  workflow matrix and live Preview verification remain incomplete.
 - Part 11 statistics/dashboard upgrade: **not evidenced in the repository**.
-- Next milestone: **Part 15 — Testing and Production Hardening**.
-- Branch/base HEAD: `master`, `3987a65` (`part-13-complete`, `part-13-custom-lists`); Part 14 is uncommitted. Tags `settings-v1` and misleading `statistics-v1` remain on `8f92cbe`.
-- Latest migration: `202607290001_part_13_private_custom_lists.sql`.
+- Next milestone: **Part 16 — Preview Deployment**.
+- Branch/base HEAD: `master`, `6d5352a` (`feat: add random movie picker and rule-based recommendations`); Part 15 is uncommitted. Tags `settings-v1` and misleading `statistics-v1` remain historical.
+- Latest migration: `202607300001_part_15_tmdb_rate_limits.sql` (local only, unapplied).
 - Latest feature set: private custom lists plus a URL-filtered random picker,
   eight explicit moods, bounded in-session repeat avoidance, and transparent
   scored/deduplicated/diversified private-library recommendations.
-- Baseline Git state was clean; only Part 14 discovery, cross-feature
-  revalidation, tests, and documentation changes are now uncommitted.
-- Part 14 requires no Supabase action. The existing manual Part 13 migration
-  application and live verification remain outstanding.
-- Logged-out Playwright coverage protects `/picker` and `/recommendations`;
-  authenticated Part 12-14 coverage is blocked as described above.
+- Baseline Git state at `6d5352a` was clean; the current worktree contains the
+  Part 15 hardening/test architecture, SQL verification, migration, dependency,
+  and documentation changes.
+- Part 15 requires manual migration application and database-object
+  verification in the Preview development project. No remote schema was
+  changed during this milestone.
+- Public/protection Playwright is green; authenticated Part 12-15 and live RLS
+  coverage is blocked as described above.
 - Missing `/statistics` is unimplemented functionality, not a runtime failure.
 
 ## 21. Next Development Queue
 
 This is the roadmap, not completed functionality.
 
-1. **Part 15 — Testing and production hardening**
-2. **Part 16 — Preview deployment**
-3. **Part 17 — Public beta preparation**
-4. **Part 18 — Notifications and calendar integration**
-5. **Part 19 — Paid SaaS**
+1. **Part 16 — Preview deployment**
+2. **Part 17 — Public beta preparation**
+3. **Part 18 — Notifications and calendar integration**
+4. **Part 19 — Paid SaaS**
 
 ## 22. Part 12 Implementation Notes
 
@@ -664,7 +722,207 @@ Implemented contract:
   mutation shortcuts, two-user isolation, five-viewport discovery layouts,
   and requested discovery screenshots were not run and are not claimed.
 
-## 25. Agent Handoff Protocol
+## 25. Part 15 Testing and Production-Hardening Notes
+
+### Local hardening and test architecture
+
+Part 15 hardening and test architecture are implemented locally. The required
+authenticated workflow matrix and live Preview verification are incomplete;
+this is not a production-readiness claim.
+
+- Unit/contract tests use typed Supabase/provider mocks and source/migration
+  contracts; they never connect to the configured project.
+- `integration/supabase-rls.integration.test.ts` is a read-only, two-user,
+  real-development-project suite. It requires
+  `RUN_SUPABASE_INTEGRATION_TESTS=true`, `E2E_TARGET_ENV=development`, the
+  public Supabase names, an exact `E2E_EXPECTED_SUPABASE_URL` match, and QA A/B
+  credentials. It creates no records, signs out locally, and performs no data
+  cleanup; the operator must still confirm the pinned project is disposable
+  development infrastructure.
+- Playwright creates fresh in-memory browser contexts and never serializes
+  cookies or auth state. Public tests always run. Authenticated mutations
+  require the same development/loopback guard, an exact expected Supabase URL
+  pin, and QA A/B credentials. Credentialed runs start the configured server
+  rather than reusing an unknown loopback listener; helpers remove only the
+  exact TMDB/list records they created. Account deletion additionally requires
+  a distinct dedicated account and `E2E_RUN_ACCOUNT_DELETION=true`.
+- CSV browser fixtures are generated in memory, capped, and are not confirmed
+  unless a test explicitly owns the cleanup. QA artifacts and auth state are
+  ignored by Git.
+- Required environment-variable names and destructive/non-destructive
+  boundaries are documented in `docs/TESTING.md` and `.env.example`; no values
+  are committed.
+
+Final local results on 2026-07-30:
+
+- `npm run lint`: passed with the Next 16 native flat configuration and no
+  rule suppressions.
+- `npx tsc --noEmit`: passed.
+- `npm test`: 55 files, 534 tests passed.
+- `npm run test:integration`: runner passed, but 1 file/5 tests were skipped
+  because the live-development guard and QA credentials were absent. Live RLS
+  is therefore unverified.
+- `npx playwright test --workers=1` against a managed production server: 35
+  passed, 6 credential-gated tests skipped, 0 failed. The passing suite covers
+  public auth semantics, callback/reset failure handling, `/auth/sign-up`
+  non-404, all logged-out protected-route redirects, no redirect loops,
+  automatic safe console/network diagnostics, keyboard focus, and the five
+  requested public viewports.
+- Playwright MCP restarted the production server, opened a clean context with
+  zero cookies/storage entries, verified canonical signup, controlled auth
+  errors, protected redirects, mobile overflow/touch size, and a friendly
+  not-found page. It found no unexpected public console warning/error, failed
+  application request, or inline secret pattern. Safe screenshots exist only
+  under ignored `qa-artifacts/`.
+- `npm run scan:client-secrets`: 462 built artifacts checked, passed. One
+  Supabase SDK `sb_secret_` sentinel in a client chunk was reviewed; no
+  configured secret value leaked.
+- `npm audit --omit=dev` and full `npm audit`: zero vulnerabilities.
+- `npm run build`: passed on Next `16.2.12`, including TypeScript and all 34
+  static page generations. The route output confirms that `/statistics` is
+  still absent.
+
+### Security, RLS, and database readiness
+
+- `docs/SECURITY_AUDIT.md` records the Server Action, Route Handler,
+  admin-client, upload, export, authentication, logging, and browser-boundary
+  review. User identity comes from fresh `auth.getUser()` at mutation/export/
+  provider boundaries; browser user IDs are not accepted; normal user-owned
+  operations use the cookie-bound client so RLS remains final enforcement.
+- The server-only admin client is imported only by shared movie metadata
+  upsert logic and final deletion of the same freshly verified Auth user. It
+  disables persistence, refresh, and URL session detection. No Client
+  Component or client-safe barrel imports it.
+- Auth callback/confirmation inputs are allowlisted, redirect targets remain
+  internal-only, auth/configuration errors are controlled, Supabase diagnostic
+  logs contain only sanitized code/category, and logout is cookie aware.
+- CSV input is authenticated before parsing, limited to 2 MB/500 rows/100
+  columns/10,000 characters per cell, validates temporary JSON at 4 MiB before
+  returning it to the browser, and uses a 6 MiB Server Action transport ceiling.
+  Decision batches are capped, matching concurrency is four, and uploaded
+  content is neither stored nor logged. CSV exports neutralize formula prefixes
+  including leading whitespace or line breaks. CSV/JSON responses are private,
+  `no-store`, `nosniff` attachments.
+- Static migration inspection found no unrestricted `true` policy in the
+  versioned user-owned tables. `user_preferences` includes authenticated
+  SELECT/INSERT/UPDATE grants and owner policies; list tables have owner RLS;
+  the limiter table has RLS, no policies, and no direct browser-role grants.
+  The base schema for `profiles`, `movies`, and `user_movies` is not
+  version-controlled, so its live policies, privileges, and cascades cannot be
+  certified from the repository.
+- `supabase/verification/production_security_audit.sql` reports table RLS,
+  policies, expected policy operations, effective/raw authenticated and anon
+  privileges, limiter isolation, and missing protections without mutation.
+- `supabase/verification/development_readiness.sql` reports required tables,
+  columns, RLS/policies, privileges, functions/grants, constraints/cascades,
+  triggers, indexes, backfills, queue normalization, scheduling, favourites,
+  lists, and Part 15 objects as `INSTALLED` or `MISSING`. Database objects, not
+  migration-history rows, are the source of truth.
+
+### TMDB limits, caching, duplicate prevention, and performance
+
+- Migration
+  `supabase/migrations/202607300001_part_15_tmdb_rate_limits.sql` is the single
+  Part 15 patch and is intentionally unapplied. It adds nullable
+  `movies.tmdb_adult`/`metadata_language`, repairs the impossible `scheduled`
+  preference default, makes shared `movies` authenticated-read/server-write-
+  only at table and column privilege levels, replaces management/schedule RPCs
+  so mutation and queue normalization are transactional, creates the private
+  `watchflow_tmdb_rate_limits` counter table, and grants authenticated callers
+  only the hardened `watchflow_take_tmdb_rate_limit(text, integer)` RPC.
+- The durable PostgreSQL fixed windows are per authenticated user and
+  operation: search 30/60 seconds; details 20/60 seconds; import search and
+  import details each 120/600 seconds. Advisory plus row locks serialize a
+  bucket across server instances. No unauthenticated route calls TMDB, so no
+  public fallback bucket exists; one is required before adding such a route.
+- `public.movies` is the only persistent shared metadata cache. Its one row per
+  `tmdb_id` uses canonical English, while preferred language remains
+  request-scoped to search. A row is fresh for 30 days only when timestamp,
+  canonical language, and adult classification are safe for the request.
+  Stale/missing rows refresh through authenticated, rate-limited, server-only
+  logic and upsert on unique `tmdb_id`. Private `user_movies`, profiles,
+  preferences, lists, picker state, and exports are never globally cached.
+- Per-process in-flight maps deduplicate identical search, detail, import, and
+  provider URL requests. Database uniqueness remains authoritative for
+  `movies.tmdb_id`, `(user_id,movie_id)`, normalized list names, memberships,
+  queue positions, and list positions. Pending controls cover repeat form
+  submission.
+- Watch Next now queries only the ordered owner queue, selects explicit fields,
+  detects truncation at 500, and normalizes inside transactional RPCs rather
+  than an N+1 update loop or a post-commit second call. Import matching is
+  concurrency-limited, Unicode-safe, and reuses title/detail promises within a
+  batch. Client logout no longer ships the browser Supabase SDK in the
+  authenticated shell.
+- The final build contains 47 static JS chunks totaling 1,746,342 raw bytes.
+  The largest route entry is `/library` at 486,629 raw bytes; auth signup/login
+  are about 333 KB, import 218,819 bytes, list detail 214,464 bytes, and picker
+  214,351 bytes. These are uncompressed build-artifact measurements, not
+  network timings. Library remains the first bundle-splitting candidate.
+- Existing indexes match the inspected owner/status/time/order query patterns.
+  No speculative workload index was added; only the limiter primary key on
+  `(user_id, operation)` creates a new index. Live `EXPLAIN ANALYZE` evidence
+  is still needed before adding text/facet indexes.
+
+### Reliability and UI hardening
+
+- TMDB requests have an eight-second abort timeout, provider 429 handling,
+  friendly retry text, stable input normalization/limits, and server-only
+  credentials.
+- Movie posters and list collages use `next/image`, reserve aspect ratio,
+  validate fixed TMDB paths, use `w342`/`w500` sources and `sizes`, lazy-load by
+  default, prioritize only explicit detail art, and fall back after missing or
+  failed images. The only remote image pattern is HTTPS
+  `image.tmdb.org/t/p/**`.
+- A shared authenticated loading skeleton covers all implemented protected
+  routes; import/lists/picker/recommendations retain focused loaders and
+  long-running controls expose pending status. Route error boundaries now
+  cover the authenticated shell, library, search, import, lists, picker,
+  recommendations, and settings. Root/list/movie not-found states are
+  controlled and contain no raw errors.
+- Dashboard, library, Watch Next, schedule, import, lists, picker, and
+  recommendations expose contextual empty/limited states and a relevant next
+  action. The absent statistics feature has no false zero-metric placeholder.
+- Native Next 16 linting exposed render-inside-catch and synchronous
+  effect-state patterns. They were refactored through data result objects,
+  keyed state scopes, derived selections, input refs, and
+  `useSyncExternalStore`; no lint rule was disabled.
+- Security headers now include a scoped CSP, `nosniff`, frame denial,
+  referrer policy, and a restrictive permissions policy.
+
+### Known blockers and readiness
+
+- The new Part 15 migration and all prior locally created migrations have not
+  been proven installed on the intended Preview Supabase project. Apply them
+  in order, run `notify pgrst, 'reload schema';` as a separate statement, then
+  run both read-only verification scripts and resolve every `MISSING`.
+- No disposable QA credentials were available. Valid/duplicate/unconfirmed
+  signup, real login/logout/session persistence, authenticated search/library/
+  detail/queue/schedule/import/settings/export/list/picker/recommendation
+  flows, complete two-user isolation, and destructive account cascades were
+  not executed. The guarded tests exist but are not claimed as passing.
+- Password-reset request validation and invalid/expired local routes pass; the
+  delivered email-link step is blocked without a test inbox.
+- Account deletion is blocked until the dedicated one-shot account and target
+  cascade verification are available. QA A/B or a developer account must
+  never substitute.
+- `/statistics` is proxy-protected but has no route or implementation. This is
+  a scope discrepancy, not a passing protected feature.
+- Search provider pagination, list-summary pagination, schedule/dashboard
+  large-library bounds, cross-instance metadata refresh deduplication,
+  concurrent queue-append retry, slow-network image checks, authenticated
+  five-viewport/dialog accessibility, monitoring, backups, email delivery,
+  legal pages, TMDB attribution/licensing, production Supabase/Vercel
+  separation, domain redirects, and analytics remain Preview/production work.
+- `docs/PRODUCTION_READINESS.md` is the status checklist. Recommendation:
+  proceed only to a controlled Part 16 Preview setup, not public production.
+
+Current milestone: Part 15 Testing and Production Hardening. Local hardening
+and test architecture are implemented; the required authenticated matrix and
+live Preview gates remain incomplete.
+
+Next milestone: Part 16 Preview Deployment.
+
+## 26. Agent Handoff Protocol
 
 Before starting any task, every coding agent must:
 
@@ -690,6 +948,39 @@ context elsewhere, or add secrets/actual environment values. Keep this document
 concise, internally consistent, and grounded in repository evidence.
 
 ## Context Change Log
+
+### 2026-07-30 - Codex Part 15 testing and production hardening
+
+- Added guarded public/authenticated/two-user/disposable-account Playwright
+  architecture, a read-only live-Supabase integration suite, automatic
+  redacted console/network diagnostics, two read-only SQL verification
+  reports, post-build secret scanning, and testing/security/readiness
+  documentation.
+- Hardened auth callbacks/errors/logout, Supabase logging, private exports, CSV
+  validation/formula protection, Server Action inputs, shared metadata
+  ingestion, queue normalization/reads, scheduling fields/defaults, route
+  errors/loading/empty states, poster fallbacks, accessibility semantics,
+  security headers, and Next 16 lint compatibility.
+- Added unapplied migration
+  `202607300001_part_15_tmdb_rate_limits.sql`: durable per-user TMDB fixed
+  windows, private limiter storage/RPC, canonical shared-cache markers,
+  authenticated-read/server-write-only `movies` privileges, transactional
+  movie-management/schedule RPC replacements, and preference-default repair.
+  No speculative query index was added; the only new index is the limiter
+  primary key.
+- Final local verification: lint and direct TypeScript passed; 55 files/534
+  unit tests passed; guarded integration loaded with 5 tests skipped;
+  Playwright passed 35 and skipped 6 credential-gated cases; public clean
+  Playwright MCP passed; both npm audits reported zero vulnerabilities; 462
+  built artifacts passed the secret scan; and the Next `16.2.12` production
+  build passed with 34 static page generations.
+- Live limitations: no migration was applied, no real QA account/data was
+  mutated, password email delivery and account deletion were not tested, live
+  RLS/privileges/cascades remain unverified, protected screenshots/responsive
+  QA remain blocked, and `/statistics` remains absent.
+- Milestone: Part 15 hardening/test architecture is locally implemented; the
+  required authenticated matrix and live Preview gates remain incomplete. Part
+  16 Preview Deployment is next.
 
 ### 2026-07-29 - Codex Part 14 picker and rule-based recommendations
 

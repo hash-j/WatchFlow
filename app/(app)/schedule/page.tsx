@@ -103,6 +103,8 @@ async function ScheduleWorkspace() {
       : null;
   const timezone = normalizeTimeZone(profileTimezone);
   const { today, upcoming, past } = groupScheduledMovies(movies, timezone);
+  const hasScheduledMovies =
+    today.length + upcoming.length + past.length > 0;
 
   if (movies.length === 0) {
     return (
@@ -134,27 +136,45 @@ async function ScheduleWorkspace() {
         />
       </div>
       <div className="space-y-8">
-        <ScheduleSection
-          title="Today"
-          items={today}
-          timezone={timezone}
-          dateFormat={preferences.dateFormat}
-          timeFormat={preferences.timeFormat}
-        />
-        <ScheduleSection
-          title="Upcoming"
-          items={upcoming}
-          timezone={timezone}
-          dateFormat={preferences.dateFormat}
-          timeFormat={preferences.timeFormat}
-        />
-        <ScheduleSection
-          title="Past"
-          items={past}
-          timezone={timezone}
-          dateFormat={preferences.dateFormat}
-          timeFormat={preferences.timeFormat}
-        />
+        {hasScheduledMovies ? (
+          <>
+            <ScheduleSection
+              title="Today"
+              items={today}
+              timezone={timezone}
+              dateFormat={preferences.dateFormat}
+              timeFormat={preferences.timeFormat}
+            />
+            <ScheduleSection
+              title="Upcoming"
+              items={upcoming}
+              timezone={timezone}
+              dateFormat={preferences.dateFormat}
+              timeFormat={preferences.timeFormat}
+            />
+            <ScheduleSection
+              title="Past"
+              items={past}
+              timezone={timezone}
+              dateFormat={preferences.dateFormat}
+              timeFormat={preferences.timeFormat}
+            />
+          </>
+        ) : (
+          <div className="rounded-xl border bg-card p-8 text-center shadow-sm">
+            <CalendarClock
+              className="mx-auto size-8 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <h2 className="mt-4 text-lg font-semibold">
+              You have no scheduled movies.
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              Choose a movie, local date, time, and timezone in the form to add
+              your first private schedule.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

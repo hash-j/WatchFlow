@@ -5,6 +5,8 @@ import type {
 
 export const CSV_IMPORT_MAX_BYTES = 2 * 1024 * 1024;
 export const CSV_IMPORT_MAX_ROWS = 500;
+export const CSV_IMPORT_MAX_COLUMNS = 100;
+export const CSV_IMPORT_MAX_CELL_CHARACTERS = 10_000;
 export const CSV_IMPORT_PREVIEW_ROWS = 20;
 
 export const IMPORT_FIELDS = [

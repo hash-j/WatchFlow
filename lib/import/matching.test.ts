@@ -9,6 +9,7 @@ import type { ValidatedImportRow } from "./types";
 import {
   classifyMovieMatch,
   matchImportRows,
+  normalizeMovieTitle,
   type ImportMatchingDependencies,
 } from "./matching";
 
@@ -131,10 +132,51 @@ describe("TMDB import matching", () => {
     expect(searchMovies).toHaveBeenCalledOnce();
   });
 
+  it("preserves Unicode letters and does not deduplicate distinct Urdu titles", async () => {
+    expect(normalizeMovieTitle("دل والے")).toBe("دل والے");
+    expect(normalizeMovieTitle("خدا کے لیے")).toBe("خدا کے لیے");
+
+    const searchMovies = vi.fn(async (_session, title: string) => [
+      candidate({ tmdbId: title === "دل والے" ? 1 : 2, title }),
+    ]);
+    const matches = await matchImportRows(
+      [
+        row({
+          id: "row_1",
+          title: "دل والے",
+          releaseYear: null,
+        }),
+        row({
+          id: "row_2",
+          rowNumber: 3,
+          sourceOrder: 1,
+          title: "خدا کے لیے",
+          releaseYear: null,
+        }),
+      ],
+      dependencies(searchMovies),
+    );
+
+    expect(searchMovies).toHaveBeenCalledTimes(2);
+    expect(searchMovies).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      "دل والے",
+    );
+    expect(searchMovies).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      "خدا کے لیے",
+    );
+    expect(matches.map((match) => match.candidates[0]?.tmdbId)).toEqual([
+      1, 2,
+    ]);
+  });
+
   it("never starts more than four TMDB lookups concurrently", async () => {
     let active = 0;
     let peak = 0;
-    const searchMovies = vi.fn(async (title: string) => {
+    const searchMovies = vi.fn(async (_session, title: string) => {
       active += 1;
       peak = Math.max(peak, active);
       await Promise.resolve();

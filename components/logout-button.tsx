@@ -1,42 +1,37 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
+
+import {
+  logoutAction,
+  type LogoutActionState,
+} from "@/app/auth/actions";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
 
-export function LogoutButton() {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+const INITIAL_STATE: LogoutActionState = { message: null };
 
-  const logout = async () => {
-    const supabase = createClient();
-    setError(null);
-    setIsLoading(true);
-
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      setError("Unable to sign out. Please try again.");
-      setIsLoading(false);
-      return;
-    }
-
-    router.replace("/auth/login");
-    router.refresh();
-  };
+function LogoutSubmitButton() {
+  const { pending } = useFormStatus();
 
   return (
-    <div className="flex flex-col items-start gap-1">
-      <Button variant="outline" size="sm" onClick={logout} disabled={isLoading}>
-        {isLoading ? "Signing out..." : "Sign out"}
-      </Button>
-      {error ? (
+    <Button variant="outline" size="sm" type="submit" disabled={pending}>
+      {pending ? "Signing out..." : "Sign out"}
+    </Button>
+  );
+}
+
+export function LogoutButton() {
+  const [state, action] = useActionState(logoutAction, INITIAL_STATE);
+
+  return (
+    <form action={action} className="flex flex-col items-start gap-1">
+      <LogoutSubmitButton />
+      {state.message ? (
         <p className="max-w-40 text-xs text-destructive" role="alert">
-          {error}
+          {state.message}
         </p>
       ) : null}
-    </div>
+    </form>
   );
 }

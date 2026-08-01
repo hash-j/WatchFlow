@@ -40,14 +40,14 @@ describe("Part 14 protected route and navigation contracts", () => {
       ).toBe(true);
     }
 
-    const shell = source("components/app-shell.tsx");
+    const navigation = source("components/app-navigation.tsx");
     const proxy = source("lib/supabase/proxy.ts");
     for (const [href, label] of [
       ["/picker", "Movie Picker"],
       ["/recommendations", "Recommendations"],
     ]) {
-      expect(shell).toContain(`href: "${href}"`);
-      expect(shell).toContain(`label: "${label}"`);
+      expect(navigation).toContain(`href: "${href}"`);
+      expect(navigation).toContain(`label: "${label}"`);
       expect(proxy).toContain(`"${href}"`);
     }
   });

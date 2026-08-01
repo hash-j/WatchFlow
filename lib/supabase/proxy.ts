@@ -10,6 +10,7 @@ export const PROTECTED_ROUTE_PREFIXES = [
   "/picker",
   "/recommendations",
   "/import",
+  "/statistics",
   "/watch-next",
   "/schedule",
   "/settings",

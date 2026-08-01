@@ -7,11 +7,11 @@ import { updateApplicationPreferencesAction } from "@/app/(app)/settings/actions
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
-  LIBRARY_MOVIE_STATUSES,
   LIBRARY_MOVIE_STATUS_LABELS,
 } from "@/lib/movies/types";
 import {
   DATE_FORMATS,
+  DEFAULT_MOVIE_STATUSES,
   INITIAL_SETTINGS_ACTION_STATE,
   MOVIES_PER_PAGE_OPTIONS,
   SUPPORTED_LANGUAGES,
@@ -77,7 +77,7 @@ export function PreferencesForm({ preferences }: { preferences: UserPreferences 
             defaultValue={preferences.defaultMovieStatus}
             className={selectClassName}
           >
-            {LIBRARY_MOVIE_STATUSES.map((status) => (
+            {DEFAULT_MOVIE_STATUSES.map((status) => (
               <option key={status} value={status}>
                 {LIBRARY_MOVIE_STATUS_LABELS[status]}
               </option>

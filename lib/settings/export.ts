@@ -1,4 +1,10 @@
 import { mapProfileSettings, mapUserPreferences } from "./mapping";
+import {
+  escapeCsvCell,
+  neutralizeSpreadsheetFormula,
+} from "@/lib/csv/safety";
+
+export { escapeCsvCell, neutralizeSpreadsheetFormula };
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -59,15 +65,6 @@ function releaseYear(movie: UnknownRecord) {
   if (stored) return stored;
   const date = stringValue(movie.release_date);
   return /^\d{4}/.test(date) ? date.slice(0, 4) : "";
-}
-
-export function neutralizeSpreadsheetFormula(value: string) {
-  return /^[\t\r ]*[=+\-@*]/.test(value) ? `'${value}` : value;
-}
-
-export function escapeCsvCell(value: unknown) {
-  const safe = neutralizeSpreadsheetFormula(stringValue(value));
-  return /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
 }
 
 export function buildLibraryCsv(rows: unknown[]) {
@@ -150,12 +147,52 @@ function mapPersonalMovie(value: unknown) {
   };
 }
 
+function mapListMembership(value: unknown) {
+  const record = isRecord(value) ? value : {};
+  const userMovie = movieRecord(record.user_movies);
+  const movie = movieRecord(userMovie.movies);
+
+  return {
+    position:
+      typeof record.position === "number" ? record.position : null,
+    title: nullableString(movie.title),
+    tmdbId:
+      typeof movie.tmdb_id === "number" || typeof movie.tmdb_id === "string"
+        ? movie.tmdb_id
+        : null,
+    addedAt: nullableString(record.created_at),
+  };
+}
+
+function mapCustomList(value: unknown) {
+  const record = isRecord(value) ? value : {};
+  const memberships = Array.isArray(record.list_movies)
+    ? record.list_movies
+        .map(mapListMembership)
+        .sort(
+          (left, right) =>
+            (left.position ?? Number.MAX_SAFE_INTEGER) -
+            (right.position ?? Number.MAX_SAFE_INTEGER),
+        )
+    : [];
+
+  return {
+    name: nullableString(record.name),
+    description: nullableString(record.description),
+    visibility: nullableString(record.visibility) ?? "private",
+    createdAt: nullableString(record.created_at),
+    updatedAt: nullableString(record.updated_at),
+    movies: memberships,
+  };
+}
+
 export function buildAccountDataExport(input: {
   exportedAt: string;
   email: string | null;
   profile: unknown;
   preferences: unknown;
   library: unknown[];
+  lists?: unknown[];
 }) {
   const profile = mapProfileSettings(input.profile);
   const preferences = mapUserPreferences(input.preferences);
@@ -173,6 +210,7 @@ export function buildAccountDataExport(input: {
     },
     preferences,
     library,
+    customLists: (input.lists ?? []).map(mapCustomList),
     schedules: library
       .filter((item) => item.scheduledFor)
       .map((item) => ({
@@ -182,7 +220,7 @@ export function buildAccountDataExport(input: {
         timezone: item.scheduleTimezone,
         note: item.scheduleNote,
       })),
-    metadata: { formatVersion: 1 },
+    metadata: { formatVersion: 2 },
   };
 }
 

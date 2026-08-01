@@ -65,10 +65,21 @@ describe("application preference validation", () => {
 
   it.each([
     ["status", { ...validPreferences, defaultMovieStatus: "private" }],
+    [
+      "schedule-less scheduled default",
+      { ...validPreferences, defaultMovieStatus: "scheduled" },
+    ],
     ["priority", { ...validPreferences, defaultPriority: "6" }],
     ["page size", { ...validPreferences, moviesPerPage: "25" }],
   ])("rejects an invalid %s", (_label, input) => {
     expect(applicationPreferencesSchema.safeParse(input).success).toBe(false);
+  });
+
+  it("repairs a legacy scheduled default to want to watch when reading data", () => {
+    expect(
+      mapUserPreferences({ default_movie_status: "scheduled" })
+        .defaultMovieStatus,
+    ).toBe("want_to_watch");
   });
 });
 

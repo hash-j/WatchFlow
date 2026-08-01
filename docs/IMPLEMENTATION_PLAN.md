@@ -137,9 +137,10 @@ Status: implemented in this milestone.
 - Applied member defaults to manual adds, TMDB adult/release/language behavior,
   library grid/list and page size, and schedule-oriented date/time rendering.
   Explicit URL view and page-size parameters take precedence.
-- Added on-demand private CSV and format-version-1 JSON exports with attachment
-  headers, no-store behavior, explicit field whitelists, and CSV formula
-  neutralization.
+- Added on-demand private CSV and JSON exports with attachment headers,
+  no-store behavior, explicit field whitelists, and CSV formula
+  neutralization. Part 15 advances JSON to format version 2 by adding owned
+  custom lists/memberships without internal identifiers.
 - Added separately confirmed library deletion and account deletion. The latter
   requires a recent trusted Auth sign-in and confines admin use to final
   deletion of the verified current Auth user.
@@ -456,10 +457,154 @@ relationships, recent picker exclusions are capped at 50 and remain in
 component memory, recommendation output is capped at 16, and authenticated
 two-user browser verification still depends on available confirmed sessions.
 
+## Part 15: testing and production hardening
+
+Status: hardening and test architecture implemented locally; the required
+authenticated workflow matrix, target migration verification, and Preview
+operational verification remain incomplete.
+
+### Test architecture
+
+- Added explicit unit, gated live-integration, database-catalog, Playwright,
+  browser-diagnostic, bundle-secret, and production-build layers documented in
+  `docs/TESTING.md`.
+- Expanded Playwright with reusable authenticated contexts for QA Users A/B,
+  login/logout, controlled movie/list lifecycle, in-memory CSV fixtures,
+  mutation-aware waits, accessible state assertions, and safe console/network
+  capture.
+- Restricted mutating browser QA to a loopback application explicitly marked
+  as development. Account deletion requires a separate one-use account,
+  different from both standard QA users, plus an explicit destructive flag.
+- Added a read-only two-user Supabase integration suite. It is disabled unless
+  the operator explicitly supplies the development guard and required
+  credentials.
+- Preserved public auth, callback/recovery failure, protected-route, keyboard,
+  sign-up non-404, and five-viewport regressions.
+
+### Security and reliability work
+
+- Added stable auth errors, allowlisted callback OTP types, safe internal
+  redirects, browser Supabase configuration validation, and cookie-aware
+  server-side logout.
+- Restricted development Supabase logs to validated error code/category and
+  kept production output empty. Raw message/detail/hint and private rows are
+  not logged.
+- Kept the admin client server-only, verified-user-gated, nonpersistent, and
+  limited to shared movie metadata plus final same-user Auth deletion.
+- Added private/no-store/no-cache/nosniff behavior on CSV/JSON responses,
+  centralized spreadsheet formula protection, and JSON format version 2 with
+  owned custom lists/memberships.
+- Hardened CSV authentication ordering and file/row/column/cell/confirmation
+  limits; retained four-request matching concurrency and memory-only handling.
+- Added CSP, referrer, permissions, nosniff, and frame-denial headers.
+- Added route error boundaries, root and dynamic not-found handling, stable
+  loading/pending announcements, and more actionable empty states.
+- Added validated optimized TMDB poster URLs, bounded source sizes, fixed
+  aspect ratios, responsive `sizes`, and runtime image fallbacks.
+
+### Rate limiting and shared caching
+
+Create exactly one Part 15 patch migration:
+
+`supabase/migrations/202607300001_part_15_tmdb_rate_limits.sql`
+
+It adds:
+
+- nullable `movies.tmdb_adult` and `movies.metadata_language` cache-safety
+  fields;
+- a repair/narrowing of preference defaults so `scheduled` cannot be selected
+  without schedule input;
+- explicit authenticated-read/server-write-only grants for shared `movies`;
+- transactional replacements for movie-management and schedule RPCs;
+- internal RLS-enabled `watchflow_tmdb_rate_limits`, with no policies or
+  browser-role table grants; and
+- authenticated `watchflow_take_tmdb_rate_limit(text, integer)`, an empty-
+  search-path `security definer` function deriving its user from `auth.uid()`.
+
+Fixed windows are 30 searches/60 seconds, 20 details/60 seconds, 120 import
+searches/600 seconds, and 120 import details/600 seconds per authenticated user.
+All current provider flows are authenticated; no public fallback limiter is
+needed.
+
+Shared `movies` details use canonical English and are reusable for 30 days only
+when timestamp, canonical-language, and adult-safety metadata match. Member
+language preferences remain search-only. Stale rows refresh through protected
+rate-limited server logic and upsert by unique `tmdb_id`. In-flight promises
+deduplicate identical requests in one process; PostgreSQL rate counters and
+uniqueness remain the multi-instance correctness boundaries. Private data is
+never globally cached.
+
+### Focused performance work
+
+- Query only Watch Next rows, sort in PostgreSQL, and render at most 500 with a
+  visible truncation state instead of downloading a full private library.
+- Normalize affected queues with one authenticated RPC rather than repeated
+  row updates.
+- Remove the browser Supabase SDK dependency from protected-shell logout. The
+  final raw route-entry audit records `/library` as the largest entry at
+  486,629 bytes; Preview still needs compressed-transfer/hydration measurement.
+- Deduplicate search/detail provider requests and confirmation detail lookups.
+- Retain server pagination for the library and existing bounded list picker,
+  import, discovery, and recommendation work.
+- Add no speculative indexes. Existing query/constraint indexes and the new
+  limiter primary key match current access; Preview query plans remain the
+  trigger for further changes.
+
+### Verification scripts and documentation
+
+- Added `supabase/verification/development_readiness.sql` for object-based
+  `INSTALLED`/`MISSING` readiness checks.
+- Added `supabase/verification/production_security_audit.sql` for RLS policy,
+  authenticated/anonymous privilege, and limiter exposure findings.
+- Added `scripts/scan-client-secrets.mjs` for built browser chunks/rendered
+  payloads; it never prints a matching configured value.
+- Added `docs/TESTING.md`, `docs/SECURITY.md`,
+  `docs/SECURITY_AUDIT.md`, and `docs/PRODUCTION_READINESS.md`.
+
+### Part 15 Preview checklist
+
+- Confirm the six earlier incremental migrations in the development target.
+  Do not rerun non-idempotent historical SQL blindly.
+- Manually apply
+  `supabase/migrations/202607300001_part_15_tmdb_rate_limits.sql`, then run
+  `notify pgrst, 'reload schema';` as a separate step.
+- Run both read-only verification scripts and resolve every missing/review/
+  unsafe result.
+- Provision two disposable confirmed QA accounts plus a distinct one-use
+  deletion account. Run guarded integration and complete authenticated
+  Playwright workflows, cross-user mutations, queue/schedule/import/settings/
+  export/list/discovery behavior, responsive/accessibility checks, console/
+  network inspection, and requested screenshots.
+- Verify Auth confirmation/password-reset email delivery and delivered/expired
+  link behavior with a QA inbox. Do not mark the end-to-end reset flow passed
+  without this.
+- Verify account-delete foreign-key cascades and shared movie preservation
+  directly in the development database.
+- Repeat lint, direct TypeScript, unit/integration, Playwright, production
+  build, dependency audit, and post-build secret scan after final changes.
+- Configure Preview-only Supabase/Vercel values, access controls, backups,
+  monitoring, SMTP, domain/Auth redirects, legal pages, and TMDB attribution/
+  licensing evidence before broader release.
+- Reconcile the requested `/statistics` route. It is proxy-protected but no
+  page, chart, query module, or testable feature exists.
+
+Recorded final local verification: lint and direct TypeScript passed; the unit/
+source suite passed 55 files and 534 tests; the guarded integration command
+completed with all five live tests skipped; Playwright passed 35 tests with six
+guarded/skipped and automatic safe console/network assertions; both npm audits
+reported zero vulnerabilities; the Next.js 16.2.12 production build passed;
+and the client scan checked 462 artifacts without a forbidden/configured-value
+leak. Playwright MCP passed a clean-restart public smoke only.
+
+Known limitations: the Part 15 migration was not applied remotely; guarded live
+tests skip without confirmed disposable credentials; delivered email and
+account deletion remain blocked; in-flight metadata refresh deduplication is
+process-local; list summaries/dashboard/schedule retain documented scaling
+limits; and production/Preview infrastructure was not configured.
+
 ## Next milestones
 
-1. Part 15 — Testing and production hardening.
-2. Part 16 — Preview deployment.
-3. Part 17 — Public beta preparation.
-4. Part 18 — Notifications and calendar integration.
-5. Part 19 — Paid SaaS.
+1. Part 16 — Preview deployment.
+2. Part 17 — Public beta preparation.
+3. Part 18 — Notifications and calendar integration.
+4. Part 19 — Paid SaaS.

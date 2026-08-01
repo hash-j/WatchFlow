@@ -65,7 +65,11 @@ export function AddMoviesDialog({
   const orderedSelectedIds = useMemo(
     () =>
       candidates
-        .filter((candidate) => selectedIds.has(candidate.userMovieId))
+        .filter(
+          (candidate) =>
+            !candidate.alreadyAdded &&
+            selectedIds.has(candidate.userMovieId),
+        )
         .map((candidate) => candidate.userMovieId),
     [candidates, selectedIds],
   );
@@ -80,19 +84,7 @@ export function AddMoviesDialog({
   }, [open]);
 
   useEffect(() => {
-    const available = new Set(availableIds);
-    setSelectedIds((current) => {
-      const next = new Set([...current].filter((id) => available.has(id)));
-      const unchanged =
-        next.size === current.size &&
-        [...next].every((id) => current.has(id));
-      return unchanged ? current : next;
-    });
-  }, [availableIds]);
-
-  useEffect(() => {
     if (state.requestId > 0 && state.status === "success") {
-      setSelectedIds(new Set());
       router.refresh();
     }
   }, [router, state.requestId, state.status]);
@@ -155,6 +147,7 @@ export function AddMoviesDialog({
             method="get"
             action={basePath}
             role="search"
+            onSubmit={() => setSelectedIds(new Set())}
             className="grid gap-3 rounded-xl border bg-muted/30 p-3 md:grid-cols-[minmax(12rem,1fr)_12rem_11rem_auto]"
           >
             <input type="hidden" name="add" value="1" />
@@ -232,7 +225,7 @@ export function AddMoviesDialog({
                 size="sm"
                 variant="ghost"
                 className="min-h-10"
-                disabled={selectedIds.size === 0}
+                disabled={orderedSelectedIds.length === 0}
                 onClick={() => setSelectedIds(new Set())}
               >
                 Clear selection
@@ -259,7 +252,10 @@ export function AddMoviesDialog({
                   type="button"
                   variant="outline"
                   className="mt-4"
-                  onClick={() => router.push(`${basePath}?add=1`)}
+                  onClick={() => {
+                    setSelectedIds(new Set());
+                    router.push(`${basePath}?add=1`);
+                  }}
                 >
                   Clear picker filters
                 </Button>

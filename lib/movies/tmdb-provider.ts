@@ -12,8 +12,14 @@ import { validateMovieSearchQuery, validateTmdbId } from "./validation";
 
 const TMDB_API_BASE_URL = "https://api.themoviedb.org/3";
 const REQUEST_TIMEOUT_MS = 8_000;
+const inFlightRequests = new Map<string, Promise<unknown>>();
 
-async function requestTmdb(path: string, params: URLSearchParams) {
+function retryAfterSeconds(response: Response) {
+  const value = Number(response.headers.get("retry-after"));
+  return Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
+async function requestTmdbUncached(path: string, params: URLSearchParams) {
   const token = process.env.TMDB_READ_ACCESS_TOKEN;
 
   if (!token) {
@@ -41,7 +47,7 @@ async function requestTmdb(path: string, params: URLSearchParams) {
     }
 
     if (response.status === 429) {
-      throw new MovieProviderRateLimitError();
+      throw new MovieProviderRateLimitError(retryAfterSeconds(response));
     }
 
     if (!response.ok) {
@@ -66,6 +72,20 @@ async function requestTmdb(path: string, params: URLSearchParams) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function requestTmdb(path: string, params: URLSearchParams) {
+  const requestKey = `${path}?${params.toString()}`;
+  const active = inFlightRequests.get(requestKey);
+  if (active) {
+    return active;
+  }
+
+  const pending = requestTmdbUncached(path, params).finally(() => {
+    inFlightRequests.delete(requestKey);
+  });
+  inFlightRequests.set(requestKey, pending);
+  return pending;
 }
 
 export class TmdbMovieProvider implements MovieProvider {

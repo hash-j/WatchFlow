@@ -1,0 +1,289 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+
+const migrationName = "202607300001_part_15_tmdb_rate_limits.sql";
+const migration = readFileSync(
+  resolve(process.cwd(), "supabase/migrations", migrationName),
+  "utf8",
+)
+  .toLowerCase()
+  .replaceAll("\r\n", "\n");
+const compactMigration = migration.replace(/\s+/g, " ");
+
+const securityAudit = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/verification/production_security_audit.sql",
+  ),
+  "utf8",
+).toLowerCase();
+const readinessAudit = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/verification/development_readiness.sql",
+  ),
+  "utf8",
+).toLowerCase();
+
+function functionSql(name: string) {
+  const start = migration.indexOf(
+    `create or replace function public.${name}(`,
+  );
+  const end = migration.indexOf("\ncomment on function", start);
+
+  return migration.slice(start, end < 0 ? migration.length : end);
+}
+
+describe("Part 15 database migration contract", () => {
+  it("uses the one authorized Part 15 migration", () => {
+    const part15Migrations = readdirSync(
+      resolve(process.cwd(), "supabase/migrations"),
+    ).filter((name) => name.includes("_part_15_"));
+
+    expect(part15Migrations).toEqual([migrationName]);
+  });
+
+  it("adds nullable cache-safety metadata without treating old rows as fresh", () => {
+    const movieAlter = compactMigration.slice(
+      compactMigration.indexOf("alter table public.movies"),
+      compactMigration.indexOf("comment on column public.movies.tmdb_adult"),
+    );
+
+    expect(movieAlter).toContain(
+      "add column if not exists tmdb_adult boolean",
+    );
+    expect(movieAlter).toContain(
+      "add column if not exists metadata_language text",
+    );
+    expect(movieAlter).not.toContain("default");
+    expect(compactMigration).toContain("movies_metadata_language_check");
+    expect(compactMigration).toContain(
+      "metadata_language ~ '^[a-z]{2}(-[a-z]{2})?$'",
+    );
+  });
+
+  it("repairs and prevents schedule-less scheduled defaults", () => {
+    const preferenceRepair = compactMigration.slice(
+      compactMigration.indexOf("update public.user_preferences"),
+      compactMigration.indexOf(
+        "create table public.watchflow_tmdb_rate_limits",
+      ),
+    );
+
+    expect(preferenceRepair).toContain(
+      "set default_movie_status = 'want_to_watch'",
+    );
+    expect(preferenceRepair).toContain(
+      "where default_movie_status = 'scheduled'",
+    );
+    expect(preferenceRepair).toContain(
+      "drop constraint if exists user_preferences_default_movie_status_check",
+    );
+    for (const status of [
+      "want_to_watch",
+      "watch_next",
+      "currently_watching",
+      "watched",
+      "on_hold",
+      "dropped",
+    ]) {
+      expect(preferenceRepair).toContain(`'${status}'`);
+    }
+    const replacementCheck = preferenceRepair.slice(
+      preferenceRepair.indexOf(
+        "add constraint user_preferences_default_movie_status_check",
+      ),
+      preferenceRepair.indexOf(
+        "-- replace the management functions",
+      ),
+    );
+    expect(replacementCheck).not.toContain("'scheduled'");
+  });
+
+  it("makes shared movies browser-readable but server-write-only", () => {
+    expect(compactMigration).toContain(
+      "revoke all privileges on table public.movies from public, anon, authenticated",
+    );
+    expect(compactMigration).toContain(
+      "revoke select (%1$s), insert (%1$s), update (%1$s), references (%1$s)",
+    );
+    expect(compactMigration).toContain(
+      "grant select on table public.movies to authenticated",
+    );
+  });
+
+  it("keeps management, scheduling, and queue compaction transactional", () => {
+    const management = functionSql(
+      "watchflow_update_library_movie",
+    ).replace(/\s+/g, " ");
+    const scheduling = functionSql("watchflow_schedule_movie").replace(
+      /\s+/g,
+      " ",
+    );
+
+    for (const functionBody of [management, scheduling]) {
+      expect(functionBody).toContain("security invoker");
+      expect(functionBody).toContain("v_user_id uuid := (select auth.uid())");
+      expect(functionBody).toContain(
+        "perform public.watchflow_normalize_queue()",
+      );
+      expect(functionBody).not.toContain("p_user_id");
+    }
+    expect(management).toContain("schedule_timezone = case");
+    expect(scheduling).toContain("schedule_timezone = p_timezone");
+  });
+
+  it("creates one private counter row per Auth user and operation", () => {
+    expect(compactMigration).toContain(
+      "create table public.watchflow_tmdb_rate_limits",
+    );
+    expect(compactMigration).toContain(
+      "user_id uuid not null references auth.users(id) on delete cascade",
+    );
+    expect(compactMigration).toContain(
+      "primary key (user_id, operation)",
+    );
+    for (const operation of [
+      "search",
+      "details",
+      "import_search",
+      "import_details",
+    ]) {
+      expect(compactMigration).toContain(`'${operation}'`);
+    }
+    expect(compactMigration).toContain(
+      "alter table public.watchflow_tmdb_rate_limits enable row level security",
+    );
+    expect(compactMigration).not.toContain("create policy");
+    expect(compactMigration).toContain(
+      "revoke all on table public.watchflow_tmdb_rate_limits from public, anon, authenticated",
+    );
+    expect(compactMigration).not.toMatch(
+      /grant[^;]+on table public\.watchflow_tmdb_rate_limits/,
+    );
+    expect(compactMigration).not.toMatch(/create\s+(?:unique\s+)?index/);
+  });
+
+  it("uses hardcoded authenticated buckets and validates cost", () => {
+    const limiter = functionSql("watchflow_take_tmdb_rate_limit").replace(
+      /\s+/g,
+      " ",
+    );
+
+    expect(limiter).toContain("security definer");
+    expect(limiter).toMatch(/set search_path = ''/);
+    expect(limiter).toContain("v_user_id uuid := (select auth.uid())");
+    expect(limiter).not.toContain("p_user_id");
+    expect(limiter).toContain(
+      "when 'search' then v_limit := 30; v_window_seconds := 60;",
+    );
+    expect(limiter).toContain(
+      "when 'details' then v_limit := 20; v_window_seconds := 60;",
+    );
+    expect(limiter).toContain(
+      "when 'import_search' then v_limit := 120; v_window_seconds := 600;",
+    );
+    expect(limiter).toContain(
+      "when 'import_details' then v_limit := 120; v_window_seconds := 600;",
+    );
+    expect(limiter).toContain(
+      "p_cost is null or p_cost < 1 or p_cost > v_limit",
+    );
+  });
+
+  it("serializes first use and increments before returning a stable result", () => {
+    const limiter = functionSql("watchflow_take_tmdb_rate_limit");
+
+    expect(limiter).toContain("pg_advisory_xact_lock");
+    expect(limiter).toContain("hashtextextended");
+    expect(limiter).toContain("for update");
+    expect(limiter).toContain(
+      "insert into public.watchflow_tmdb_rate_limits",
+    );
+    expect(limiter).toContain(
+      "update public.watchflow_tmdb_rate_limits",
+    );
+    expect(limiter).toContain(
+      "v_window_started_at\n      + pg_catalog.make_interval(secs => v_window_seconds) <= v_now",
+    );
+    expect(limiter).toContain("v_window_started_at := v_now");
+    expect(limiter).toContain(
+      "where rate_limit.user_id = v_user_id\n    and rate_limit.operation = p_operation",
+    );
+    for (const key of [
+      "allowed",
+      "remaining",
+      "retry_after_seconds",
+      "limit",
+      "window_seconds",
+    ]) {
+      expect(limiter).toContain(`'${key}'`);
+    }
+  });
+
+  it("exposes only the limiter function to authenticated callers", () => {
+    expect(compactMigration).toContain(
+      "revoke all on function public.watchflow_take_tmdb_rate_limit(text, integer) from public, anon, authenticated",
+    );
+    expect(compactMigration).toContain(
+      "grant execute on function public.watchflow_take_tmdb_rate_limit(text, integer) to authenticated",
+    );
+  });
+});
+
+describe("Part 15 read-only verification contracts", () => {
+  it("audits all private/shared/internal tables, policies, and privileges", () => {
+    for (const table of [
+      "profiles",
+      "movies",
+      "user_movies",
+      "user_preferences",
+      "lists",
+      "list_movies",
+      "watchflow_tmdb_rate_limits",
+    ]) {
+      expect(securityAudit).toContain(`'${table}'`);
+    }
+
+    expect(securityAudit).toContain("pg_catalog.pg_policies");
+    expect(securityAudit).toContain("has_table_privilege");
+    expect(securityAudit).toContain("has_any_column_privilege");
+    expect(securityAudit).toContain("unsafe_true_policy");
+    expect(securityAudit).toContain("limiter_has_no_policies");
+    expect(securityAudit).toContain("missing_policy");
+    expect(securityAudit).toContain("effective_privileges");
+  });
+
+  it("checks readiness from real objects rather than migration history", () => {
+    for (const object of [
+      "watchflow_normalize_queue",
+      "move_watch_queue_item",
+      "watchflow_add_user_movie",
+      "watchflow_library_rows",
+      "watchflow_bulk_remove_library_movies",
+      "watchflow_list_summaries",
+      "watchflow_take_tmdb_rate_limit",
+      "tmdb_adult",
+      "metadata_language",
+      "movies_metadata_language_check",
+      "default_status_schedule_safety",
+      "profiles_backfill",
+      "user_preferences_backfill",
+    ]) {
+      expect(readinessAudit).toContain(object);
+    }
+
+    expect(readinessAudit).toContain("'installed'");
+    expect(readinessAudit).toContain("'missing'");
+    expect(readinessAudit).not.toContain("supabase_migrations");
+  });
+
+  it("keeps both verification files read-only", () => {
+    for (const audit of [securityAudit, readinessAudit]) {
+      expect(audit).not.toMatch(
+        /^\s*(?:insert|update|delete|alter|create|drop|truncate)\b/im,
+      );
+    }
+  });
+});

@@ -2,19 +2,21 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { tmdbMovieProvider } from "../movies/tmdb-provider";
-import type { LibraryMovie, MovieDetails } from "../movies/types";
-import { createAdminClient } from "../supabase/admin";
+import { resolveSharedMovieMetadata } from "../movies/shared-metadata";
+import type { LibraryMovie } from "../movies/types";
+import { readUserPreferences } from "../settings/supabase-settings";
 import { logSupabaseError } from "../supabase/error-logging";
 import { createClient } from "../supabase/server";
-import { LibraryPersistenceError } from "./errors";
 import { classifyUserMovieInsert } from "./duplicate";
-import { mapLibraryMovieRow, toSharedMovieRow } from "./mapping";
+import {
+  AuthenticationRequiredError,
+  LibraryPersistenceError,
+} from "./errors";
+import { mapLibraryMovieRow } from "./mapping";
 import type {
   AuthenticatedLibrarySession,
   LibraryDependencies,
 } from "./service";
-import { readUserPreferences } from "../settings/supabase-settings";
 
 type SupabaseLibrarySession = AuthenticatedLibrarySession & {
   client: SupabaseClient;
@@ -36,37 +38,6 @@ async function authenticate(): Promise<SupabaseLibrarySession | null> {
   }
 
   return { userId: user.id, client: supabase };
-}
-
-async function upsertSharedMovie(
-  session: AuthenticatedLibrarySession,
-  movie: MovieDetails,
-) {
-  const admin = createAdminClient(session.userId);
-  const { data, error } = await admin
-    .from("movies")
-    .upsert(toSharedMovieRow(movie), { onConflict: "tmdb_id" })
-    .select("id")
-    .single();
-
-  const id =
-    data && (typeof data.id === "string" || typeof data.id === "number")
-      ? String(data.id)
-      : null;
-
-  if (error) {
-    logSupabaseError("movies metadata upsert failed", error);
-    throw new LibraryPersistenceError("The movie metadata could not be saved.");
-  }
-
-  if (!id) {
-    logSupabaseError("movies metadata upsert returned no ID", {
-      message: "Supabase returned no movie ID after a successful upsert.",
-    });
-    throw new LibraryPersistenceError("The movie metadata could not be saved.");
-  }
-
-  return { id };
 }
 
 async function insertUserMovie(
@@ -124,6 +95,43 @@ async function listUserMovies(session: AuthenticatedLibrarySession) {
   return mapRows(data);
 }
 
+export const MAX_WATCH_NEXT_ROWS = 500;
+
+export async function getCurrentUserWatchNextMovies() {
+  const session = await authenticate();
+  if (!session) {
+    throw new AuthenticationRequiredError();
+  }
+
+  const { client, userId } = session;
+  const { data, error } = await client
+    .from("user_movies")
+    .select(
+      "id, status, priority, queue_position, created_at, movies(id, tmdb_id, title, poster_path)",
+    )
+    .eq("user_id", userId)
+    .eq("status", "watch_next")
+    .order("queue_position", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true })
+    .range(0, MAX_WATCH_NEXT_ROWS);
+
+  if (error) {
+    logSupabaseError("watch_next queue read failed", error);
+    throw new LibraryPersistenceError("Your Watch Next queue could not be loaded.");
+  }
+
+  const mapped = Array.isArray(data)
+    ? data
+        .map(mapLibraryMovieRow)
+        .filter((movie): movie is LibraryMovie => Boolean(movie))
+    : [];
+
+  return {
+    items: mapped.slice(0, MAX_WATCH_NEXT_ROWS),
+    truncated: mapped.length > MAX_WATCH_NEXT_ROWS,
+  };
+}
+
 async function getUserMovie(
   session: AuthenticatedLibrarySession,
   movieId: string,
@@ -147,15 +155,17 @@ async function getUserMovie(
 export function createSupabaseLibraryDependencies(): LibraryDependencies {
   return {
     authenticate,
-    getMovieDetails: async (session, tmdbId) => {
+    resolveSharedMovie: async (session, tmdbId) => {
       const { client, userId } = getSessionClient(session);
       const preferences = await readUserPreferences(client, userId);
-      return tmdbMovieProvider.getMovieDetails(tmdbId, {
+      return resolveSharedMovieMetadata({
+        client,
+        verifiedUserId: userId,
+        tmdbId,
         includeAdult: preferences.showAdultResults,
-        language: preferences.preferredLanguage,
+        rateLimitOperation: "details",
       });
     },
-    upsertSharedMovie,
     insertUserMovie,
     listUserMovies,
     getUserMovie,

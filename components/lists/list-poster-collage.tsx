@@ -1,8 +1,34 @@
+"use client";
+
 import Image from "next/image";
 import { Images } from "lucide-react";
+import { useState } from "react";
 
 import { getTmdbImageUrl } from "@/lib/movies/images";
 import { cn } from "@/lib/utils";
+
+function PosterTile({ source }: { source: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div className="grid size-full place-items-center bg-muted">
+        <Images className="size-5 text-muted-foreground" aria-hidden="true" />
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={source}
+      alt=""
+      fill
+      sizes="(max-width: 640px) 50vw, (max-width: 1280px) 25vw, 220px"
+      className="object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export function ListPosterCollage({
   posterPaths,
@@ -48,13 +74,7 @@ export function ListPosterCollage({
           )}
           aria-hidden="true"
         >
-          <Image
-            src={source}
-            alt=""
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1280px) 25vw, 220px"
-            className="object-cover"
-          />
+          <PosterTile source={source} />
         </div>
       ))}
     </div>

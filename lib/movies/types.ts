@@ -20,6 +20,7 @@ export type MovieTrailer = {
 };
 
 export type MovieDetails = MovieSearchResult & {
+  adult?: boolean | null;
   backdropPath: string | null;
   runtimeMinutes: number | null;
   genres: string[];
@@ -28,6 +29,7 @@ export type MovieDetails = MovieSearchResult & {
   originalLanguage: string | null;
   productionCountries: string[];
   trailer: MovieTrailer | null;
+  metadataLanguage?: string | null;
 };
 
 export const LIBRARY_MOVIE_STATUSES = [

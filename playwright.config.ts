@@ -1,7 +1,19 @@
 import { defineConfig } from "@playwright/test";
 
 const baseURL =
-  process.env.PLAYWRIGHT_BASE_URL?.trim() || "http://localhost:3000";
+  process.env.E2E_BASE_URL?.trim() ||
+  process.env.PLAYWRIGHT_BASE_URL?.trim() ||
+  "http://localhost:3000";
+const webServerCommand =
+  process.env.E2E_WEB_SERVER_COMMAND?.trim() || "npm run dev";
+const configuredSupabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/$/, "") ?? "";
+const expectedSupabaseUrl =
+  process.env.E2E_EXPECTED_SUPABASE_URL?.trim().replace(/\/$/, "") ?? "";
+const pinnedAuthenticatedQaRun =
+  process.env.E2E_TARGET_ENV === "development" &&
+  Boolean(configuredSupabaseUrl) &&
+  configuredSupabaseUrl === expectedSupabaseUrl;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -29,9 +41,12 @@ export default defineConfig({
     video: "retain-on-failure",
   },
   webServer: {
-    command: "npm run dev",
+    command: webServerCommand,
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    // A credentialed run must start the configured command with this process's
+    // pinned Supabase environment instead of trusting an unknown server already
+    // listening on the loopback port.
+    reuseExistingServer: !process.env.CI && !pinnedAuthenticatedQaRun,
     timeout: 120_000,
   },
 });

@@ -1,17 +1,18 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
 import { AddToLibraryForm } from "@/components/movies/add-to-library-form";
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { MovieRating } from "@/components/movies/movie-rating";
 import { MovieSearchForm } from "@/components/movies/search-form";
-import { getAuthContext } from "@/lib/supabase/auth";
 import {
   EmptyMovieQueryError,
   MovieProviderError,
+  MovieSearchValidationError,
 } from "@/lib/movies/errors";
+import { AuthenticationRequiredError } from "@/lib/library/errors";
 import { getMovieReleaseYear } from "@/lib/movies/images";
-import { tmdbMovieProvider } from "@/lib/movies/tmdb-provider";
-import { getCurrentUserPreferences } from "@/lib/settings/supabase-settings";
+import { searchTmdbMoviesForCurrentUser } from "@/lib/movies/server-search";
 
 type SearchPageProps = {
   searchParams: Promise<{ q?: string | string[] }>;
@@ -48,81 +49,87 @@ async function SearchResults({ searchParams }: SearchPageProps) {
     );
   }
 
-  const [, preferences] = await Promise.all([
-    getAuthContext(),
-    getCurrentUserPreferences(),
-  ]);
+  let searchResult:
+    | {
+        status: "success";
+        movies: Awaited<ReturnType<typeof searchTmdbMoviesForCurrentUser>>;
+      }
+    | { status: "error"; message: string };
 
   try {
-    const movies = await tmdbMovieProvider.searchMovies(query, {
-      includeAdult: preferences?.showAdultResults ?? false,
-      includeUnreleased: preferences?.includeUnreleasedMovies ?? true,
-      language: preferences?.preferredLanguage ?? "en",
-    });
-
-    if (movies.length === 0) {
-      return (
-        <SearchMessage>
-          No movies matched “{query.trim()}”. Try another title.
-        </SearchMessage>
-      );
-    }
-
-    return (
-      <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        {movies.map((movie) => {
-          const releaseYear = getMovieReleaseYear(movie.releaseDate);
-
-          return (
-            <article
-              key={movie.tmdbId}
-              className="flex overflow-hidden rounded-xl border bg-card shadow-sm"
-            >
-              <div className="w-32 shrink-0 p-3 pr-0">
-                <MoviePoster
-                  path={movie.posterPath}
-                  title={movie.title}
-                  sizes="128px"
-                />
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col p-4">
-                <h2 className="font-semibold leading-tight">{movie.title}</h2>
-                {movie.originalTitle ? (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Original: {movie.originalTitle}
-                  </p>
-                ) : null}
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {releaseYear ?? "Release date unavailable"}
-                </p>
-                <div className="mt-2">
-                  <MovieRating rating={movie.voteAverage} />
-                </div>
-                <p className="mt-3 line-clamp-4 text-sm text-muted-foreground">
-                  {movie.overview ?? "No overview is available for this movie."}
-                </p>
-                <AddToLibraryForm tmdbId={movie.tmdbId} />
-              </div>
-            </article>
-          );
-        })}
-      </div>
-    );
+    const movies = await searchTmdbMoviesForCurrentUser(query);
+    searchResult = { status: "success", movies };
   } catch (error) {
-    if (error instanceof EmptyMovieQueryError) {
-      return <SearchMessage>{error.message}</SearchMessage>;
+    if (error instanceof AuthenticationRequiredError) {
+      redirect("/auth/login");
+    } else if (
+      error instanceof EmptyMovieQueryError ||
+      error instanceof MovieSearchValidationError
+    ) {
+      searchResult = { status: "error", message: error.message };
+    } else if (error instanceof MovieProviderError) {
+      searchResult = { status: "error", message: error.message };
+    } else {
+      searchResult = {
+        status: "error",
+        message: "Movie search is unavailable right now. Please try again.",
+      };
     }
+  }
 
-    if (error instanceof MovieProviderError) {
-      return <SearchMessage>{error.message}</SearchMessage>;
-    }
+  if (searchResult.status === "error") {
+    return <SearchMessage>{searchResult.message}</SearchMessage>;
+  }
 
+  if (searchResult.movies.length === 0) {
     return (
       <SearchMessage>
-        Movie search is unavailable right now. Please try again.
+        No movies matched “{query.trim()}”. Try another title.
       </SearchMessage>
     );
   }
+
+  return (
+    <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+      {searchResult.movies.map((movie) => {
+        const releaseYear = getMovieReleaseYear(movie.releaseDate);
+
+        return (
+          <article
+            key={movie.tmdbId}
+            data-tmdb-id={movie.tmdbId}
+            className="flex overflow-hidden rounded-xl border bg-card shadow-sm"
+          >
+            <div className="w-32 shrink-0 p-3 pr-0">
+              <MoviePoster
+                path={movie.posterPath}
+                title={movie.title}
+                sizes="128px"
+              />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col p-4">
+              <h2 className="font-semibold leading-tight">{movie.title}</h2>
+              {movie.originalTitle ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Original: {movie.originalTitle}
+                </p>
+              ) : null}
+              <p className="mt-2 text-xs text-muted-foreground">
+                {releaseYear ?? "Release date unavailable"}
+              </p>
+              <div className="mt-2">
+                <MovieRating rating={movie.voteAverage} />
+              </div>
+              <p className="mt-3 line-clamp-4 text-sm text-muted-foreground">
+                {movie.overview ?? "No overview is available for this movie."}
+              </p>
+              <AddToLibraryForm tmdbId={movie.tmdbId} />
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function SearchPage({ searchParams }: SearchPageProps) {

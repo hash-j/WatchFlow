@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { MovieDetails } from "../movies/types";
 import { AuthenticationRequiredError } from "./errors";
 import { classifyUserMovieInsert } from "./duplicate";
 import {
@@ -8,24 +7,6 @@ import {
   listLibraryMovies,
   type LibraryDependencies,
 } from "./service";
-
-const movie: MovieDetails = {
-  tmdbId: 603,
-  title: "The Matrix",
-  originalTitle: null,
-  overview: "A hacker discovers the truth.",
-  posterPath: "/poster.jpg",
-  backdropPath: "/backdrop.jpg",
-  releaseDate: "1999-03-30",
-  voteAverage: 8.2,
-  runtimeMinutes: 136,
-  genres: ["Action", "Science Fiction"],
-  director: "Lana Wachowski",
-  cast: [{ name: "Keanu Reeves", character: "Neo" }],
-  originalLanguage: "en",
-  productionCountries: ["United States of America"],
-  trailer: { key: "trailer-key", name: "Official Trailer", site: "YouTube" },
-};
 
 function createDependencies(
   overrides: Partial<LibraryDependencies> = {},
@@ -35,8 +16,7 @@ function createDependencies(
       userId: "verified-user-id",
       client: { scope: "authenticated" },
     }),
-    getMovieDetails: vi.fn().mockResolvedValue(movie),
-    upsertSharedMovie: vi.fn().mockResolvedValue({ id: "movie-row-id" }),
+    resolveSharedMovie: vi.fn().mockResolvedValue({ id: "movie-row-id" }),
     insertUserMovie: vi.fn().mockResolvedValue("added"),
     listUserMovies: vi.fn().mockResolvedValue([]),
     getUserMovie: vi.fn().mockResolvedValue(null),
@@ -53,21 +33,22 @@ describe("authenticated library service", () => {
     await expect(addMovieToLibrary(603, dependencies)).rejects.toBeInstanceOf(
       AuthenticationRequiredError,
     );
-    expect(dependencies.getMovieDetails).not.toHaveBeenCalled();
-    expect(dependencies.upsertSharedMovie).not.toHaveBeenCalled();
+    expect(dependencies.resolveSharedMovie).not.toHaveBeenCalled();
     expect(dependencies.insertUserMovie).not.toHaveBeenCalled();
   });
 
-  it("successfully upserts complete shared movie metadata", async () => {
-    const upsertSharedMovie = vi.fn().mockResolvedValue({ id: "movie-row-id" });
-    const dependencies = createDependencies({ upsertSharedMovie });
+  it("resolves shared metadata only after authentication", async () => {
+    const resolveSharedMovie = vi
+      .fn()
+      .mockResolvedValue({ id: "movie-row-id" });
+    const dependencies = createDependencies({ resolveSharedMovie });
 
     await expect(addMovieToLibrary(603, dependencies)).resolves.toBe("added");
 
-    expect(upsertSharedMovie).toHaveBeenCalledOnce();
-    expect(upsertSharedMovie).toHaveBeenCalledWith(
+    expect(resolveSharedMovie).toHaveBeenCalledOnce();
+    expect(resolveSharedMovie).toHaveBeenCalledWith(
       expect.objectContaining({ userId: "verified-user-id" }),
-      movie,
+      603,
     );
   });
 
@@ -115,11 +96,11 @@ describe("authenticated library service", () => {
     expect(listUserMoviesMock).toHaveBeenCalledWith(session);
   });
 
-  it("does not insert user_movies when the database upsert fails", async () => {
-    const upsertError = new Error("safe test upsert failure");
+  it("does not insert user_movies when shared metadata resolution fails", async () => {
+    const upsertError = new Error("safe test metadata failure");
     const insertUserMovie = vi.fn();
     const dependencies = createDependencies({
-      upsertSharedMovie: vi.fn().mockRejectedValue(upsertError),
+      resolveSharedMovie: vi.fn().mockRejectedValue(upsertError),
       insertUserMovie,
     });
 

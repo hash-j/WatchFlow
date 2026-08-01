@@ -29,6 +29,17 @@ function PickerContentLoading() {
 }
 
 async function PickerContent({ searchParams }: PickerPageProps) {
+  let content:
+    | {
+        status: "ready";
+        filters: ReturnType<typeof parsePickerSearchParams>["filters"];
+        availableGenres: ReturnType<typeof getAvailableGenres>;
+        warnings: ReturnType<typeof parsePickerSearchParams>["warnings"];
+        libraryCount: number;
+        libraryTruncated: boolean;
+      }
+    | { status: "error"; message: string };
+
   try {
     const [dataset, rawParams] = await Promise.all([
       getDiscoveryDataset(),
@@ -37,28 +48,41 @@ async function PickerContent({ searchParams }: PickerPageProps) {
     const availableGenres = getAvailableGenres(dataset.movies);
     const parsed = parsePickerSearchParams(rawParams, availableGenres);
 
-    return (
-      <MoviePicker
-        key={JSON.stringify(parsed.filters)}
-        initialFilters={parsed.filters}
-        availableGenres={availableGenres}
-        initialWarnings={parsed.warnings}
-        libraryCount={dataset.totalCount}
-        libraryTruncated={dataset.truncated}
-      />
-    );
+    content = {
+      status: "ready",
+      filters: parsed.filters,
+      availableGenres,
+      warnings: parsed.warnings,
+      libraryCount: dataset.totalCount,
+      libraryTruncated: dataset.truncated,
+    };
   } catch (error) {
     if (error instanceof DiscoveryAuthenticationError) {
       redirect("/auth/login");
     }
 
+    content = { status: "error", message: getSafeDiscoveryLoadError(error) };
+  }
+
+  if (content.status === "error") {
     return (
       <DiscoveryLoadError
-        message={getSafeDiscoveryLoadError(error)}
+        message={content.message}
         retryHref="/picker"
       />
     );
   }
+
+  return (
+    <MoviePicker
+      key={JSON.stringify(content.filters)}
+      initialFilters={content.filters}
+      availableGenres={content.availableGenres}
+      initialWarnings={content.warnings}
+      libraryCount={content.libraryCount}
+      libraryTruncated={content.libraryTruncated}
+    />
+  );
 }
 
 export default function PickerPage(props: PickerPageProps) {

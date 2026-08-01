@@ -302,6 +302,20 @@ export function LibrarySelectionWorkspace({
   scopeKey: string;
   children: ReactNode;
 }) {
+  return (
+    <LibrarySelectionWorkspaceState key={scopeKey} items={items}>
+      {children}
+    </LibrarySelectionWorkspaceState>
+  );
+}
+
+function LibrarySelectionWorkspaceState({
+  items,
+  children,
+}: {
+  items: VisibleLibraryItem[];
+  children: ReactNode;
+}) {
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [feedback, setFeedback] = useState<BulkLibraryActionState | null>(null);
@@ -310,12 +324,6 @@ export function LibrarySelectionWorkspace({
     () => items.map((item) => item.libraryId),
     [items],
   );
-
-  useEffect(() => {
-    setIsSelecting(false);
-    setSelectedIds(new Set());
-    setFeedback(null);
-  }, [scopeKey]);
 
   const orderedSelectedIds = useMemo(
     () => orderedSelectedLibraryIds(visibleIds, selectedIds),

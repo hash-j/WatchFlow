@@ -4,10 +4,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { classifyUserMovieInsert } from "../library/duplicate";
 import { LibraryPersistenceError } from "../library/errors";
-import { toSharedMovieRow } from "../library/mapping";
+import { enforceTmdbRateLimit } from "../movies/rate-limit";
+import {
+  resolveSharedMovieMetadata,
+  type SharedMovieReference,
+} from "../movies/shared-metadata";
 import { tmdbMovieProvider } from "../movies/tmdb-provider";
-import type { MovieDetails } from "../movies/types";
-import { createAdminClient } from "../supabase/admin";
 import { logSupabaseError } from "../supabase/error-logging";
 import { createClient } from "../supabase/server";
 import type { ImportAuthentication } from "./matching";
@@ -58,27 +60,12 @@ async function existingUserMovie(
 
 export async function saveImportedMovie(
   session: ImportAuthentication,
-  movie: MovieDetails,
+  movie: SharedMovieReference,
   imported: ConfirmedImportMovie,
   queuePosition: number | null,
 ) {
   const { client, userId } = sessionClient(session);
-  // Construction is deliberately after auth.getUser() succeeded.
-  const admin = createAdminClient(userId);
-  const { data: sharedMovie, error: sharedError } = await admin
-    .from("movies")
-    .upsert(toSharedMovieRow(movie), { onConflict: "tmdb_id" })
-    .select("id")
-    .single();
-
-  if (sharedError || !sharedMovie?.id) {
-    if (sharedError) {
-      logSupabaseError("CSV import movie metadata upsert failed", sharedError);
-    }
-    throw new LibraryPersistenceError("Movie metadata could not be saved.");
-  }
-
-  const movieId = String(sharedMovie.id);
+  const movieId = movie.id;
   if (await existingUserMovie(client, userId, movieId)) {
     return { status: "already_in_library" as const, matchedTitle: movie.title };
   }
@@ -107,6 +94,35 @@ export async function saveImportedMovie(
   }
 
   return { status: "imported" as const, matchedTitle: movie.title };
+}
+
+async function findOwnedMovie(
+  session: ImportAuthentication,
+  tmdbId: number,
+) {
+  const { client, userId } = sessionClient(session);
+  const { data, error } = await client
+    .from("user_movies")
+    .select("id, movies!inner(title, tmdb_id)")
+    .eq("user_id", userId)
+    .eq("movies.tmdb_id", tmdbId)
+    .maybeSingle();
+
+  if (error) {
+    logSupabaseError("CSV import owned movie lookup failed", error);
+    throw new LibraryPersistenceError();
+  }
+
+  const related = Array.isArray(data?.movies) ? data.movies[0] : data?.movies;
+  const title =
+    related &&
+    typeof related === "object" &&
+    "title" in related &&
+    typeof related.title === "string"
+      ? related.title
+      : null;
+
+  return data ? { matchedTitle: title ?? "Stored movie" } : null;
 }
 
 async function getNextQueuePosition(session: ImportAuthentication) {
@@ -147,14 +163,28 @@ async function normalizeQueue(session: ImportAuthentication) {
 export function createImportMatchingDependencies() {
   return {
     authenticate,
-    searchMovies: (query: string) => tmdbMovieProvider.searchMovies(query),
+    searchMovies: async (session: ImportAuthentication, query: string) => {
+      const { client } = sessionClient(session);
+      await enforceTmdbRateLimit(client, "import_search");
+      return tmdbMovieProvider.searchMovies(query);
+    },
   };
 }
 
 export function createMovieImportDependencies(): MovieImportDependencies {
   return {
     authenticate,
-    getMovieDetails: (tmdbId) => tmdbMovieProvider.getMovieDetails(tmdbId),
+    findOwnedMovie,
+    resolveSharedMovie: (session, tmdbId) => {
+      const { client, userId } = sessionClient(session);
+      return resolveSharedMovieMetadata({
+        client,
+        verifiedUserId: userId,
+        tmdbId,
+        includeAdult: false,
+        rateLimitOperation: "import_details",
+      });
+    },
     saveMovie: saveImportedMovie,
     getNextQueuePosition,
     normalizeQueue,

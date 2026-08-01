@@ -96,7 +96,7 @@ describe("mapped row validation", () => {
 
   it("maps known statuses and flags unknown statuses for review", () => {
     const parsed = parseCsvText(
-      "Title,Status\nInception,Complete\nArrival,Maybe Later",
+      "Title,Status\nInception,Complete\nArrival,Maybe Later\nDune,Scheduled",
     );
     const rows = validateAndMapRows(parsed, {
       title: "column_1",
@@ -108,7 +108,13 @@ describe("mapped row validation", () => {
       code: "unknown_status",
       severity: "review",
     });
+    expect(rows[2].status).toBeNull();
+    expect(rows[2].issues[0]).toMatchObject({
+      code: "unknown_status",
+      severity: "review",
+    });
     expect(canMatchImportRow(rows[1])).toBe(true);
+    expect(canMatchImportRow(rows[2])).toBe(true);
   });
 
   it("flags duplicate title and year rows inside the CSV", () => {
@@ -120,5 +126,18 @@ describe("mapped row validation", () => {
       releaseYear: "column_2",
     });
     expect(rows[1].issues[0].code).toBe("duplicate_csv_row");
+  });
+
+  it("does not collapse distinct Urdu titles into one duplicate key", () => {
+    const parsed = parseCsvText(
+      "Title,Year\nدل والے,2015\nخدا کے لیے,2015",
+    );
+    const rows = validateAndMapRows(parsed, {
+      title: "column_1",
+      releaseYear: "column_2",
+    });
+
+    expect(rows[0].issues).toEqual([]);
+    expect(rows[1].issues).toEqual([]);
   });
 });

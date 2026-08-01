@@ -191,6 +191,21 @@ describe("Part 12 library UI contracts", () => {
     expect(mutationAdapter).not.toContain('.from("movies").delete');
   });
 
+  it("queries only the ordered Watch Next subset with a documented cap", () => {
+    const adapter = source("lib/library/supabase-library.ts");
+    const page = source("app/(app)/watch-next/page.tsx");
+
+    expect(adapter).toContain("MAX_WATCH_NEXT_ROWS = 500");
+    expect(adapter).toContain('.eq("status", "watch_next")');
+    expect(adapter).toContain(
+      '.order("queue_position", { ascending: true, nullsFirst: false })',
+    );
+    expect(adapter).toContain(".range(0, MAX_WATCH_NEXT_ROWS)");
+    expect(page).toContain("getCurrentUserWatchNextMovies");
+    expect(page).not.toContain("listLibraryMovies");
+    expect(page).toContain("Showing the first 500 queued movies");
+  });
+
   it("provides keyboard-operable current-page selection and confirmations", () => {
     const selection = source(
       "components/library/library-selection-workspace.tsx",

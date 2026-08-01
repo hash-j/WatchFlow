@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { CalendarPlus } from "lucide-react";
 
 import { scheduleMovieAction } from "@/app/(app)/actions/management";
@@ -24,8 +24,8 @@ export function ScheduleMovieForm({
   profileTimezone,
   defaultDate,
 }: ScheduleMovieFormProps) {
-  const [timezone, setTimezone] = useState(profileTimezone ?? "UTC");
-  const [scheduledDate, setScheduledDate] = useState(defaultDate);
+  const scheduledDateRef = useRef<HTMLInputElement>(null);
+  const timezoneRef = useRef<HTMLInputElement>(null);
   const [state, action, isPending] = useActionState(
     scheduleMovieAction,
     initialLibraryActionState,
@@ -39,10 +39,15 @@ export function ScheduleMovieForm({
     const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     if (browserTimezone) {
-      setTimezone(browserTimezone);
-      setScheduledDate(
-        getLocalDateInput(new Date().toISOString(), browserTimezone),
-      );
+      if (timezoneRef.current) {
+        timezoneRef.current.value = browserTimezone;
+      }
+      if (scheduledDateRef.current) {
+        scheduledDateRef.current.value = getLocalDateInput(
+          new Date().toISOString(),
+          browserTimezone,
+        );
+      }
     }
   }, [profileTimezone]);
 
@@ -84,8 +89,8 @@ export function ScheduleMovieForm({
             name="scheduledDate"
             type="date"
             required
-            value={scheduledDate}
-            onChange={(event) => setScheduledDate(event.target.value)}
+            ref={scheduledDateRef}
+            defaultValue={defaultDate}
           />
         </div>
         <div className="space-y-2">
@@ -106,8 +111,8 @@ export function ScheduleMovieForm({
           id="schedule-timezone"
           name="timezone"
           required
-          value={timezone}
-          onChange={(event) => setTimezone(event.target.value)}
+          ref={timezoneRef}
+          defaultValue={profileTimezone ?? "UTC"}
           placeholder="UTC"
           autoComplete="off"
         />

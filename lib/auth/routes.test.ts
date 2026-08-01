@@ -104,6 +104,7 @@ describe("critical authentication route contracts", () => {
       "/lists/11111111-1111-4111-8111-111111111111",
       "/picker",
       "/recommendations",
+      "/statistics",
       "/watch-next",
       "/schedule",
       "/import",
@@ -145,6 +146,65 @@ describe("critical authentication route contracts", () => {
     expect(source("components/forgot-password-form.tsx")).toContain(
       '<Card role="status">',
     );
+  });
+
+  it("maps browser authentication failures to controlled copy", () => {
+    for (const relativePath of [
+      "components/login-form.tsx",
+      "components/sign-up-form.tsx",
+      "components/forgot-password-form.tsx",
+      "components/update-password-form.tsx",
+    ]) {
+      const form = source(relativePath);
+      expect(form, relativePath).toContain("getControlledAuthErrorMessage");
+      expect(form, relativePath).not.toContain("error.message");
+      expect(form.indexOf("try {"), relativePath).toBeLessThan(
+        form.indexOf("createClient()"),
+      );
+    }
+  });
+
+  it("keeps callback errors and invalid recovery sessions controlled", () => {
+    for (const relativePath of [
+      "app/auth/callback/route.ts",
+      "app/auth/confirm/route.ts",
+    ]) {
+      const route = source(relativePath);
+      expect(route, relativePath).toContain("parseEmailOtpType");
+      expect(route, relativePath).toContain("authErrorPath");
+      expect(route, relativePath).not.toContain("error.message");
+      expect(route, relativePath).not.toContain("?error=");
+    }
+
+    const errorPage = source("app/auth/error/page.tsx");
+    expect(errorPage).toContain("getAuthErrorReasonMessage");
+    expect(errorPage).not.toContain("params.error");
+    expect(errorPage).not.toContain("Code error:");
+
+    const updatePage = source("app/auth/update-password/page.tsx");
+    expect(updatePage).toContain('authErrorPath("recovery_session_required")');
+    expect(updatePage).toContain('authErrorPath("service_unavailable")');
+  });
+
+  it("redirects the leftover protected tutorial without rendering claims", () => {
+    const protectedPage = source("app/protected/page.tsx");
+    expect(protectedPage).toContain('redirect("/dashboard")');
+    expect(protectedPage).not.toContain("JSON.stringify");
+    expect(protectedPage).not.toContain("data.claims");
+  });
+
+  it("keeps logout on the authenticated server boundary", () => {
+    const action = source("app/auth/actions.ts");
+    const button = source("components/logout-button.tsx");
+
+    expect(action).toContain('import "server-only"');
+    expect(action).toContain("client.auth.getUser()");
+    expect(action).toContain('client.auth.signOut({ scope: "local" })');
+    expect(action).toContain('redirect("/auth/login")');
+    expect(button).toContain("useFormStatus");
+    expect(button).toContain("disabled={pending}");
+    expect(button).not.toContain("createClient");
+    expect(button).not.toContain("@/lib/supabase/client");
   });
 
   it("uses only /auth/sign-up as the signup URL", () => {

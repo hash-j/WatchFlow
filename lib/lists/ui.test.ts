@@ -54,11 +54,11 @@ describe("Part 13 route and private navigation contracts", () => {
   });
 
   it("adds My Lists to authenticated navigation and proxy protection", () => {
-    const shell = source("components/app-shell.tsx");
+    const navigation = source("components/app-navigation.tsx");
     const proxy = source("lib/supabase/proxy.ts");
     const authRoutes = source("lib/auth/routes.test.ts");
 
-    expect(shell).toContain(
+    expect(navigation).toContain(
       '{ href: "/lists", label: "My Lists", icon: ListPlus }',
     );
     expect(proxy).toContain('"/lists"');

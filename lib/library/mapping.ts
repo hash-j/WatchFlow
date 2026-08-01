@@ -89,7 +89,9 @@ function mapCast(value: unknown): MovieCastMember[] {
     .filter((item): item is MovieCastMember => Boolean(item));
 }
 
-function mapStoredMovie(record: UnknownRecord): (MovieDetails & { id: string }) | null {
+export function mapStoredMovie(
+  record: UnknownRecord,
+): (MovieDetails & { id: string }) | null {
   const id = asString(record.id);
   const tmdbId = asNumber(record.tmdb_id);
 
@@ -113,6 +115,8 @@ function mapStoredMovie(record: UnknownRecord): (MovieDetails & { id: string }) 
   return {
     id,
     tmdbId,
+    adult:
+      typeof record.tmdb_adult === "boolean" ? record.tmdb_adult : null,
     title,
     originalTitle: originalTitle && originalTitle !== title ? originalTitle : null,
     overview: asString(record.overview),
@@ -130,6 +134,7 @@ function mapStoredMovie(record: UnknownRecord): (MovieDetails & { id: string }) 
     originalLanguage: asString(record.original_language),
     productionCountries: mapStringArray(record.production_countries),
     trailer,
+    metadataLanguage: asString(record.metadata_language),
   };
 }
 
@@ -187,6 +192,9 @@ export function toSharedMovieRow(movie: MovieDetails) {
     production_countries: movie.productionCountries,
     public_rating: movie.voteAverage,
     trailer_key: movie.trailer?.key ?? null,
+    tmdb_adult:
+      typeof movie.adult === "boolean" ? movie.adult : null,
+    metadata_language: movie.metadataLanguage ?? null,
     metadata_updated_at: new Date().toISOString(),
   };
 }

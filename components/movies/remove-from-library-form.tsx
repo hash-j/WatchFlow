@@ -31,8 +31,6 @@ export function RemoveFromLibraryForm({
       return;
     }
 
-    setIsConfirming(false);
-
     if (redirectAfterRemoval) {
       router.replace("/library");
       router.refresh();

@@ -4,7 +4,11 @@ export function getTmdbImageUrl(
   path: string | null,
   size: "w342" | "w500" | "w780" = "w500",
 ) {
-  if (!path || !path.startsWith("/")) {
+  if (
+    !path ||
+    !/^\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(path) ||
+    path.includes("..")
+  ) {
     return null;
   }
 

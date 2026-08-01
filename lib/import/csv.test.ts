@@ -4,7 +4,12 @@ import {
   CsvImportValidationError,
   parseCsvText,
   validateCsvFileMetadata,
+  validateParsedCsvPayload,
 } from "./csv";
+import {
+  CSV_IMPORT_MAX_CELL_CHARACTERS,
+  CSV_IMPORT_MAX_COLUMNS,
+} from "./types";
 
 describe("CSV import parsing", () => {
   it("parses a valid CSV", () => {
@@ -74,6 +79,38 @@ describe("CSV import parsing", () => {
     const csv = ["Title", "One", "Two", "Three"].join("\n");
     expect(() => parseCsvText(csv, "movies.csv", 2)).toThrow(
       "Import at most 2 rows",
+    );
+  });
+
+  it("rejects excessive columns during the initial parse", () => {
+    const headers = Array.from(
+      { length: CSV_IMPORT_MAX_COLUMNS + 1 },
+      (_, index) => `Column ${index + 1}`,
+    );
+    expect(() => parseCsvText(headers.join(","))).toThrow(
+      `${CSV_IMPORT_MAX_COLUMNS} columns or fewer`,
+    );
+  });
+
+  it("rejects oversized cells during the initial parse", () => {
+    const oversized = "a".repeat(CSV_IMPORT_MAX_CELL_CHARACTERS + 1);
+    expect(() => parseCsvText(`Title\n${oversized}`)).toThrow(
+      `${CSV_IMPORT_MAX_CELL_CHARACTERS.toLocaleString()} characters or fewer`,
+    );
+  });
+
+  it("rejects parsed control-character expansion before returning it to the browser", () => {
+    const expandedCell = "\u0001".repeat(1_400);
+    const csv = [
+      "Title",
+      ...Array.from({ length: 500 }, () => expandedCell),
+    ].join("\n");
+    const parsed = parseCsvText(csv);
+
+    expect(csv.length).toBeLessThan(2 * 1024 * 1024);
+    expect(JSON.stringify(parsed).length).toBeGreaterThan(4 * 1024 * 1024);
+    expect(() => validateParsedCsvPayload(parsed)).toThrow(
+      "temporary CSV data is invalid",
     );
   });
 });

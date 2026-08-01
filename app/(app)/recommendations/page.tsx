@@ -131,6 +131,16 @@ function RecommendationEmptyState({
 async function RecommendationsContent({
   searchParams,
 }: RecommendationsPageProps) {
+  let content:
+    | {
+        status: "ready";
+        dataset: Awaited<ReturnType<typeof getDiscoveryDataset>>;
+        refresh: ReturnType<typeof parseRefreshSeed>;
+        result: ReturnType<typeof buildRuleBasedRecommendations>;
+        nextRefresh: number;
+      }
+    | { status: "error"; message: string };
+
   try {
     const [dataset, params] = await Promise.all([
       getDiscoveryDataset(),
@@ -143,120 +153,128 @@ async function RecommendationsContent({
     const nextRefresh =
       refresh.seed >= MAX_REFRESH_SEED ? 1 : refresh.seed + 1;
 
-    return (
-      <div className="space-y-8">
-        <section className="rounded-xl border bg-card p-5 shadow-sm sm:p-6">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-            <div>
-              <Badge variant="outline">Rule-based recommendations</Badge>
-              <p className="mt-3 max-w-3xl text-sm text-muted-foreground">
-                Suggestions use only stored metadata and activity from your
-                private library. They are transparent rules—not AI,
-                predictions, or certainty.
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {result.recommendationCount} recommendations from{" "}
-                {result.candidateCount} eligible unwatched candidates
-              </p>
-            </div>
-            {result.recommendationCount > 1 ? (
-              <Link
-                href={`/recommendations?refresh=${nextRefresh}`}
-                className={buttonVariants({ variant: "outline" })}
-                aria-label="Refresh recommendation presentation"
-              >
-                <RefreshCw aria-hidden="true" />
-                Refresh suggestions
-              </Link>
-            ) : null}
-          </div>
-
-          <details className="mt-5 rounded-lg border bg-muted/30 p-4">
-            <summary className="cursor-pointer font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              How recommendations work
-            </summary>
-            <div className="mt-3 space-y-3 text-sm text-muted-foreground">
-              <p>
-                Seeds prefer personal ratings of 8/10 or higher, then watched
-                favourites, watched ratings of 7+, rated genres, watched
-                genres, favourite genres, and stored public ratings.
-              </p>
-              <p>
-                Candidate statuses are Want to Watch, Watch Next, Scheduled,
-                and On Hold. Watched, Dropped, and Currently Watching movies
-                are excluded.
-              </p>
-              <p>
-                Scoring: +{RECOMMENDATION_SCORE_WEIGHTS.sharedGenre} per shared
-                genre (up to {RECOMMENDATION_SCORE_WEIGHTS.sharedGenreCap}), +
-                {RECOMMENDATION_SCORE_WEIGHTS.sameDirector} same director, +
-                {RECOMMENDATION_SCORE_WEIGHTS.similarReleasePeriod} within 10
-                release years, +{RECOMMENDATION_SCORE_WEIGHTS.similarRuntime}{" "}
-                within 30 runtime minutes, +
-                {RECOMMENDATION_SCORE_WEIGHTS.favourite} favourite, +
-                {RECOMMENDATION_SCORE_WEIGHTS.watchNext} Watch Next, and up to
-                +{RECOMMENDATION_SCORE_WEIGHTS.publicRatingEight} for public
-                rating. A 9–10 seed adds up to +
-                {RECOMMENDATION_SCORE_WEIGHTS.seedRatingTen}.
-              </p>
-              <p>
-                Results are deduplicated, limited to {MAX_RECOMMENDATIONS},
-                and diversified across genres and directors. Refresh only
-                shuffles within a similar-score window.
-              </p>
-            </div>
-          </details>
-        </section>
-
-        {refresh.warning ? (
-          <p
-            className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
-            role="status"
-          >
-            {refresh.warning}
-          </p>
-        ) : null}
-
-        {dataset.truncated ? (
-          <p className="text-sm text-muted-foreground" role="status">
-            For predictable performance, these recommendations use your 1,000
-            most recently added library movies.
-          </p>
-        ) : null}
-
-        {result.notice ? (
-          <p
-            className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground"
-            role="status"
-          >
-            {result.notice}
-          </p>
-        ) : null}
-
-        {result.sections.length === 0 ? (
-          <RecommendationEmptyState
-            coldStart={result.coldStart}
-            notice={result.notice}
-          />
-        ) : (
-          result.sections.map((section) => (
-            <RecommendationSection key={section.id} section={section} />
-          ))
-        )}
-      </div>
-    );
+    content = { status: "ready", dataset, refresh, result, nextRefresh };
   } catch (error) {
     if (error instanceof DiscoveryAuthenticationError) {
       redirect("/auth/login");
     }
 
+    content = { status: "error", message: getSafeDiscoveryLoadError(error) };
+  }
+
+  if (content.status === "error") {
     return (
       <DiscoveryLoadError
-        message={getSafeDiscoveryLoadError(error)}
+        message={content.message}
         retryHref="/recommendations"
       />
     );
   }
+
+  const { dataset, refresh, result, nextRefresh } = content;
+
+  return (
+    <div className="space-y-8">
+      <section className="rounded-xl border bg-card p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+          <div>
+            <Badge variant="outline">Rule-based recommendations</Badge>
+            <p className="mt-3 max-w-3xl text-sm text-muted-foreground">
+              Suggestions use only stored metadata and activity from your
+              private library. They are transparent rules—not AI, predictions,
+              or certainty.
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {result.recommendationCount} recommendations from{" "}
+              {result.candidateCount} eligible unwatched candidates
+            </p>
+          </div>
+          {result.recommendationCount > 1 ? (
+            <Link
+              href={`/recommendations?refresh=${nextRefresh}`}
+              className={buttonVariants({ variant: "outline" })}
+              aria-label="Refresh recommendation presentation"
+            >
+              <RefreshCw aria-hidden="true" />
+              Refresh suggestions
+            </Link>
+          ) : null}
+        </div>
+
+        <details className="mt-5 rounded-lg border bg-muted/30 p-4">
+          <summary className="cursor-pointer font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            How recommendations work
+          </summary>
+          <div className="mt-3 space-y-3 text-sm text-muted-foreground">
+            <p>
+              Seeds prefer personal ratings of 8/10 or higher, then watched
+              favourites, watched ratings of 7+, rated genres, watched genres,
+              favourite genres, and stored public ratings.
+            </p>
+            <p>
+              Candidate statuses are Want to Watch, Watch Next, Scheduled, and
+              On Hold. Watched, Dropped, and Currently Watching movies are
+              excluded.
+            </p>
+            <p>
+              Scoring: +{RECOMMENDATION_SCORE_WEIGHTS.sharedGenre} per shared
+              genre (up to {RECOMMENDATION_SCORE_WEIGHTS.sharedGenreCap}), +
+              {RECOMMENDATION_SCORE_WEIGHTS.sameDirector} same director, +
+              {RECOMMENDATION_SCORE_WEIGHTS.similarReleasePeriod} within 10
+              release years, +{RECOMMENDATION_SCORE_WEIGHTS.similarRuntime}{" "}
+              within 30 runtime minutes, +
+              {RECOMMENDATION_SCORE_WEIGHTS.favourite} favourite, +
+              {RECOMMENDATION_SCORE_WEIGHTS.watchNext} Watch Next, and up to +
+              {RECOMMENDATION_SCORE_WEIGHTS.publicRatingEight} for public
+              rating. A 9–10 seed adds up to +
+              {RECOMMENDATION_SCORE_WEIGHTS.seedRatingTen}.
+            </p>
+            <p>
+              Results are deduplicated, limited to {MAX_RECOMMENDATIONS}, and
+              diversified across genres and directors. Refresh only shuffles
+              within a similar-score window.
+            </p>
+          </div>
+        </details>
+      </section>
+
+      {refresh.warning ? (
+        <p
+          className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
+          role="status"
+        >
+          {refresh.warning}
+        </p>
+      ) : null}
+
+      {dataset.truncated ? (
+        <p className="text-sm text-muted-foreground" role="status">
+          For predictable performance, these recommendations use your 1,000
+          most recently added library movies.
+        </p>
+      ) : null}
+
+      {result.notice ? (
+        <p
+          className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground"
+          role="status"
+        >
+          {result.notice}
+        </p>
+      ) : null}
+
+      {result.sections.length === 0 ? (
+        <RecommendationEmptyState
+          coldStart={result.coldStart}
+          notice={result.notice}
+        />
+      ) : (
+        result.sections.map((section) => (
+          <RecommendationSection key={section.id} section={section} />
+        ))
+      )}
+    </div>
+  );
 }
 
 export default function RecommendationsPage(props: RecommendationsPageProps) {

@@ -1,38 +1,23 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const { createAdminClientMock } = vi.hoisted(() => ({
-  createAdminClientMock: vi.fn(),
-}));
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-vi.mock("../supabase/admin", () => ({
-  createAdminClient: createAdminClientMock,
-}));
 vi.mock("../supabase/error-logging", () => ({ logSupabaseError: vi.fn() }));
 vi.mock("../supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("../movies/tmdb-provider", () => ({ tmdbMovieProvider: {} }));
+vi.mock("../movies/rate-limit", () => ({ enforceTmdbRateLimit: vi.fn() }));
+vi.mock("../movies/shared-metadata", () => ({
+  resolveSharedMovieMetadata: vi.fn(),
+}));
 
 import { saveImportedMovie } from "./supabase-import";
 import type { ConfirmedImportMovie } from "./service";
-import type { MovieDetails } from "../movies/types";
+import type { SharedMovieReference } from "../movies/shared-metadata";
 
-const movie: MovieDetails = {
-  tmdbId: 27205,
+const movie: SharedMovieReference = {
+  id: "42",
   title: "Inception",
-  originalTitle: null,
-  overview: null,
-  posterPath: null,
-  backdropPath: null,
-  releaseDate: "2010-07-15",
-  voteAverage: 8.4,
-  runtimeMinutes: 148,
-  genres: ["Science Fiction"],
-  director: "Christopher Nolan",
-  cast: [],
-  originalLanguage: "en",
-  productionCountries: [],
-  trailer: null,
+  source: "provider",
 };
 
 const imported: ConfirmedImportMovie = {
@@ -69,25 +54,8 @@ function chainedLookup(data: unknown) {
   return builder;
 }
 
-function configureAdmin() {
-  const builder = {
-    upsert: vi.fn(),
-    select: vi.fn(),
-    single: vi.fn().mockResolvedValue({ data: { id: 42 }, error: null }),
-  };
-  builder.upsert.mockReturnValue(builder);
-  builder.select.mockReturnValue(builder);
-  createAdminClientMock.mockReturnValue({ from: vi.fn().mockReturnValue(builder) });
-  return builder;
-}
-
-beforeEach(() => {
-  createAdminClientMock.mockReset();
-});
-
 describe("Supabase CSV import persistence", () => {
-  it("upserts shared metadata and inserts normalized personal fields", async () => {
-    const admin = configureAdmin();
+  it("inserts normalized personal fields for resolved shared metadata", async () => {
     const lookup = chainedLookup(null);
     const insert = vi.fn().mockResolvedValue({ error: null });
     const from = vi
@@ -103,11 +71,6 @@ describe("Supabase CSV import persistence", () => {
       status: "imported",
       matchedTitle: "Inception",
     });
-    expect(createAdminClientMock).toHaveBeenCalledWith("verified-user");
-    expect(admin.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ tmdb_id: 27205, title: "Inception" }),
-      { onConflict: "tmdb_id" },
-    );
     expect(lookup.eq).toHaveBeenNthCalledWith(1, "user_id", "verified-user");
     expect(insert).toHaveBeenCalledWith({
       user_id: "verified-user",
@@ -122,7 +85,6 @@ describe("Supabase CSV import persistence", () => {
   });
 
   it("uses an existing shared movie without creating duplicate user data", async () => {
-    const admin = configureAdmin();
     const lookup = chainedLookup({ id: "existing-library-row" });
     const from = vi.fn().mockReturnValue(lookup);
     const result = await saveImportedMovie(
@@ -135,7 +97,6 @@ describe("Supabase CSV import persistence", () => {
       null,
     );
 
-    expect(admin.upsert).toHaveBeenCalledOnce();
     expect(result.status).toBe("already_in_library");
     expect(from).toHaveBeenCalledTimes(1);
   });

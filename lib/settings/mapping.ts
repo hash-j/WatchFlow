@@ -1,7 +1,7 @@
-import { LIBRARY_MOVIE_STATUSES } from "@/lib/movies/types";
 import { isValidTimeZone } from "@/lib/library/timezone";
 import {
   DATE_FORMATS,
+  DEFAULT_MOVIE_STATUSES,
   DEFAULT_USER_PREFERENCES,
   LIBRARY_VIEWS,
   MOVIES_PER_PAGE_OPTIONS,
@@ -64,7 +64,7 @@ export function mapUserPreferences(value: unknown): UserPreferences {
   return {
     defaultMovieStatus: enumValue(
       record.default_movie_status,
-      LIBRARY_MOVIE_STATUSES,
+      DEFAULT_MOVIE_STATUSES,
       DEFAULT_USER_PREFERENCES.defaultMovieStatus,
     ),
     defaultPriority:

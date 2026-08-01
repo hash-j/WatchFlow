@@ -1,5 +1,15 @@
 import type { LibraryMovieStatus } from "@/lib/movies/types";
 
+export const DEFAULT_MOVIE_STATUSES = [
+  "want_to_watch",
+  "watch_next",
+  "currently_watching",
+  "watched",
+  "on_hold",
+  "dropped",
+] as const satisfies readonly LibraryMovieStatus[];
+export type DefaultMovieStatus = (typeof DEFAULT_MOVIE_STATUSES)[number];
+
 export const LIBRARY_VIEWS = ["grid", "list"] as const;
 export type LibraryView = (typeof LIBRARY_VIEWS)[number];
 
@@ -20,7 +30,7 @@ export const MOVIES_PER_PAGE_OPTIONS = [12, 24, 48, 96] as const;
 export const REMINDER_OFFSET_OPTIONS = [15, 30, 60, 180, 1440] as const;
 
 export type UserPreferences = {
-  defaultMovieStatus: LibraryMovieStatus;
+  defaultMovieStatus: DefaultMovieStatus;
   defaultPriority: number;
   defaultLibraryView: LibraryView;
   dateFormat: DateFormat;

@@ -1,29 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { AuthenticationRequiredError } from "../library/errors";
-import type { MovieDetails } from "../movies/types";
+import type { SharedMovieReference } from "../movies/shared-metadata";
 import type { ValidatedImportRow } from "./types";
 import {
   importConfirmedMovies,
   type MovieImportDependencies,
 } from "./service";
 
-const movie: MovieDetails = {
-  tmdbId: 27205,
+const movie: SharedMovieReference = {
+  id: "shared-movie-id",
   title: "Inception",
-  originalTitle: null,
-  overview: "A dream within a dream.",
-  posterPath: "/poster.jpg",
-  backdropPath: "/backdrop.jpg",
-  releaseDate: "2010-07-15",
-  voteAverage: 8.4,
-  runtimeMinutes: 148,
-  genres: ["Science Fiction"],
-  director: "Christopher Nolan",
-  cast: [{ name: "Leonardo DiCaprio", character: "Cobb" }],
-  originalLanguage: "en",
-  productionCountries: ["United States of America"],
-  trailer: { key: "trailer", name: "Trailer", site: "YouTube" },
+  source: "provider",
 };
 
 function row(
@@ -67,7 +55,8 @@ function dependencies(
       userId: "verified-user",
       client: { scope: "authenticated" },
     }),
-    getMovieDetails: vi.fn().mockResolvedValue(movie),
+    findOwnedMovie: vi.fn().mockResolvedValue(null),
+    resolveSharedMovie: vi.fn().mockResolvedValue(movie),
     saveMovie: vi.fn().mockResolvedValue({
       status: "imported",
       matchedTitle: movie.title,
@@ -84,7 +73,7 @@ describe("confirmed CSV import", () => {
     await expect(importConfirmedMovies([row()], [decision()], deps)).rejects.toBeInstanceOf(
       AuthenticationRequiredError,
     );
-    expect(deps.getMovieDetails).not.toHaveBeenCalled();
+    expect(deps.resolveSharedMovie).not.toHaveBeenCalled();
     expect(deps.saveMovie).not.toHaveBeenCalled();
   });
 
@@ -102,14 +91,15 @@ describe("confirmed CSV import", () => {
 
   it("reports a movie already in the user's library", async () => {
     const deps = dependencies({
-      saveMovie: vi.fn().mockResolvedValue({
-        status: "already_in_library",
+      findOwnedMovie: vi.fn().mockResolvedValue({
         matchedTitle: movie.title,
       }),
     });
     const result = await importConfirmedMovies([row()], [decision()], deps);
     expect(result.summary.alreadyInLibrary).toBe(1);
     expect(result.summary.imported).toBe(0);
+    expect(deps.resolveSharedMovie).not.toHaveBeenCalled();
+    expect(deps.saveMovie).not.toHaveBeenCalled();
   });
 
   it("passes normalized personal fields to persistence", async () => {
@@ -152,6 +142,29 @@ describe("confirmed CSV import", () => {
       dependencies({ saveMovie }),
     );
     expect(result.summary).toMatchObject({ total: 2, imported: 1, failed: 1 });
+  });
+
+  it("resolves duplicate TMDB selections once within a confirmed batch", async () => {
+    const rows = [
+      row(),
+      row({ id: "row_2", rowNumber: 3, sourceOrder: 1 }),
+    ];
+    const resolveSharedMovie = vi.fn().mockResolvedValue(movie);
+    const saveMovie = vi
+      .fn()
+      .mockResolvedValueOnce({ status: "imported", matchedTitle: movie.title })
+      .mockResolvedValueOnce({
+        status: "already_in_library",
+        matchedTitle: movie.title,
+      });
+
+    await importConfirmedMovies(
+      rows,
+      [decision(), decision("row_2")],
+      dependencies({ resolveSharedMovie, saveMovie }),
+    );
+
+    expect(resolveSharedMovie).toHaveBeenCalledOnce();
   });
 
   it("appends Watch Next rows sequentially in CSV order", async () => {

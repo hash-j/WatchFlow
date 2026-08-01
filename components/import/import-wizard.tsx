@@ -28,6 +28,7 @@ import {
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { escapeCsvCell } from "@/lib/csv/safety";
 import {
   CsvImportValidationError,
   validateCsvFileMetadata,
@@ -106,11 +107,6 @@ function matchLabel(match: ImportRowMatch) {
   }
 }
 
-function escapeCsv(value: string | number) {
-  const text = String(value);
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
 function failureReport(result: ImportBatchResult) {
   const failures = result.rows.filter(
     (row) => !["imported", "already_in_library"].includes(row.status),
@@ -124,7 +120,7 @@ function failureReport(result: ImportBatchResult) {
       row.message,
     ]),
   ]
-    .map((row) => row.map(escapeCsv).join(","))
+    .map((row) => row.map(escapeCsvCell).join(","))
     .join("\n");
 }
 

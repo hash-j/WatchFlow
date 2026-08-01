@@ -65,142 +65,43 @@ function throwUserMovieUpdateError(
   );
 }
 
-function asQueuePosition(value: unknown) {
-  return typeof value === "number" && Number.isSafeInteger(value) && value > 0
-    ? value
-    : null;
-}
-
-async function getNextQueuePosition(client: SupabaseClient, userId: string) {
-  const { data, error } = await client
-    .from("user_movies")
-    .select("queue_position")
-    .eq("user_id", userId)
-    .eq("status", "watch_next")
-    .not("queue_position", "is", null)
-    .order("queue_position", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throwUserMovieUpdateError("watch_next position lookup failed", error);
-  }
-
-  return (asQueuePosition(data?.queue_position) ?? 0) + 1;
-}
-
-async function normalizeAuthenticatedQueue(
-  client: SupabaseClient,
-  userId: string,
-) {
-  const { data, error } = await client
-    .from("user_movies")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("status", "watch_next")
-    .order("queue_position", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    throwUserMovieUpdateError("watch_next queue lookup failed", error);
-  }
-
-  const queueIds = (data ?? [])
-    .map((row) => (typeof row.id === "string" ? row.id : null))
-    .filter((id): id is string => Boolean(id));
-
-  if (queueIds.length === 0) {
-    return;
-  }
-
-  const { error: clearError } = await client
-    .from("user_movies")
-    .update({ queue_position: null })
-    .eq("user_id", userId)
-    .eq("status", "watch_next");
-
-  if (clearError) {
-    throwUserMovieUpdateError("watch_next queue reset failed", clearError);
-  }
-
-  for (const [index, queueId] of queueIds.entries()) {
-    const { error: positionError } = await client
-      .from("user_movies")
-      .update({ queue_position: index + 1 })
-      .eq("id", queueId)
-      .eq("user_id", userId);
-
-    if (positionError) {
-      throwUserMovieUpdateError(
-        "watch_next queue resequencing failed",
-        positionError,
-      );
-    }
-  }
-}
-
 export async function updateAuthenticatedUserMovie(
   client: SupabaseClient,
   userId: string,
   libraryId: string,
   input: ValidatedMovieManagement,
 ) {
-  const { data: current, error: lookupError } = await client
-    .from("user_movies")
-    .select("id, status, queue_position")
-    .eq("id", libraryId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (lookupError) {
-    throwUserMovieUpdateError("user_movies ownership lookup failed", lookupError);
-  }
-
-  if (!current) {
+  if (!userId) {
     return false;
   }
 
-  const currentQueuePosition = asQueuePosition(current.queue_position);
-  const queuePosition =
-    input.status === "watch_next"
-      ? current.status === "watch_next" && currentQueuePosition
-        ? currentQueuePosition
-        : await getNextQueuePosition(client, userId)
-      : null;
-  const payload = {
-    status: input.status,
-    personal_rating: input.personalRating,
-    review: input.review,
-    priority: input.priority,
-    watched_at: input.watchedAt,
-    would_watch_again: input.wouldWatchAgain,
-    queue_position: queuePosition,
-    scheduled_for:
-      input.status === "scheduled" ? input.scheduledFor : null,
-  };
-  const { data, error } = await client
-    .from("user_movies")
-    .update(payload)
-    .eq("id", libraryId)
-    .eq("user_id", userId)
-    .select(
-      "id, status, personal_rating, review, priority, watched_at, would_watch_again",
-    )
-    .maybeSingle();
+  const { data, error } = await client.rpc(
+    "watchflow_update_library_movie",
+    {
+      p_library_id: libraryId,
+      p_status: input.status,
+      p_personal_rating: input.personalRating,
+      p_review: input.review,
+      p_priority: input.priority,
+      p_would_watch_again: input.wouldWatchAgain,
+      p_watched_at: input.watchedAt,
+      p_scheduled_for: input.scheduledFor,
+      p_timezone: input.timezone,
+      p_schedule_note: input.scheduleNote,
+    },
+  );
 
   if (error) {
-    throwUserMovieUpdateError("user_movies management update failed", error);
+    if (error.code === "PGRST202" || error.code === "42883") {
+      logSupabaseError("atomic user_movies management RPC missing", error);
+      throw new LibrarySchemaError(
+        "Movie management is not configured yet. Apply the schedule and queue migration.",
+      );
+    }
+    throwUserMovieUpdateError("atomic user_movies management update failed", error);
   }
 
-  if (!data) {
-    return false;
-  }
-
-  if (current.status === "watch_next" || input.status === "watch_next") {
-    await normalizeAuthenticatedQueue(client, userId);
-  }
-
-  return true;
+  return data === true;
 }
 
 async function updateMovie(
@@ -265,7 +166,7 @@ export async function scheduleAuthenticatedUserMovie(
 ) {
   const { data: current, error: lookupError } = await client
     .from("user_movies")
-    .select("id, movie_id, status")
+    .select("id, movie_id")
     .eq("id", libraryId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -278,21 +179,12 @@ export async function scheduleAuthenticatedUserMovie(
     return null;
   }
 
-  const { data, error } = await client
-    .from("user_movies")
-    .update({
-      status: "scheduled",
-      scheduled_for: input.scheduledFor,
-      schedule_timezone: input.timezone,
-      schedule_note: input.scheduleNote,
-      queue_position: null,
-    })
-    .eq("id", libraryId)
-    .eq("user_id", userId)
-    .select(
-      "id, movie_id, status, scheduled_for, schedule_timezone, schedule_note",
-    )
-    .maybeSingle();
+  const { data, error } = await client.rpc("watchflow_schedule_movie", {
+    p_library_id: libraryId,
+    p_scheduled_for: input.scheduledFor,
+    p_timezone: input.timezone,
+    p_schedule_note: input.scheduleNote,
+  });
 
   if (error) {
     logSupabaseError("user_movies scheduling failed", error);
@@ -300,7 +192,8 @@ export async function scheduleAuthenticatedUserMovie(
     if (
       error.code === "PGRST204" ||
       error.code === "42703" ||
-      error.code === "PGRST202"
+      error.code === "PGRST202" ||
+      error.code === "42883"
     ) {
       throw new LibrarySchemaError(
         "Scheduling is not configured yet. Apply the schedule and queue migration.",
@@ -320,27 +213,15 @@ export async function scheduleAuthenticatedUserMovie(
     );
   }
 
-  if (!data) {
+  if (data !== true) {
     return null;
-  }
-
-  const { error: profileError } = await client
-    .from("profiles")
-    .update({ timezone: input.timezone })
-    .eq("id", userId);
-
-  if (profileError) {
-    logSupabaseError("profile timezone update failed", profileError);
-  }
-
-  if (current.status === "watch_next") {
-    await normalizeAuthenticatedQueue(client, userId);
   }
 
   return {
     movieId:
-      typeof data.movie_id === "string" || typeof data.movie_id === "number"
-        ? String(data.movie_id)
+      typeof current.movie_id === "string" ||
+      typeof current.movie_id === "number"
+        ? String(current.movie_id)
         : "",
   };
 }

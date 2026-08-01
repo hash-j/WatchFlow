@@ -58,7 +58,8 @@ export async function readAccountExportSource(
   client: SupabaseClient,
   userId: string,
 ) {
-  const [profileResult, preferencesResult, library] = await Promise.all([
+  const [profileResult, preferencesResult, listsResult, library] =
+    await Promise.all([
     client
       .from("profiles")
       .select("full_name, avatar_url, country, timezone, created_at")
@@ -71,6 +72,13 @@ export async function readAccountExportSource(
       )
       .eq("user_id", userId)
       .maybeSingle(),
+    client
+      .from("lists")
+      .select(
+        "name, description, visibility, created_at, updated_at, list_movies(position, created_at, user_movies!inner(movies!inner(title, tmdb_id)))",
+      )
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false }),
     readOwnedLibraryExportRows(client, userId),
   ]);
 
@@ -87,9 +95,15 @@ export async function readAccountExportSource(
     throw new SettingsPersistenceError("Your account export could not be created.");
   }
 
+  if (listsResult.error) {
+    logSupabaseError("account export custom lists read failed", listsResult.error);
+    throw new SettingsPersistenceError("Your account export could not be created.");
+  }
+
   return {
     profile: profileResult.data,
     preferences: preferencesResult.data,
     library,
+    lists: Array.isArray(listsResult.data) ? listsResult.data : [],
   };
 }

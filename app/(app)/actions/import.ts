@@ -103,6 +103,27 @@ function decisionsFromUnknown(value: unknown): ImportDecision[] {
   });
 }
 
+function rowIdsFromUnknown(value: unknown) {
+  if (!Array.isArray(value) || value.length > 500) {
+    throw new LibraryValidationError("The selected import rows are invalid.");
+  }
+
+  const rowIds = value.map((rowId) => {
+    if (typeof rowId !== "string" || !/^row_[1-9]\d{0,2}$/.test(rowId)) {
+      throw new LibraryValidationError("A selected import row is invalid.");
+    }
+    return rowId;
+  });
+
+  if (new Set(rowIds).size !== rowIds.length) {
+    throw new LibraryValidationError(
+      "An import row was selected more than once.",
+    );
+  }
+
+  return new Set(rowIds);
+}
+
 export async function parseCsvAction(
   formData: FormData,
 ): Promise<ImportActionResult<ParsedCsv>> {
@@ -120,7 +141,8 @@ export async function parseCsvAction(
     }
 
     validateCsvFileMetadata(file);
-    return { ok: true, data: parseCsvText(await file.text(), file.name) };
+    const parsed = parseCsvText(await file.text(), file.name);
+    return { ok: true, data: validateParsedCsvPayload(parsed) };
   } catch (error) {
     return { ok: false, message: friendlyImportError(error) };
   }
@@ -131,17 +153,18 @@ export async function matchCsvRowsAction(input: {
   mapping: unknown;
   rowIds: unknown;
 }): Promise<ImportActionResult<ImportRowMatch[]>> {
+  if (!(await isAuthenticated())) {
+    return {
+      ok: false,
+      message: "Your session has expired. Sign in again before importing movies.",
+    };
+  }
+
   try {
     const parsed = validateParsedCsvPayload(input.parsed);
     const mapping = mappingFromUnknown(input.mapping);
     const rows = validateAndMapRows(parsed, mapping);
-    const requestedRows = Array.isArray(input.rowIds)
-      ? new Set(
-          input.rowIds.filter(
-            (rowId): rowId is string => typeof rowId === "string",
-          ),
-        )
-      : new Set<string>();
+    const requestedRows = rowIdsFromUnknown(input.rowIds);
     const matches = await matchImportRows(
       rows.filter((row) => requestedRows.has(row.id)),
       createImportMatchingDependencies(),
@@ -157,6 +180,13 @@ export async function confirmCsvImportAction(input: {
   mapping: unknown;
   decisions: unknown;
 }): Promise<ImportActionResult<ImportBatchResult>> {
+  if (!(await isAuthenticated())) {
+    return {
+      ok: false,
+      message: "Your session has expired. Sign in again before importing movies.",
+    };
+  }
+
   try {
     const parsed = validateParsedCsvPayload(input.parsed);
     const rows = validateAndMapRows(parsed, mappingFromUnknown(input.mapping));

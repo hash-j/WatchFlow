@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { ListPlus, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -12,35 +12,42 @@ import {
   type ListMembership,
 } from "@/lib/lists/types";
 
-export function MovieListMembershipsForm({
-  userMovieId,
-  movieId,
-  movieTitle,
-  memberships,
-}: {
+type MovieListMembershipsFormProps = {
   userMovieId: string;
   movieId: string;
   movieTitle: string;
   memberships: ListMembership[];
-}) {
-  const router = useRouter();
-  const selectedSignature = memberships
-    .filter((membership) => membership.selected)
-    .map((membership) => membership.listId)
+};
+
+export function MovieListMembershipsForm(
+  props: MovieListMembershipsFormProps,
+) {
+  const selectionKey = props.memberships
+    .map((membership) => `${membership.listId}:${membership.selected}`)
     .join(",");
-  const initiallySelected = useMemo(
-    () => new Set(selectedSignature ? selectedSignature.split(",") : []),
-    [selectedSignature],
+
+  return <MovieListMembershipsFormState key={selectionKey} {...props} />;
+}
+
+function MovieListMembershipsFormState({
+  userMovieId,
+  movieId,
+  movieTitle,
+  memberships,
+}: MovieListMembershipsFormProps) {
+  const router = useRouter();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () =>
+      new Set(
+        memberships
+          .filter((membership) => membership.selected)
+          .map((membership) => membership.listId),
+      ),
   );
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(initiallySelected);
   const [state, action, isPending] = useActionState(
     setMovieListMembershipsAction,
     initialListActionState,
   );
-
-  useEffect(() => {
-    setSelectedIds(initiallySelected);
-  }, [initiallySelected]);
 
   useEffect(() => {
     if (state.requestId > 0 && state.status === "success") {

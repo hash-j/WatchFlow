@@ -8,6 +8,7 @@ import {
   type ParsedCsv,
   type ValidatedImportRow,
 } from "./types";
+import { movieTitleKey } from "./title-normalization";
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
 const MIN_RELEASE_YEAR = 1888;
@@ -33,7 +34,6 @@ const STATUS_ALIASES: Record<string, LibraryMovieStatus> = {
   pending: "want_to_watch",
   watchnext: "watch_next",
   next: "watch_next",
-  scheduled: "scheduled",
   watching: "currently_watching",
   currentlywatching: "currently_watching",
   watched: "watched",
@@ -325,7 +325,7 @@ export function validateAndMapRows(
       });
     }
 
-    const duplicateKey = `${normalizeHeader(title)}::${releaseYear ?? ""}`;
+    const duplicateKey = `${movieTitleKey(title)}::${releaseYear ?? ""}`;
     if (title && duplicateKeys.has(duplicateKey)) {
       issues.push({
         code: "duplicate_csv_row",

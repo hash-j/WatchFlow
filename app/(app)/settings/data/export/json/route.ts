@@ -5,13 +5,22 @@ import {
 import { readAccountExportSource } from "@/lib/settings/supabase-export";
 import { authenticateSettings } from "@/lib/settings/supabase-settings";
 
-export async function GET() {
-  const session = await authenticateSettings();
-  if (!session) {
-    return Response.json({ error: "Authentication required." }, { status: 401 });
-  }
+const PRIVATE_HEADERS = {
+  "Cache-Control": "private, no-store, max-age=0",
+  Pragma: "no-cache",
+  "X-Content-Type-Options": "nosniff",
+};
 
+export async function GET() {
   try {
+    const session = await authenticateSettings();
+    if (!session) {
+      return Response.json(
+        { error: "Authentication required." },
+        { status: 401, headers: PRIVATE_HEADERS },
+      );
+    }
+
     const source = await readAccountExportSource(
       session.client,
       session.user.id,
@@ -28,9 +37,7 @@ export async function GET() {
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         "Content-Disposition": `attachment; filename="${filename}"`,
-        "Cache-Control": "private, no-store, max-age=0",
-        Pragma: "no-cache",
-        "X-Content-Type-Options": "nosniff",
+        ...PRIVATE_HEADERS,
       },
     });
   } catch {
@@ -38,7 +45,7 @@ export async function GET() {
       { error: "Your account export could not be created." },
       {
         status: 500,
-        headers: { "Cache-Control": "private, no-store, max-age=0" },
+        headers: PRIVATE_HEADERS,
       },
     );
   }

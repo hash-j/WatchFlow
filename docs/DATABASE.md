@@ -5,9 +5,9 @@
 The deployed Supabase database already contains `profiles`, `movies`, and
 `user_movies`, with RLS enabled. The repository does not contain the original
 base-schema migration, schema dump, or generated database types. It does contain
-reviewed Phase 3, Part 10B, Part 12, and Part 13 incremental migrations, so this
-document combines the previously verified deployed contract with those
-version-controlled changes.
+reviewed Phase 3, Part 10B, Part 12, Part 13, and Part 15 incremental
+migrations, so this document combines the previously verified deployed
+contract with those version-controlled changes.
 
 The live Supabase schema remains authoritative. A read-only OpenAPI inspection
 before Phase 3 confirmed the base columns documented below. Incremental
@@ -63,17 +63,25 @@ Application fields are `default_movie_status`, `default_priority`,
 `reminder_offset_minutes`, and `weekly_summary_enabled`. Audit fields are
 `created_at` and trigger-maintained `updated_at`.
 
-Check constraints enforce the seven library statuses, priorities 0 through 5,
-grid/list views, the three supported date formats, 12h/24h time formats,
-reasonable language codes, page sizes 12/24/48/96, and reminder offsets
-15/30/60/180/1440 minutes. Adult results default off and unreleased movies
-default on.
+After the Part 15 patch, the default-status check permits the six statuses that
+can be created without extra required scheduling input: `want_to_watch`,
+`watch_next`, `currently_watching`, `watched`, `on_hold`, and `dropped`.
+`scheduled` remains a valid `user_movies` status, but cannot be a preference
+default because that path has no instant/timezone. The migration repairs any
+existing scheduled default to `want_to_watch`. Other checks enforce priorities
+0 through 5, grid/list views, the three supported date formats, 12h/24h time
+formats, reasonable language codes, page sizes 12/24/48/96, and reminder
+offsets 15/30/60/180/1440 minutes. Adult results default off and unreleased
+movies default on.
 
 RLS policies permit authenticated SELECT, INSERT, and UPDATE only when
 `(select auth.uid()) = user_id`. The authenticated role has no DELETE grant or
-policy. Column grants prevent direct changes to `user_id`, `created_at`, or
-`updated_at`. Account deletion removes the row through its Auth foreign-key
-cascade, not a normal member delete operation.
+policy. The later privilege repair grants table-level SELECT/INSERT/UPDATE;
+therefore older statements that audit columns are protected by column grants
+are no longer accurate. Ownership RLS and server validation remain the row and
+field boundaries, while the update trigger controls `updated_at`. Account
+deletion removes the row through its Auth foreign-key cascade, not a normal
+member delete operation.
 
 `watchflow_auth_user_preferences_created` is a preferences-only Auth trigger.
 It supplements, and does not replace, the deployed profile-creation trigger.
@@ -95,6 +103,14 @@ inspection confirmed the application columns are `title`, `original_title`,
 `metadata_updated_at` is also required and defaults to `now()`. A conflict-target
 diagnostic reached PostgreSQL constraint execution rather than returning
 `42P10`, confirming `tmdb_id` has the unique constraint required by the upsert.
+
+Part 15 adds nullable `tmdb_adult` and `metadata_language`. Existing rows remain
+null and are therefore ineligible for safe cache reuse until authenticated
+server logic refreshes them. `metadata_language` accepts a two-letter lowercase
+language with an optional uppercase region; current detail ingestion always
+stores canonical `en`, so this shared field never reflects a member's preferred
+search language. These markers complement `metadata_updated_at`; they do not
+contain member preferences or private data.
 
 ### `user_movies`
 
@@ -186,6 +202,25 @@ inside their transaction while they use conflict-safe temporary positions.
 Deleting a list cascades only its `list_movies` rows. It cannot delete
 `user_movies`, personal metadata, schedules, queue state, or shared `movies`.
 
+### `watchflow_tmdb_rate_limits`
+
+Purpose: an internal, durable fixed-window counter for authenticated
+TMDB-backed operations. Part 15 creates it in
+`202607300001_part_15_tmdb_rate_limits.sql`.
+
+| Column | Contract |
+|---|---|
+| `user_id` | Auth UUID with `on delete cascade`; supplied only by the limiter function through `auth.uid()` |
+| `operation` | One of `search`, `details`, `import_search`, or `import_details` |
+| `window_started_at` | Absolute start of the current fixed window |
+| `request_count` | Nonnegative consumed cost in the window |
+| `updated_at` | Last successful counter mutation |
+
+The primary key `(user_id, operation)` is both the uniqueness guard and exact
+lookup index. RLS is enabled, no RLS policy exposes a row, and all table
+privileges are revoked from `PUBLIC`, `anon`, and `authenticated`. Browser
+roles access only `watchflow_take_tmdb_rate_limit(text, integer)`.
+
 ### Queue invariant
 
 Only `watch_next` rows receive a queue position. Positions are contiguous and
@@ -224,6 +259,8 @@ security properties are:
 - All `profiles`, `user_movies`, `lists`, and `list_movies` operations use the
   member's cookie-bound client and JWT. Security-invoker functions remain
   subject to RLS.
+- Neither `anon` nor `authenticated` can read or write the internal limiter
+  table directly. The limiter RPC derives the authenticated owner.
 
 These are security expectations, not a replacement for reviewing the deployed
 policy SQL before Phase 2 writes are introduced.
@@ -689,6 +726,117 @@ authoritative. Custom-list management continues through the Part 13
 membership architecture. Merely viewing, picking, or refreshing a
 recommendation performs no database mutation.
 
+## Part 15 rate limit, cache, and readiness contract
+
+### Rate-limit migration
+
+`supabase/migrations/202607300001_part_15_tmdb_rate_limits.sql` is the one
+focused Part 15 schema patch. It:
+
+1. adds nullable `movies.tmdb_adult` and `movies.metadata_language`;
+2. repairs preference rows whose default is `scheduled` and replaces that
+   check with the six safe default statuses;
+3. revokes table- and column-level browser writes on shared `movies` while
+   granting authenticated SELECT;
+4. replaces management/scheduling RPCs so mutation and queue compaction are
+   transactional;
+5. creates the private internal limiter table described above; and
+6. creates the authenticated limiter function.
+
+`watchflow_take_tmdb_rate_limit(text, integer)` is `security definer` because
+normal roles have no table privilege or policy. It uses an empty search path,
+fully qualified object names, `auth.uid()`, hardcoded operation limits,
+validated positive cost, a user/operation advisory transaction lock, and a row
+lock. It returns only `allowed`, `remaining`, `retry_after_seconds`, `limit`,
+and `window_seconds`.
+
+| Operation | Limit | Fixed window |
+|---|---:|---:|
+| `search` | 30 | 60 seconds |
+| `details` | 20 | 60 seconds |
+| `import_search` | 120 | 600 seconds |
+| `import_details` | 120 | 600 seconds |
+
+Execution is revoked from `PUBLIC` and `anon` and granted to `authenticated`.
+No current unauthenticated route calls TMDB.
+
+### Persistent metadata cache
+
+Shared `movies` rows are cacheable; personal relationships are not. An existing
+shared row can satisfy a detail request only when:
+
+- `metadata_updated_at` is no more than 30 days old and is not a future value;
+- `metadata_language` is the canonical detail locale `en`;
+- `tmdb_adult` is non-null; and
+- an adult-classified row is not reused for a member who disallows adult
+  results.
+
+A stale/missing/incompatible row is refreshed through the authenticated,
+rate-limited, server-only provider and upserted on unique `tmdb_id`.
+Per-process promise maps deduplicate simultaneous identical requests. They are
+not the cross-instance boundary: the PostgreSQL rate counter and existing
+unique constraint remain authoritative. Private `user_movies`, lists,
+preferences, exports, picker datasets, and recommendations are never stored in
+a shared application cache.
+
+### Index audit
+
+Part 15 reviewed existing primary, unique, partial, and query indexes before
+adding anything:
+
+- Part 12 owner/status/favourite/rating/watched indexes support the library and
+  bounded discovery relationship queries.
+- The existing queue/schedule indexes support status, queue position, and
+  scheduled instant access.
+- Part 13's owner/update, list/position, list/movie, and reverse-membership
+  structures support list summaries/details and cascades.
+- `movies.tmdb_id` already supplies the metadata upsert/cache lookup.
+- The new limiter primary key supports its exact user/operation access.
+
+No speculative title/director/genre/metadata timestamp index was added.
+List summaries and legacy dashboard/schedule reads require measured Preview
+plans before further indexing or pagination.
+
+### Read-only verification
+
+Use database objects—not migration-history rows—as the source of truth:
+
+- `supabase/verification/development_readiness.sql` reports required tables,
+  columns, RLS, policy operations, functions/execute grants, function
+  hardening, constraints/cascades, indexes, triggers, profile/preference
+  backfill gaps, and historical regression objects as `INSTALLED` or
+  `MISSING`.
+- `supabase/verification/production_security_audit.sql` reports table scopes,
+  all policies, effective/raw authenticated and anonymous privileges, limiter
+  exposure, and findings for missing ownership or unrestricted-true policies.
+
+Both files are catalog/read-only queries and do not depend on Supabase's
+migration-history table. Run them manually against the intended development or
+Preview database and investigate every missing/review result.
+
+### Manual Part 15 application
+
+The migration was created but not applied remotely during Part 15. After
+verifying that the six earlier incremental migrations are represented in the
+target:
+
+1. review and manually run
+   `supabase/migrations/202607300001_part_15_tmdb_rate_limits.sql`;
+2. commit the transaction and inspect errors;
+3. as a separate SQL Editor action, run:
+
+   ```sql
+   notify pgrst, 'reload schema';
+   ```
+
+4. run both verification scripts; and
+5. exercise separate-user allowances, over-limit responses, expiry, metadata
+   freshness/adult/locale behavior, and direct table denial with disposable
+   authenticated accounts.
+
+Do not apply the migration to an unknown or production project automatically.
+Vitest migration contracts prove only the SQL text, not target installation.
+
 ## Schema-change policy
 
 Schema changes are represented as reviewable migrations, preserve RLS, include
@@ -702,11 +850,13 @@ CSV import requires no schema migration. It writes only the existing shared
 `movies` and private `user_movies` tables and retains all existing RLS policies
 and constraints.
 
-For a confirmed TMDB selection, the server-only secret-key client upserts the
-complete provider metadata into `movies` using the unique `tmdb_id` conflict
-target. The member's authenticated SSR client then checks and inserts
-`user_movies` with the identity returned by `auth.getUser()`. Browser input does
-not contain or control `user_id`.
+For a confirmed TMDB selection, the authenticated metadata resolver first
+checks the shared `movies` cache. A safe fresh row is reused; otherwise the
+import-details allowance is consumed, complete provider metadata is fetched,
+and the server-only secret-key client upserts by unique `tmdb_id`. The member's
+authenticated SSR client then checks and inserts `user_movies` with the identity
+returned by `auth.getUser()`. Browser input does not contain or control
+`user_id`.
 
 Valid mapped personal values populate `status`, `personal_rating`, `review`,
 `priority`, and `watched_at`. Empty ratings and watched dates become `null`, an
@@ -721,8 +871,9 @@ database conflicts without exposing database details to the browser.
 
 Imported `watch_next` rows start after the authenticated member's current
 maximum `queue_position`, preserve CSV order, and use the existing
-`watchflow_normalize_queue()` security-invoker function after the batch. The
-admin client never reads or mutates queue or personal-library data.
+`watchflow_normalize_queue()` security-invoker function after the batch. Import
+searches and details use their separate durable rate-limit buckets. The admin
+client never reads or mutates queue or personal-library data.
 
 ## Part 10B export and deletion behavior
 
@@ -733,6 +884,9 @@ the ID returned from `auth.getUser()`.
 
 Deleting a library removes only the current user's `user_movies` rows. It never
 deletes `movies`. Complete account deletion calls the Auth admin API only after
-server-side identity and confirmation checks; existing foreign-key cascades
-remove user-owned profile, preference, and library data while shared movie
-metadata remains.
+server-side identity and confirmation checks. The intended target contract is
+for Auth foreign-key cascades to remove user-owned profile, preference,
+library, list, and membership data while shared movie metadata remains. The
+base profile/user-movie foreign keys are not version-controlled here, so that
+contract must be confirmed with the readiness script and the dedicated
+disposable-account deletion test before release.

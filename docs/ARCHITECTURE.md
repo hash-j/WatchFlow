@@ -55,8 +55,11 @@ the member to an internal destination.
 ### Sign-in and sign-out
 
 The browser uses `signInWithPassword()` and then refreshes navigation so Server
-Components receive the new cookie session. Sign-out calls `signOut()` and
-returns to `/auth/login` only after Supabase succeeds.
+Components receive the new cookie session. Sign-out submits a cookie-aware
+Server Action, which creates the SSR client, performs a local-scope
+`signOut()`, and returns to `/auth/login` only after Supabase succeeds. This
+keeps the browser SDK out of the protected shell solely for logout and lets the
+server own cookie mutation.
 
 ### Password recovery
 
@@ -98,11 +101,13 @@ TMDB with the read-access Bearer token, applies an eight-second timeout, and
 maps unknown API payloads before returning internal types.
 
 Library server actions accept only TMDB or library-record identifiers. The
-orchestration service authenticates first. Shared `movies` metadata is then
-upserted with a separate server-only secret-key client; the client is created
-only after a verified user is available. All `user_movies` reads, inserts, and
-deletes use the cookie-bound authenticated client and explicit verified-user
-filters in addition to the existing RLS policies.
+orchestration service authenticates first. Part 15 then consumes the appropriate
+durable allowance and reuses compatible, fresh shared metadata when available;
+stale/missing metadata is fetched and upserted with a separate server-only
+secret-key client created only after a verified user is available. All
+`user_movies` reads, inserts, and deletes use the cookie-bound authenticated
+client and explicit verified-user filters in addition to the existing RLS
+policies.
 
 ## Phase 3 movie-management boundary
 
@@ -226,8 +231,9 @@ CSV and JSON exports are generated entirely in memory. Both whitelist columns,
 scope every private query to the verified member, set attachment and no-store
 headers, and are never persisted. CSV serialization doubles quotes, quotes
 commas/newlines, and prefixes formula-like spreadsheet values. JSON format
-version 1 separates profile, preferences, personal library, and schedule data
-without including raw Auth records or internal secrets.
+version 2 separates profile, preferences, personal library, private custom
+lists/memberships, and schedule data without including raw Auth records,
+internal relationship/list IDs, or secrets.
 
 Library deletion uses the authenticated client to delete only `user_movies`
 rows where `user_id` matches the verified user. Account deletion is a separate
@@ -575,15 +581,176 @@ authenticated mutation architecture.
 
 ## Browser QA architecture
 
-`playwright.config.ts` runs headless Chrome against `PLAYWRIGHT_BASE_URL` or
-`http://localhost:3000` and can reuse an existing local server. The focused
-specs are:
+`playwright.config.ts` runs headless Chrome against `E2E_BASE_URL`,
+`PLAYWRIGHT_BASE_URL`, or `http://localhost:3000`. `E2E_WEB_SERVER_COMMAND`
+can select the local production server command, and an existing local server
+may be reused outside CI. The specs are:
 
 - `e2e/authentication.spec.ts`
 - `e2e/protected-routes.spec.ts`
 - `e2e/responsive.spec.ts`
+- `e2e/authenticated-smoke.spec.ts`
+- `e2e/authenticated-isolation.spec.ts`
+- `e2e/account-deletion.spec.ts`
 
-They cover logged-out authentication semantics/errors, callback failure
-handling, protected-route redirects, keyboard order, and public responsive
-behavior. They do not store an authenticated session and do not prove Part 12
-migration application, Supabase privileges/RLS, or two-user data isolation.
+The public tests cover authentication semantics/errors, callback failure
+handling, protected-route redirects, keyboard order, and responsive behavior.
+Authenticated contexts are created in memory, never serialized, and are
+available only when an explicit development guard, a loopback application URL,
+and disposable QA credentials are present. The separate deletion account also
+requires an explicit one-shot enable flag and must differ from QA Users A/B.
+
+`e2e/helpers/diagnostics.ts` observes console errors/warnings, page errors,
+failed requests, and HTTP error responses. Attachments include only categories,
+methods, resource types, statuses, and redacted paths; they omit query strings,
+headers, bodies, cookies, passwords, and tokens. Traces/video are disabled for
+authenticated suites.
+
+The guarded integration suite under `integration/` performs direct read-only
+two-user/anonymous Supabase isolation checks. Neither a skipped guarded suite
+nor a mocked adapter test proves a target migration, RLS policy, grant, Auth
+redirect, email delivery, or delete cascade.
+
+## Part 15 testing and production-hardening architecture
+
+### Auth and browser configuration
+
+Auth form provider/configuration failures pass through stable application
+messages in `lib/auth/errors.ts`. Client construction validates the public
+Supabase URL/key shape through `lib/supabase/browser-config.ts` and remains
+inside the form's recoverable error boundary. Callback/confirmation handlers
+allowlist OTP types, keep redirect targets internal, and place stable reason
+codes—not raw provider messages—in the URL.
+
+The protected `/protected` starter route redirects to `/dashboard` instead of
+rendering claims JSON. `/statistics` was added to proxy protection for
+defense-in-depth, but no statistics page exists.
+
+### TMDB request flow
+
+All TMDB-backed operations require an authenticated user. Search always
+consumes its allowance before a provider call; detail ingestion checks the
+shared cache first and consumes a detail allowance only when a provider refresh
+is necessary:
+
+```text
+authenticated request
+  -> auth.getUser()
+  -> validated operation and applicable search preferences/defaults
+  -> search branch
+       -> PostgreSQL search allowance keyed by auth.uid()
+       -> optional in-process identical-search deduplication
+       -> server-only TMDB search with eight-second timeout
+     or detail/import-detail branch
+       -> fresh compatible shared movies cache row
+            -> reuse without consuming a detail allowance
+          or stale/missing row
+            -> PostgreSQL detail allowance keyed by auth.uid()
+            -> optional in-process identical-refresh deduplication
+            -> server-only TMDB details request with eight-second timeout
+            -> provider-boundary mapping
+            -> admin upsert of shared movies by unique tmdb_id
+  -> authenticated user_movies/list operation under RLS where applicable
+```
+
+Migration `202607300001_part_15_tmdb_rate_limits.sql` creates an internal
+RLS-enabled counter table with no browser policies/grants and an authenticated
+`security definer` function whose search path is empty. The function derives
+identity from `auth.uid()`, recognizes only four hardcoded buckets, validates
+cost, and serializes counter creation/increment across server instances.
+
+The fixed windows are:
+
+- interactive search: 30 requests per 60 seconds;
+- interactive details: 20 per 60 seconds;
+- import search: 120 per 600 seconds; and
+- import details: 120 per 600 seconds.
+
+There is no unauthenticated TMDB-backed route, so no public fallback bucket is
+needed. If that changes, an independently durable public limit is required.
+
+`lib/movies/server-search.ts` deduplicates identical in-flight searches by
+verified user, normalized query, adult/release settings, and language.
+`lib/movies/tmdb-provider.ts` deduplicates the final identical provider URL in
+one process. These maps reduce rerender/double-submit provider traffic but do
+not provide authorization or a distributed request budget.
+
+### Shared metadata caching
+
+`public.movies` is the only persistent TMDB detail cache. Because it has one
+row per `tmdb_id`, detail ingestion uses the canonical English locale instead
+of a member preference. A row is reusable for 30 days only when
+`metadata_updated_at` is current, `metadata_language` is `en`, `tmdb_adult` is
+known, and the current member's adult preference permits it. Preferred
+language remains request-scoped to search. Old rows have nullable safety
+markers and therefore refresh before reuse.
+
+Stale refreshes are authenticated, rate limited, server-only, and upsert by
+unique `tmdb_id`. Identical in-flight refreshes are deduplicated per process by
+user, operation, TMDB ID, adult choice, and canonical language. Cross-instance duplicate
+stale refreshes may still occur; the distributed rate counter and unique upsert
+are the correctness boundaries. A distributed refresh lease is deferred until
+Preview metrics justify it.
+
+Private `user_movies`, profiles, preferences, lists, exports, picker datasets,
+and recommendations remain request/user scoped and are never globally cached.
+
+### CSV and export boundaries
+
+Authentication occurs before CSV parsing/matching work. Server reconstruction
+is bounded to 2 MiB, 500 non-empty rows, 100 columns, 10,000 characters per
+cell, 4 MiB of validated temporary JSON, and 500 confirmation row decisions.
+The Server Action transport ceiling is 6 MiB so every accepted temporary
+payload fits while the narrower domain validator remains authoritative.
+Matching remains capped at four
+concurrent operations, while per-operation title and detail caches prevent
+duplicate requests. The admin client is not constructed in the import adapter;
+the authenticated metadata resolver owns the narrow shared upsert.
+
+CSV export and failure reports share one formula-neutralization helper. CSV/JSON
+Route Handlers authenticate inside the controlled boundary and return private,
+no-store, no-cache, nosniff attachments, including safe error responses.
+
+### Reliability, loading, and error recovery
+
+- Important product routes stream through the authenticated group loading
+  skeleton. Import, lists/list detail, picker, and recommendations add focused
+  route loading states. Long-running interactive forms expose pending state and
+  prevent repeat submission.
+- The app shell plus library, search, import, lists, picker,
+  recommendations, and settings have controlled error boundaries using
+  `components/route-error.tsx`. Retry is offered where safe and a stable
+  navigation action is always available.
+- Invalid movie/list routes use route not-found boundaries; the root app has a
+  controlled not-found page.
+- Empty states distinguish an empty collection from filters with no matches
+  and provide one relevant action. Watch Next is explicitly bounded to 500
+  queue rows with an honest truncation notice.
+- Queue-changing detail/schedule updates invoke one authenticated
+  `watchflow_normalize_queue()` RPC instead of resequencing rows one by one.
+
+### Image and response hardening
+
+Movie posters and list collages use `next/image` with a single allowlisted TMDB
+HTTPS path, validated fixed-size poster URLs, reserved aspect ratios,
+responsive `sizes`, lazy loading by default, meaningful or deliberately empty
+alt text, and runtime failure fallbacks. Small cards request `w342`; detail
+contexts may request larger sources.
+
+`next.config.ts` sends a scoped Content Security Policy, strict-origin
+referrer policy, restrictive permissions policy, nosniff, and frame denial.
+The CSP permits only the application, configured Supabase HTTP/WebSocket
+origin, and the fixed TMDB image host for the resources they require.
+
+### Verification boundaries
+
+`supabase/verification/development_readiness.sql` and
+`production_security_audit.sql` are read-only catalog checks. They inspect
+actual objects, not migration-history rows. `scripts/scan-client-secrets.mjs`
+inspects built browser chunks and rendered payloads while reporting only a path
+and pattern category.
+
+The new migration was not applied to a remote project during Part 15.
+Authenticated two-user, account-deletion, delivered password-reset, database
+catalog, and full protected responsive/browser validation therefore remain
+Preview gates rather than passed checks.

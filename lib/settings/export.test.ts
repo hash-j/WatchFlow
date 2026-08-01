@@ -58,6 +58,12 @@ describe("CSV account export", () => {
     },
   );
 
+  it("neutralizes a formula after a leading line break", () => {
+    expect(escapeCsvCell("\n=SUM(A1:A2)")).toBe(
+      "\"'\n=SUM(A1:A2)\"",
+    );
+  });
+
   it("exports only the rows supplied by the authenticated query", () => {
     const csv = buildLibraryCsv([libraryRow]);
     expect(csv).toContain('"Movie, The"');
@@ -91,13 +97,66 @@ describe("complete JSON account export", () => {
     expect(result).toMatchObject({
       exportedAt: "2026-07-22T12:00:00.000Z",
       profile: { email: "member@example.com", fullName: "Member" },
-      metadata: { formatVersion: 1 },
+      metadata: { formatVersion: 2 },
     });
     expect(result.library).toHaveLength(1);
+    expect(result.customLists).toEqual([]);
     expect(result.library[0]?.favourite).toBe(true);
     expect(result.schedules).toHaveLength(0);
     expect(json).not.toContain("internal-user-id");
     expect(json).not.toContain("subscription_plan");
     expect(json).not.toMatch(/password|refresh_token|service_role|secret_key/i);
+  });
+
+  it("includes private custom-list memberships without internal identifiers", () => {
+    const result = buildAccountDataExport({
+      exportedAt: "2026-07-22T12:00:00.000Z",
+      email: "member@example.com",
+      profile: null,
+      preferences: null,
+      library: [],
+      lists: [
+        {
+          id: "internal-list-id",
+          user_id: "internal-user-id",
+          name: "Weekend Movies",
+          description: "Private picks",
+          visibility: "private",
+          list_movies: [
+            {
+              id: "internal-membership-id-2",
+              position: 2,
+              user_movies: {
+                id: "internal-user-movie-id-2",
+                movies: { title: "Arrival", tmdb_id: 329865 },
+              },
+            },
+            {
+              id: "internal-membership-id-1",
+              position: 1,
+              user_movies: {
+                id: "internal-user-movie-id-1",
+                movies: { title: "Inception", tmdb_id: 27205 },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    const json = JSON.stringify(result);
+
+    expect(result.customLists).toEqual([
+      expect.objectContaining({
+        name: "Weekend Movies",
+        visibility: "private",
+        movies: [
+          expect.objectContaining({ position: 1, title: "Inception" }),
+          expect.objectContaining({ position: 2, title: "Arrival" }),
+        ],
+      }),
+    ]);
+    expect(json).not.toContain("internal-list-id");
+    expect(json).not.toContain("internal-membership-id");
+    expect(json).not.toContain("internal-user-id");
   });
 });

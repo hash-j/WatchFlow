@@ -201,6 +201,7 @@ export function mapTmdbMovieDetails(
 
   return {
     ...summary,
+    adult: typeof payload.adult === "boolean" ? payload.adult : null,
     backdropPath: asString(payload.backdrop_path),
     runtimeMinutes:
       runtime !== null && Number.isSafeInteger(runtime) && runtime > 0

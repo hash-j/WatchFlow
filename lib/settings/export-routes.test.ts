@@ -69,7 +69,8 @@ describe("private export Route Handlers", () => {
       profile: { email: "member@example.com", fullName: "Member" },
       library: [],
       schedules: [],
-      metadata: { formatVersion: 1 },
+      customLists: [],
+      metadata: { formatVersion: 2 },
     });
     expect(response.headers.get("content-disposition")).toMatch(
       /watchflow-account-data-\d{4}-\d{2}-\d{2}\.json/,

@@ -11,8 +11,14 @@ import type {
   ValidatedImportRow,
 } from "./types";
 import { canMatchImportRow } from "./mapping";
+import {
+  movieTitleKey,
+  normalizeMovieTitle,
+} from "./title-normalization";
 
 const MATCH_CONCURRENCY = 4;
+
+export { normalizeMovieTitle } from "./title-normalization";
 
 export type ImportAuthentication = {
   userId: string;
@@ -21,18 +27,10 @@ export type ImportAuthentication = {
 
 export interface ImportMatchingDependencies {
   authenticate(): Promise<ImportAuthentication | null>;
-  searchMovies(query: string): Promise<MovieSearchResult[]>;
-}
-
-export function normalizeMovieTitle(value: string) {
-  return value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .replace(/\s+/g, " ");
+  searchMovies(
+    session: ImportAuthentication,
+    query: string,
+  ): Promise<MovieSearchResult[]>;
 }
 
 function candidateYear(candidate: MovieSearchResult) {
@@ -42,6 +40,8 @@ function candidateYear(candidate: MovieSearchResult) {
 
 function titleMatches(row: ValidatedImportRow, candidate: MovieSearchResult) {
   const imported = normalizeMovieTitle(row.title);
+  if (!imported) return false;
+
   return [candidate.title, candidate.originalTitle]
     .filter((title): title is string => Boolean(title))
     .some((title) => normalizeMovieTitle(title) === imported);
@@ -209,11 +209,11 @@ export async function matchImportRows(
     eligibleRows,
     MATCH_CONCURRENCY,
     async (row): Promise<ImportRowMatch> => {
-      const cacheKey = `${normalizeMovieTitle(row.title)}::${row.releaseYear ?? ""}`;
+      const cacheKey = movieTitleKey(row.title);
       let lookup = lookupCache.get(cacheKey);
 
       if (!lookup) {
-        lookup = dependencies.searchMovies(row.title);
+        lookup = dependencies.searchMovies(session, row.title);
         lookupCache.set(cacheKey, lookup);
       }
 

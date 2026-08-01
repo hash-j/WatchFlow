@@ -69,38 +69,25 @@ async function MovieCustomLists({
   movieId: string;
   movieTitle: string;
 }) {
+  let loadResult:
+    | {
+        status: "loaded";
+        memberships: Awaited<ReturnType<typeof getMovieListMemberships>>;
+      }
+    | { status: "error"; error: unknown };
+
   try {
     const memberships = await getMovieListMemberships(userMovieId);
-
-    if (!memberships) {
-      return (
-        <section
-          aria-labelledby="custom-lists-heading"
-          className="mt-10 rounded-xl border bg-card p-5 shadow-sm sm:p-6"
-        >
-          <h2 id="custom-lists-heading" className="text-xl font-semibold">
-            Custom Lists
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground" role="status">
-            This movie is no longer in your personal library.
-          </p>
-        </section>
-      );
-    }
-
-    return (
-      <MovieListMembershipsForm
-        userMovieId={userMovieId}
-        movieId={movieId}
-        movieTitle={movieTitle}
-        memberships={memberships}
-      />
-    );
+    loadResult = { status: "loaded", memberships };
   } catch (error) {
     if (error instanceof ListsAuthenticationError) {
       redirect("/auth/login");
     }
 
+    loadResult = { status: "error", error };
+  }
+
+  if (loadResult.status === "error") {
     return (
       <section
         aria-labelledby="custom-lists-heading"
@@ -110,11 +97,36 @@ async function MovieCustomLists({
           Custom Lists
         </h2>
         <p className="mt-2 text-sm text-muted-foreground" role="alert">
-          {getSafeListLoadError(error)}
+          {getSafeListLoadError(loadResult.error)}
         </p>
       </section>
     );
   }
+
+  if (!loadResult.memberships) {
+    return (
+      <section
+        aria-labelledby="custom-lists-heading"
+        className="mt-10 rounded-xl border bg-card p-5 shadow-sm sm:p-6"
+      >
+        <h2 id="custom-lists-heading" className="text-xl font-semibold">
+          Custom Lists
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground" role="status">
+          This movie is no longer in your personal library.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <MovieListMembershipsForm
+      userMovieId={userMovieId}
+      movieId={movieId}
+      movieTitle={movieTitle}
+      memberships={loadResult.memberships}
+    />
+  );
 }
 
 async function MovieDetail({ params }: MovieDetailPageProps) {
@@ -130,7 +142,9 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
 
   const { movie } = item;
   const year = getMovieReleaseYear(movie.releaseDate);
-  const timezone = normalizeTimeZone(authContext.profile?.timezone);
+  const timezone = normalizeTimeZone(
+    item.scheduleTimezone ?? authContext.profile?.timezone,
+  );
   const scheduledDate = item.scheduledFor
     ? getLocalDateInput(item.scheduledFor, timezone)
     : getLocalDateInput(new Date().toISOString(), timezone);
@@ -146,6 +160,7 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
           title={movie.title}
           priority
           sizes="256px"
+          sourceSize="w500"
         />
         <div className="mt-4">
           <RemoveFromLibraryForm

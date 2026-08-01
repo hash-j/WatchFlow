@@ -1,5 +1,7 @@
 import {
   CSV_IMPORT_MAX_BYTES,
+  CSV_IMPORT_MAX_CELL_CHARACTERS,
+  CSV_IMPORT_MAX_COLUMNS,
   CSV_IMPORT_MAX_ROWS,
   type CsvColumn,
   type CsvRawRow,
@@ -148,6 +150,22 @@ export function parseCsvText(
   }
 
   const parsedRows = parseCsvCells(normalizedSource);
+  if (parsedRows.some((row) => row.length > CSV_IMPORT_MAX_COLUMNS)) {
+    throw new CsvImportValidationError(
+      `The CSV must contain ${CSV_IMPORT_MAX_COLUMNS} columns or fewer.`,
+    );
+  }
+
+  if (
+    parsedRows.some((row) =>
+      row.some((cell) => cell.length > CSV_IMPORT_MAX_CELL_CHARACTERS),
+    )
+  ) {
+    throw new CsvImportValidationError(
+      `CSV values must contain ${CSV_IMPORT_MAX_CELL_CHARACTERS.toLocaleString("en-US")} characters or fewer.`,
+    );
+  }
+
   const headerIndex = parsedRows.findIndex((row) => !isEmptyRow(row));
 
   if (headerIndex === -1) {
@@ -202,7 +220,7 @@ export function validateParsedCsvPayload(value: unknown): ParsedCsv {
     !Array.isArray(value.columns) ||
     !Array.isArray(value.rows) ||
     value.columns.length === 0 ||
-    value.columns.length > 100 ||
+    value.columns.length > CSV_IMPORT_MAX_COLUMNS ||
     value.rows.length === 0 ||
     value.rows.length > CSV_IMPORT_MAX_ROWS ||
     JSON.stringify(value).length > CSV_IMPORT_MAX_BYTES * 2
@@ -252,7 +270,10 @@ export function validateParsedCsvPayload(value: unknown): ParsedCsv {
     const values = Object.fromEntries(
       [...columnIds].map((columnId) => {
         const cell = (row.values as Record<string, unknown>)[columnId];
-        if (typeof cell !== "string" || cell.length > 10_000) {
+        if (
+          typeof cell !== "string" ||
+          cell.length > CSV_IMPORT_MAX_CELL_CHARACTERS
+        ) {
           throw new CsvImportValidationError(
             "A CSV value is invalid or too long. Upload a corrected file.",
           );

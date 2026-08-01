@@ -1,109 +1,158 @@
-<a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
-</a>
+# WatchFlow
 
-<p align="center">
- The fastest way to build apps with Next.js and Supabase
-</p>
+WatchFlow is a private, multi-user movie-management SaaS built with the Next.js
+App Router, TypeScript, Tailwind CSS, Supabase Auth/PostgreSQL/RLS, and a
+server-only TMDB integration.
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+The implemented application supports authentication, profiles and preferences,
+movie search, a private library, personal ratings/reviews/favourites, Watch
+Next ordering, timezone-aware scheduling, CSV import, CSV/JSON exports, private
+custom lists, a filtered random picker, and transparent rule-based
+recommendations.
 
-## Features
+Payments, public profiles/lists, social or collaborative features, AI
+recommendations, notification delivery, calendar sync, and production
+deployment are out of scope. There is currently no `/statistics` page.
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Proxy
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Password-based authentication block installed via the [Supabase UI Library](https://supabase.com/ui/docs/nextjs/password-based-auth)
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Components with [shadcn/ui](https://ui.shadcn.com/)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+## Repository orientation
 
-## Demo
+Read these before changing the application:
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
+1. `AGENTS.md`
+2. `docs/PROJECT_CONTEXT.md`
+3. the relevant architecture/database/security documents
 
-## Deploy to Vercel
+Important references:
 
-Vercel deployment will guide you through creating a Supabase account and project.
+- `docs/ARCHITECTURE.md` — application and data-flow boundaries
+- `docs/DATABASE.md` — tables, RLS expectations, RPCs, migrations, and indexes
+- `docs/SECURITY.md` — permanent security rules
+- `docs/SECURITY_AUDIT.md` — Part 15 source/static audit and unresolved risks
+- `docs/TESTING.md` — unit, integration, database, and Playwright architecture
+- `docs/PRODUCTION_READINESS.md` — honest Preview/production gate status
+- `docs/PRODUCT_SPEC.md` — implemented product behavior
+- `docs/IMPLEMENTATION_PLAN.md` — milestone history and next work
 
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
+## Requirements
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
+- A maintained Node.js version supported by Next.js 16
+- npm and the committed lockfile
+- A non-production Supabase project with the reviewed schema/migrations
+- A TMDB API read-access token for search/import workflows
+- Chrome for the configured Playwright project
 
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
+Install from the lockfile:
 
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
+```bash
+npm ci
+```
 
-## Clone and run locally
+## Environment-variable names
 
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
+Copy `.env.example` to an ignored `.env.local` and configure the required names
+without committing their values.
 
-2. Create a Next.js app using the Supabase Starter template npx command
+| Name | Exposure | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Browser-safe public | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser-safe public | Supabase publishable/legacy anon key |
+| `SUPABASE_SECRET_KEY` | Server-only secret | Shared movie metadata and final verified Auth-user deletion |
+| `TMDB_READ_ACCESS_TOKEN` | Server-only secret | Server-side TMDB search/details/import |
+| `NEXT_PUBLIC_APP_URL` | Browser-safe public, currently optional | Reserved application origin name; current source does not consume it |
 
-   ```bash
-   npx create-next-app --example with-supabase with-supabase-app
+The E2E and integration names are documented in `.env.example` and
+`docs/TESTING.md`. Real QA emails/passwords, cookies, Auth storage state,
+access/refresh tokens, and downloaded private exports must not be committed.
+
+## Database setup
+
+The repository contains incremental migrations only; the original base schema
+for `profiles`, `movies`, and `user_movies` is absent. Do not rerun older
+non-idempotent migrations blindly or infer remote application from Git.
+
+For an existing development target:
+
+1. verify actual objects with
+   `supabase/verification/development_readiness.sql`;
+2. reconcile the target with the reviewed migration sequence;
+3. manually apply only the missing patch migration(s), ending with
+   `supabase/migrations/202607300001_part_15_tmdb_rate_limits.sql`;
+4. after the transaction commits, run this as a separate SQL Editor step:
+
+   ```sql
+   notify pgrst, 'reload schema';
    ```
 
-   ```bash
-   yarn create next-app --example with-supabase with-supabase-app
-   ```
+5. run both read-only verification scripts and investigate every `MISSING`,
+   `REVIEW_*`, or unsafe result; and
+6. use two disposable users to verify RLS and privileges before mutating real
+   data.
 
-   ```bash
-   pnpm create next-app --example with-supabase with-supabase-app
-   ```
+No migration in this repository should be automatically applied to an unknown
+or production database.
 
-3. Use `cd` to change into the app's directory
+## Local development
 
-   ```bash
-   cd with-supabase-app
-   ```
+Start the development server:
 
-4. Rename `.env.example` to `.env.local` and update the following:
+```bash
+npm run dev
+```
 
-  ```env
-  NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=[INSERT SUPABASE PROJECT API PUBLISHABLE OR ANON KEY]
-  ```
-  > [!NOTE]
-  > This example uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, which refers to Supabase's new **publishable** key format.
-  > Both legacy **anon** keys and new **publishable** keys can be used with this variable name during the transition period. Supabase's dashboard may show `NEXT_PUBLIC_SUPABASE_ANON_KEY`; its value can be used in this example.
-  > See the [full announcement](https://github.com/orgs/supabase/discussions/29260) for more information.
+The default local origin is `http://localhost:3000`. Supabase Auth Site URL and
+allowed redirect URLs must include the local callback/recovery routes described
+in `docs/ARCHITECTURE.md`.
 
-  Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` can be found in [your Supabase project's API settings](https://supabase.com/dashboard/project/_?showConnect=true)
+## Quality commands
 
-5. You can now run the Next.js local development server:
+```bash
+npm run lint
+npx tsc --noEmit
+npm test
+npm run test:integration
+npm run test:e2e
+npm run build
+npm run scan:client-secrets
+```
 
-   ```bash
-   npm run dev
-   ```
+The integration and authenticated/destructive Playwright suites are deliberately
+guarded. Credentialed runs require `E2E_EXPECTED_SUPABASE_URL` to exactly match
+the configured public Supabase URL, an explicit development target, a loopback
+application URL, and disposable credentials. Playwright starts its configured
+server instead of reusing an unknown listener for a correctly pinned run. A
+skipped live test is not a passing workflow; see `docs/TESTING.md`.
 
-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
+Run the client secret scan only after a successful production build. It checks
+built browser chunks and rendered payloads without printing configured secret
+values.
 
-6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
+## Security essentials
 
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
+- Keep `SUPABASE_SECRET_KEY` and `TMDB_READ_ACCESS_TOKEN` in server-only code.
+- Use fresh Supabase Auth identity for mutations, provider ingestion, exports,
+  and deletion; never trust a browser-supplied user ID.
+- Keep normal user-owned operations on the authenticated SSR client so RLS is
+  enforced.
+- Restrict the admin client to shared `movies` metadata and final deletion of
+  the same verified Auth user.
+- Never disable RLS or broaden policies/grants to make an application error go
+  away.
+- Keep CSV uploads in memory and bounded; keep exports private/no-store and
+  formula-safe.
+- Use only disposable development users for destructive QA.
 
-## Feedback and issues
+See `docs/SECURITY.md` and `docs/SECURITY_AUDIT.md` for the complete rules and
+Part 15 findings.
 
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
+## Current readiness
 
-## More Supabase examples
+Part 15 hardening and test architecture are implemented locally, but the
+required authenticated workflow matrix and live Preview verification remain
+incomplete. The database-backed rate limiter migration has not been applied
+remotely by this work, and live two-user RLS, full authenticated workflows,
+password-reset delivery, and disposable account deletion remain unverified.
 
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+The next milestone is **Part 16 — Preview Deployment**. Production launch
+remains blocked on isolated environments, migration/RLS evidence, email,
+backups, monitoring, legal pages, TMDB attribution/licensing, and domain/Auth
+configuration. The full status is in `docs/PRODUCTION_READINESS.md`.

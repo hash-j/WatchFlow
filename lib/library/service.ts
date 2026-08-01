@@ -1,4 +1,4 @@
-import type { LibraryMovie, MovieDetails } from "../movies/types";
+import type { LibraryMovie } from "../movies/types";
 import { validateTmdbId } from "../movies/validation";
 import { AuthenticationRequiredError } from "./errors";
 import { isDatabaseIdentifier } from "./mapping";
@@ -12,13 +12,9 @@ export type AddLibraryMovieResult = "added" | "duplicate";
 
 export interface LibraryDependencies {
   authenticate(): Promise<AuthenticatedLibrarySession | null>;
-  getMovieDetails(
+  resolveSharedMovie(
     session: AuthenticatedLibrarySession,
     tmdbId: number,
-  ): Promise<MovieDetails>;
-  upsertSharedMovie(
-    session: AuthenticatedLibrarySession,
-    movie: MovieDetails,
   ): Promise<{ id: string }>;
   insertUserMovie(
     session: AuthenticatedLibrarySession,
@@ -49,8 +45,10 @@ export async function addMovieToLibrary(
 ) {
   const session = await requireSession(dependencies);
   const validTmdbId = validateTmdbId(tmdbId);
-  const movie = await dependencies.getMovieDetails(session, validTmdbId);
-  const sharedMovie = await dependencies.upsertSharedMovie(session, movie);
+  const sharedMovie = await dependencies.resolveSharedMovie(
+    session,
+    validTmdbId,
+  );
 
   return dependencies.insertUserMovie(session, sharedMovie.id);
 }

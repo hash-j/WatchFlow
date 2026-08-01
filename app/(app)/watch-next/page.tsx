@@ -5,8 +5,7 @@ import { ListOrdered } from "lucide-react";
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { QueueControls } from "@/components/movies/queue-controls";
 import { Button } from "@/components/ui/button";
-import { listLibraryMovies } from "@/lib/library/service";
-import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
+import { getCurrentUserWatchNextMovies } from "@/lib/library/supabase-library";
 
 function QueueLoading() {
   return (
@@ -20,14 +19,8 @@ function QueueLoading() {
 }
 
 async function WatchNextQueue() {
-  const queue = (await listLibraryMovies(createSupabaseLibraryDependencies()))
-    .filter((item) => item.status === "watch_next")
-    .sort(
-      (left, right) =>
-        (left.queuePosition ?? Number.MAX_SAFE_INTEGER) -
-          (right.queuePosition ?? Number.MAX_SAFE_INTEGER) ||
-        (left.addedAt ?? "").localeCompare(right.addedAt ?? ""),
-    );
+  const { items: queue, truncated } =
+    await getCurrentUserWatchNextMovies();
 
   if (queue.length === 0) {
     return (
@@ -46,41 +39,52 @@ async function WatchNextQueue() {
   }
 
   return (
-    <ol className="mt-8 space-y-3">
-      {queue.map((item, index) => (
-        <li
-          key={item.libraryId}
-          className="grid gap-4 rounded-xl border bg-card p-4 shadow-sm sm:grid-cols-[2.5rem_5rem_1fr_auto] sm:items-center"
+    <>
+      {truncated ? (
+        <p
+          className="mt-8 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
+          role="status"
         >
-          <span className="grid size-10 place-items-center rounded-full bg-muted text-sm font-semibold">
-            {index + 1}
-          </span>
-          <div className="w-20">
-            <MoviePoster
-              path={item.movie.posterPath}
-              title={item.movie.title}
-              sizes="80px"
+          Showing the first 500 queued movies. Remove or reorder earlier items
+          to reach the rest.
+        </p>
+      ) : null}
+      <ol className={`${truncated ? "mt-4" : "mt-8"} space-y-3`}>
+        {queue.map((item, index) => (
+          <li
+            key={item.libraryId}
+            className="grid gap-4 rounded-xl border bg-card p-4 shadow-sm sm:grid-cols-[2.5rem_5rem_1fr_auto] sm:items-center"
+          >
+            <span className="grid size-10 place-items-center rounded-full bg-muted text-sm font-semibold">
+              {index + 1}
+            </span>
+            <div className="w-20">
+              <MoviePoster
+                path={item.movie.posterPath}
+                title={item.movie.title}
+                sizes="80px"
+              />
+            </div>
+            <div className="min-w-0">
+              <Link
+                href={`/library/${item.movie.id}`}
+                className="font-semibold hover:underline"
+              >
+                {item.movie.title}
+              </Link>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Priority {item.priority} · Position {index + 1}
+              </p>
+            </div>
+            <QueueControls
+              libraryId={item.libraryId}
+              isFirst={index === 0}
+              isLast={index === queue.length - 1 && !truncated}
             />
-          </div>
-          <div className="min-w-0">
-            <Link
-              href={`/library/${item.movie.id}`}
-              className="font-semibold hover:underline"
-            >
-              {item.movie.title}
-            </Link>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Priority {item.priority} · Position {index + 1}
-            </p>
-          </div>
-          <QueueControls
-            libraryId={item.libraryId}
-            isFirst={index === 0}
-            isLast={index === queue.length - 1}
-          />
-        </li>
-      ))}
-    </ol>
+          </li>
+        ))}
+      </ol>
+    </>
   );
 }
 

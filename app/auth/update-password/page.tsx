@@ -1,14 +1,24 @@
 import { UpdatePasswordForm } from "@/components/update-password-form";
+import { authErrorPath } from "@/lib/auth/errors";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 async function UpdatePasswordContent() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
+  let data;
+  let error;
+
+  try {
+    const supabase = await createClient();
+    const result = await supabase.auth.getClaims();
+    data = result.data;
+    error = result.error;
+  } catch {
+    redirect(authErrorPath("service_unavailable"));
+  }
 
   if (error || !data?.claims) {
-    redirect("/auth/login");
+    redirect(authErrorPath("recovery_session_required"));
   }
 
   return (

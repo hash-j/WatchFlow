@@ -18,6 +18,7 @@ export function LibraryMovieCard({ item }: { item: LibraryMovieSummary }) {
 
   return (
     <article
+      data-tmdb-id={movie.tmdbId}
       className={cn(
         "flex flex-col rounded-xl border bg-card p-3 shadow-sm",
         statusVisual.cardAccentClasses,

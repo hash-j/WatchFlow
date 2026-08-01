@@ -203,10 +203,11 @@ email, reminders, or summaries in this milestone and the interface states that
 clearly.
 
 Members can download an on-demand UTF-8 CSV of their movie library or a
-versioned JSON export of their profile, preferences, personal library, queue,
-and schedule data. Exports omit internal relationship UUIDs, Auth records,
-tokens, keys, and other members' data. CSV fields are quoted correctly and
-formula-like values are neutralized.
+versioned JSON export of their profile, preferences, personal library, private
+custom lists/memberships, queue, and schedule data. JSON format version 2 omits
+internal relationship/list UUIDs, Auth records, tokens, keys, and other
+members' data. CSV fields are quoted correctly and formula-like values are
+neutralized.
 
 The Data and Privacy danger zone separates deleting all private `user_movies`
 relationships from deleting the complete account. Library deletion requires
@@ -508,6 +509,101 @@ Public recommendations, shareable result pages, AI recommendations, social
 feedback, “not interested” training, and recommendation-model learning remain
 out of scope.
 
+## Part 15: testing and production hardening
+
+Part 15 prepares the implemented private SaaS for an isolated Preview. It adds
+no payment, social, collaboration, public-profile/list, AI-recommendation,
+notification-delivery, calendar-sync, or deployment feature.
+
+### Reliability and security requirements
+
+- All TMDB-backed operations authenticate before provider work and consume a
+  database-backed allowance belonging to that authenticated user.
+- Interactive search permits 30 requests per 60 seconds and details 20 per 60
+  seconds. CSV search/details each permit 120 requests per 600 seconds.
+- A friendly retry message replaces provider/internal details when an
+  allowance is exhausted. A missing limiter migration fails closed.
+- Shared `movies` details use one canonical English row per `tmdb_id` and may
+  be reused for 30 days only when their refresh timestamp and
+  adult-classification markers are compatible. Preferred language remains a
+  request-scoped search choice.
+  Personal library, settings, lists, exports, picks, and recommendations are
+  never globally cached.
+- Identical requests in one server process are deduplicated while in flight.
+  Database uniqueness protects stored relationships/metadata and the durable
+  limiter enforces cross-instance request budgets; neither deduplicates
+  identical provider refreshes across instances.
+- CSV input stays in memory and is bounded by file, row, column, cell, and
+  confirmation limits. Every generated CSV, including failure reports,
+  neutralizes spreadsheet formula prefixes.
+- Auth callback, provider, and database failures use safe application messages.
+  Production UI never displays raw Postgres details or stack traces.
+- Private exports are authenticated, owner-filtered, no-store attachments.
+  JSON export format version 2 includes private custom lists without internal
+  identifiers.
+- The server-only admin client remains limited to shared movie metadata and
+  final deletion of the same freshly verified Auth user.
+
+### Usability requirements
+
+- Product routes stream a stable loading layout and long-running forms expose a
+  pending state that prevents accidental repeat submission.
+- Important route failures offer controlled retry/stable navigation without
+  leaking implementation details.
+- Empty states explain whether a collection is empty or filters produced no
+  match and provide one relevant action.
+- Posters reserve their aspect ratio, use optimized bounded TMDB source sizes,
+  include appropriate alternative text, and fall back when a path/image fails.
+- Current navigation, statuses, and favourite state have text or icon semantics
+  and are not conveyed only by color.
+- Public sign-up remains usable at 375x667, 390x844, 768x1024, 1366x768, and
+  1440x900.
+
+### Test architecture and acceptance
+
+Unit/source tests use pure fixtures and mocked Supabase/provider adapters.
+Read-only database catalog scripts report actual schema/RLS/grant readiness.
+Playwright provides public auth/route regressions, isolated in-memory contexts
+for two QA users, controlled movie/list/CSV helpers, redacted console/network
+diagnostics, and a separately guarded disposable account-deletion suite.
+
+Authenticated mutation tests run only when the app uses a loopback URL, the
+target is explicitly identified as development, the configured Supabase URL
+exactly matches an independently supplied expected-project URL, and disposable
+credentials are provided. Account deletion also requires a distinct one-use
+account and an explicit enable flag. Skipped guarded tests are recorded as
+blocked coverage, never as passing workflows.
+
+The recorded local hardening gate includes lint, direct TypeScript, the
+complete unit suite, the gated integration command, public/regression
+Playwright, a production build, and a post-build client secret scan. It does
+not complete Part 15 acceptance: the required authenticated workflow matrix
+and live verification remain incomplete. Finishing that work in Part 16
+requires applying/inspecting the target migrations, running both SQL
+verification scripts, two-user RLS/privilege isolation, authenticated critical
+workflows, password-reset email delivery, and the disposable deletion account.
+
+### Part 15 known limitations
+
+- `supabase/migrations/202607300001_part_15_tmdb_rate_limits.sql` is created but
+  not remotely applied by this milestone.
+- The repository lacks the original base migration for `profiles`, `movies`,
+  and `user_movies`; target base RLS, grants, and Auth cascades require direct
+  inspection.
+- No confirmed disposable QA credentials or mailbox were available for the
+  recorded local run, so authenticated, destructive, delivered-email,
+  protected-responsive, and complete screenshot workflows remain unverified.
+- In-flight deduplication is process-local. Multiple instances can refresh the
+  same stale metadata concurrently, though the durable rate counter and unique
+  upsert preserve limits/data integrity.
+- List summaries, dashboard, and schedule retain documented bounded/unpaginated
+  MVP reads that need Preview measurements.
+- Monitoring, backups/restore, SMTP, legal pages, TMDB attribution/licensing,
+  isolated production infrastructure, and domain redirects are not configured.
+- The requested `/statistics` feature is not present in the repository. Its
+  prefix is protected, but there is no page, chart, query module, or route to
+  preserve/test.
+
 ## Next milestone
 
-Part 15 - Testing and Production Hardening.
+Part 16 - Preview Deployment.

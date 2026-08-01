@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { EmptyMovieQueryError } from "./errors";
+import {
+  EmptyMovieQueryError,
+  MovieSearchValidationError,
+} from "./errors";
 import { mapTmdbMovieDetails, mapTmdbSearchResponse } from "./tmdb-mapper";
 import { validateMovieSearchQuery } from "./validation";
 
@@ -8,6 +11,13 @@ describe("movie search validation", () => {
   it("rejects an empty search query", () => {
     expect(() => validateMovieSearchQuery("   \n  ")).toThrow(
       EmptyMovieQueryError,
+    );
+  });
+
+  it("normalizes Unicode and whitespace while capping provider input", () => {
+    expect(validateMovieSearchQuery("  The   Matrix \n")).toBe("The Matrix");
+    expect(() => validateMovieSearchQuery("a".repeat(121))).toThrow(
+      MovieSearchValidationError,
     );
   });
 });

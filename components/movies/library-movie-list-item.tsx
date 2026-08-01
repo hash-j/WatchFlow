@@ -10,7 +10,10 @@ import type { LibraryMovieSummary } from "@/lib/movies/types";
 
 export function LibraryMovieListItem({ item }: { item: LibraryMovieSummary }) {
   return (
-    <article className="grid gap-4 rounded-xl border bg-card p-4 shadow-sm sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:items-center">
+    <article
+      data-tmdb-id={item.movie.tmdbId}
+      className="grid gap-4 rounded-xl border bg-card p-4 shadow-sm sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:items-center"
+    >
       <div className="w-20">
         <MoviePoster
           path={item.movie.posterPath}

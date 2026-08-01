@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState, useTransition } from "react";
+import { FormEvent, useState, useTransition } from "react";
 import { Search } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -9,15 +9,16 @@ import { Input } from "@/components/ui/input";
 
 export function MovieSearchForm() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const urlQuery = searchParams.get("q") ?? "";
-  const [query, setQuery] = useState(urlQuery);
+
+  return <MovieSearchFormFields key={urlQuery} initialQuery={urlQuery} />;
+}
+
+function MovieSearchFormFields({ initialQuery }: { initialQuery: string }) {
+  const router = useRouter();
+  const [query, setQuery] = useState(initialQuery);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    setQuery(urlQuery);
-  }, [urlQuery]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -76,10 +76,9 @@ describe("authenticated Supabase movie updates", () => {
     );
   });
 
-  it("does not update a row that is not owned by the authenticated user", async () => {
-    const lookup = createBuilder({ data: null, error: null });
-    const from = vi.fn().mockReturnValue(lookup);
-    const client = { from } as unknown as SupabaseClient;
+  it("returns false when the atomic ownership-scoped RPC finds no row", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: false, error: null });
+    const client = { rpc } as unknown as SupabaseClient;
 
     await expect(
       updateAuthenticatedUserMovie(
@@ -90,37 +89,17 @@ describe("authenticated Supabase movie updates", () => {
       ),
     ).resolves.toBe(false);
 
-    expect(lookup.eq).toHaveBeenNthCalledWith(1, "id", "another-users-row-id");
-    expect(lookup.eq).toHaveBeenNthCalledWith(2, "user_id", "verified-user-id");
-    expect(from).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith(
+      "watchflow_update_library_movie",
+      expect.objectContaining({ p_library_id: "another-users-row-id" }),
+    );
+    expect(rpc.mock.calls[0][1]).not.toHaveProperty("user_id");
+    expect(rpc.mock.calls[0][1]).not.toHaveProperty("p_user_id");
   });
 
-  it("updates a matching row with normalized values and both ownership filters", async () => {
-    const lookup = createBuilder({
-      data: {
-        id: "owned-row-id",
-        status: "want_to_watch",
-        queue_position: null,
-      },
-      error: null,
-    });
-    const update = createBuilder({
-      data: {
-        id: "owned-row-id",
-        status: "want_to_watch",
-        personal_rating: 8.5,
-        review: null,
-        priority: 0,
-        watched_at: null,
-        would_watch_again: false,
-      },
-      error: null,
-    });
-    const from = vi
-      .fn()
-      .mockReturnValueOnce(lookup)
-      .mockReturnValueOnce(update);
-    const client = { from } as unknown as SupabaseClient;
+  it("sends normalized values to one atomic management RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
+    const client = { rpc } as unknown as SupabaseClient;
 
     await expect(
       updateAuthenticatedUserMovie(
@@ -131,30 +110,27 @@ describe("authenticated Supabase movie updates", () => {
       ),
     ).resolves.toBe(true);
 
-    expect(update.update).toHaveBeenCalledWith({
-      status: "want_to_watch",
-      personal_rating: 8.5,
-      review: null,
-      priority: 0,
-      watched_at: null,
-      would_watch_again: false,
-      queue_position: null,
-      scheduled_for: null,
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith("watchflow_update_library_movie", {
+      p_library_id: "owned-row-id",
+      p_status: "want_to_watch",
+      p_personal_rating: 8.5,
+      p_review: null,
+      p_priority: 0,
+      p_would_watch_again: false,
+      p_watched_at: null,
+      p_scheduled_for: null,
+      p_timezone: null,
+      p_schedule_note: null,
     });
-    expect(update.eq).toHaveBeenNthCalledWith(1, "id", "owned-row-id");
-    expect(update.eq).toHaveBeenNthCalledWith(2, "user_id", "verified-user-id");
-    expect(update.select).toHaveBeenCalledWith(
-      "id, status, personal_rating, review, priority, watched_at, would_watch_again",
-    );
   });
 
   it("reports an explicit RLS authorization failure", async () => {
-    const lookup = createBuilder({
-      data: null,
-      error: { code: "42501", message: "row-level security policy violation" },
-    });
     const client = {
-      from: vi.fn().mockReturnValue(lookup),
+      rpc: vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: "42501", message: "row-level security policy violation" },
+      }),
     } as unknown as SupabaseClient;
 
     await expect(
@@ -168,20 +144,11 @@ describe("authenticated Supabase movie updates", () => {
   });
 
   it("reports database constraint failures separately", async () => {
-    const lookup = createBuilder({
-      data: {
-        id: "owned-row-id",
-        status: "want_to_watch",
-        queue_position: null,
-      },
-      error: null,
-    });
-    const update = createBuilder({
-      data: null,
-      error: { code: "23514", message: "check constraint violation" },
-    });
     const client = {
-      from: vi.fn().mockReturnValueOnce(lookup).mockReturnValueOnce(update),
+      rpc: vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: "23514", message: "check constraint violation" },
+      }),
     } as unknown as SupabaseClient;
 
     await expect(
@@ -194,29 +161,54 @@ describe("authenticated Supabase movie updates", () => {
     ).rejects.toBeInstanceOf(LibraryConstraintError);
   });
 
-  it("schedules only an owned user_movies row with normalized columns", async () => {
+  it("keeps queue normalization inside the one management RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
+    const client = { rpc } as unknown as SupabaseClient;
+
+    await expect(
+      updateAuthenticatedUserMovie(
+        client,
+        "verified-user-id",
+        "owned-row-id",
+        { ...input, status: "watch_next" },
+      ),
+    ).resolves.toBe(true);
+
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith(
+      "watchflow_update_library_movie",
+      expect.objectContaining({ p_status: "watch_next" }),
+    );
+  });
+
+  it("reports a missing atomic management RPC explicitly", async () => {
+    const client = {
+      rpc: vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: "PGRST202", message: "function not found" },
+      }),
+    } as unknown as SupabaseClient;
+
+    await expect(
+      updateAuthenticatedUserMovie(
+        client,
+        "verified-user-id",
+        "owned-row-id",
+        input,
+      ),
+    ).rejects.toBeInstanceOf(LibrarySchemaError);
+  });
+
+  it("schedules an owned row through one atomic scheduling RPC", async () => {
     const lookup = createBuilder({
-      data: { id: "owned-row-id", movie_id: 42, status: "want_to_watch" },
+      data: { id: "owned-row-id", movie_id: 42 },
       error: null,
     });
-    const update = createBuilder({
-      data: {
-        id: "owned-row-id",
-        movie_id: 42,
-        status: "scheduled",
-        scheduled_for: "2099-07-22T14:30:00.000Z",
-        schedule_timezone: "Asia/Karachi",
-        schedule_note: null,
-      },
-      error: null,
-    });
-    const profile = createBuilder({ data: null, error: null });
-    const from = vi
-      .fn()
-      .mockReturnValueOnce(lookup)
-      .mockReturnValueOnce(update)
-      .mockReturnValueOnce(profile);
-    const client = { from } as unknown as SupabaseClient;
+    const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
+    const client = {
+      from: vi.fn().mockReturnValue(lookup),
+      rpc,
+    } as unknown as SupabaseClient;
 
     await expect(
       scheduleAuthenticatedUserMovie(
@@ -231,21 +223,24 @@ describe("authenticated Supabase movie updates", () => {
       ),
     ).resolves.toEqual({ movieId: "42" });
 
-    expect(update.update).toHaveBeenCalledWith({
-      status: "scheduled",
-      scheduled_for: "2099-07-22T14:30:00.000Z",
-      schedule_timezone: "Asia/Karachi",
-      schedule_note: null,
-      queue_position: null,
+    expect(lookup.eq).toHaveBeenNthCalledWith(1, "id", "owned-row-id");
+    expect(lookup.eq).toHaveBeenNthCalledWith(2, "user_id", "verified-user-id");
+    expect(rpc).toHaveBeenCalledWith("watchflow_schedule_movie", {
+      p_library_id: "owned-row-id",
+      p_scheduled_for: "2099-07-22T14:30:00.000Z",
+      p_timezone: "Asia/Karachi",
+      p_schedule_note: null,
     });
-    expect(update.eq).toHaveBeenNthCalledWith(1, "id", "owned-row-id");
-    expect(update.eq).toHaveBeenNthCalledWith(2, "user_id", "verified-user-id");
+    expect(rpc.mock.calls[0][1]).not.toHaveProperty("user_id");
   });
 
   it("does not schedule another user's movie", async () => {
     const lookup = createBuilder({ data: null, error: null });
-    const from = vi.fn().mockReturnValue(lookup);
-    const client = { from } as unknown as SupabaseClient;
+    const rpc = vi.fn();
+    const client = {
+      from: vi.fn().mockReturnValue(lookup),
+      rpc,
+    } as unknown as SupabaseClient;
 
     await expect(
       scheduleAuthenticatedUserMovie(
@@ -259,23 +254,23 @@ describe("authenticated Supabase movie updates", () => {
         },
       ),
     ).resolves.toBeNull();
-    expect(from).toHaveBeenCalledTimes(1);
+    expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("reports missing scheduling columns explicitly", async () => {
+  it("reports a missing scheduling RPC explicitly", async () => {
     const lookup = createBuilder({
-      data: { id: "owned-row-id", movie_id: 42, status: "want_to_watch" },
+      data: { id: "owned-row-id", movie_id: 42 },
       error: null,
     });
-    const update = createBuilder({
-      data: null,
-      error: {
-        code: "PGRST204",
-        message: "Could not find the schedule_timezone column",
-      },
-    });
     const client = {
-      from: vi.fn().mockReturnValueOnce(lookup).mockReturnValueOnce(update),
+      from: vi.fn().mockReturnValue(lookup),
+      rpc: vi.fn().mockResolvedValue({
+        data: null,
+        error: {
+          code: "PGRST202",
+          message: "Could not find watchflow_schedule_movie",
+        },
+      }),
     } as unknown as SupabaseClient;
 
     await expect(

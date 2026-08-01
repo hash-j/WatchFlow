@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 import { isValidTimeZone } from "@/lib/library/timezone";
-import { LIBRARY_MOVIE_STATUSES } from "@/lib/movies/types";
 import {
   DATE_FORMATS,
+  DEFAULT_MOVIE_STATUSES,
   LIBRARY_VIEWS,
   MOVIES_PER_PAGE_OPTIONS,
   REMINDER_OFFSET_OPTIONS,
@@ -42,7 +42,7 @@ export const profileSettingsSchema = z.object({
 });
 
 export const applicationPreferencesSchema = z.object({
-  defaultMovieStatus: z.enum(LIBRARY_MOVIE_STATUSES, {
+  defaultMovieStatus: z.enum(DEFAULT_MOVIE_STATUSES, {
     error: "Choose a valid default status.",
   }),
   defaultPriority: integerFromForm(
