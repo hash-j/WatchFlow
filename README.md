@@ -8,11 +8,14 @@ The implemented application supports authentication, profiles and preferences,
 movie search, a private library, personal ratings/reviews/favourites, Watch
 Next ordering, timezone-aware scheduling, CSV import, CSV/JSON exports, private
 custom lists, a filtered random picker, and transparent rule-based
-recommendations.
+recommendations. The current uncommitted Part 15.1 work also adds protected,
+server-calculated personal viewing statistics at `/statistics`.
 
 Payments, public profiles/lists, social or collaborative features, AI
 recommendations, notification delivery, calendar sync, and production
-deployment are out of scope. There is currently no `/statistics` page.
+deployment are out of scope. Statistics are private to the signed-in member;
+WatchFlow does not provide public, social, global, predictive, or third-party
+analytics.
 
 ## Repository orientation
 
@@ -146,11 +149,18 @@ Part 15 findings.
 
 ## Current readiness
 
-Part 15 hardening and test architecture are implemented locally, but the
-required authenticated workflow matrix and live Preview verification remain
-incomplete. The database-backed rate limiter migration has not been applied
-remotely by this work, and live two-user RLS, full authenticated workflows,
-password-reset delivery, and disposable account deletion remain unverified.
+Part 15 hardening and test architecture are committed at `f6b15d4`. Part 15.1
+Statistics is implemented as current uncommitted review work. Its final local
+gate passed: lint, direct TypeScript, 62 focused Statistics tests, 596 full
+Vitest tests, the post-build client-secret scan, and the Next.js production
+build all completed successfully; the route table contains `/statistics`.
+The safe public Playwright set passed 35 tests and skipped 15 guarded tests,
+including all 10 authenticated Statistics cases because the disposable QA
+guard was unavailable. The required authenticated workflow matrix and live
+Preview verification therefore remain incomplete. The database-backed rate
+limiter migration has not been applied remotely by this work, and live
+two-user RLS, full authenticated workflows, password-reset delivery, and
+disposable account deletion remain unverified.
 
 The next milestone is **Part 16 — Preview Deployment**. Production launch
 remains blocked on isolated environments, migration/RLS evidence, email,

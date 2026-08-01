@@ -1,11 +1,11 @@
 # WatchFlow Project Context
 
-Last updated: 2026-07-30
+Last updated: 2026-08-02
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 15 hardening and test architecture are implemented locally; the required authenticated workflow matrix and live Preview verification remain incomplete because migrations are unapplied and disposable QA credentials were unavailable
-Current branch: `master` at `6d5352a` (`feat: add random movie picker and rule-based recommendations`); Part 15 is uncommitted
-Local status: The inspected Part 14 baseline was clean; Part 15 application, test, SQL-verification, dependency, and documentation changes are local only; no remote database schema, account, or target data was modified
+Current phase: Part 15 is committed at `f6b15d4`; focused Part 15.1 personal Statistics is current uncommitted review work with the local quality gate passed and authenticated browser verification blocked by the disposable QA guard
+Current branch: `master` at `f6b15d4` (`test: complete Part 15 local hardening`)
+Local status: Part 15.1 route, navigation, Statistics modules/components/tests, revalidation, and documentation are uncommitted review work; no migration or remote database/account/data change belongs to Part 15.1
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
@@ -23,14 +23,15 @@ The implemented flow is:
 6. Organize personal-library movies into ordered private custom lists.
 7. Pick a filtered random library movie or review transparent, rule-based
    recommendations from the private library.
-8. Import a downloaded CSV, export private data, and manage account settings.
+8. Review private, server-calculated personal viewing statistics.
+9. Import a downloaded CSV, export private data, and manage account settings.
 
 The product currently supports authentication, profiles, title search, private
 libraries, movie management, queueing, scheduling, favourites, private custom
 lists, a random picker, rule-based recommendations, CSV import, CSV/JSON
-export, settings, and basic dashboard summaries. It does **not** contain a
-statistics page, charts, public/shared lists, AI recommendations, notification
-delivery, calendar sync, or payments.
+export, settings, a personal Statistics page, and basic dashboard summaries.
+It does **not** contain public/global/social analytics, shared lists, AI
+recommendations or insights, notification delivery, calendar sync, or payments.
 
 The direction remains a production-oriented SaaS, but paid launch is deferred. The repository contains no billing implementation or proof of a production deployment.
 
@@ -47,9 +48,9 @@ The direction remains a production-oriented SaaS, but paid launch is deferred. T
 | Movie data | Server-only TMDB API v3 adapter with provider-neutral internal types |
 | Validation | Zod `4.4.3` for settings and custom lists; typed custom validators for library/import/TMDB inputs |
 | CSV parsing | Custom parser in `lib/import/csv.ts`; no third-party CSV package |
-| Charts | None; no charting dependency exists |
-| Tests | Vitest `4.1.10`; 55 unit/contract files plus a guarded real-Supabase integration configuration |
-| Browser E2E | `@playwright/test 1.62.0`, headless Chrome, safe in-memory QA contexts, public regressions, and credential-gated authenticated/two-user/account-deletion suites |
+| Charts | No charting dependency; Part 15.1 uses semantic HTML and lightweight CSS bars with visible text values |
+| Tests | Vitest `4.1.10`; committed Part 15 baseline has 55 unit/contract files, with four current uncommitted Statistics test files plus a guarded real-Supabase integration configuration |
+| Browser E2E | `@playwright/test 1.62.0`, headless Chrome, safe in-memory QA contexts, public regressions, credential-gated authenticated/two-user/account-deletion suites, and current uncommitted Statistics coverage |
 | Deployment | Vercel is the intended target inferred from runtime variables/starter UI; no `vercel.json` or deployment record exists |
 | Package manager | npm with `package-lock.json` lockfile version 3 |
 
@@ -72,6 +73,7 @@ versions to audited compatible releases. Final production-only and full
 | `lib/settings/` | Settings adapters/types, formatting, exports, and data controls |
 | `lib/lists/` | Part 13 list types, Zod validation, defensive mapping, safe errors, authenticated queries/mutations, and tests |
 | `lib/discovery/` | Part 14 private dataset adapter, mapping, picker validation/matching, mood rules, recommendation scoring/diversity, errors, types, and tests |
+| `lib/statistics/` | Part 15.1 private query adapter, normalization, pure metric/distribution/timeline calculations, formatting, errors, types, and tests |
 | `lib/supabase/` | Browser, server, proxy, auth-context, admin, and safe-error modules |
 | `docs/` | Architecture, database, product, testing/security/readiness reports, implementation plan, and this canonical context |
 | `supabase/migrations/` | Seven incremental SQL migrations; the original base schema is absent |
@@ -108,6 +110,7 @@ The `(app)` directory is a route group and does not appear in URLs.
 | `/lists/[listId]` | Dynamic page | Protected owned-list detail, library picker, ordering, and membership-only removal; invalid/missing/foreign UUIDs share one not-found result |
 | `/picker` | Page | Protected random picker using explicit private-library filters, URL filter state, and session-memory repeat avoidance |
 | `/recommendations` | Page | Protected transparent rule-based recommendations from eligible unwatched private-library movies |
+| `/statistics` | Page | Protected personal library summary metrics, status/genre/rating distributions, 12-month watched activity, and watched-movie lists |
 | `/import` | Page | Protected seven-step CSV import |
 | `/watch-next` | Page | Protected ordered queue |
 | `/schedule` | Page | Protected scheduler and Today/Upcoming/Past groups |
@@ -120,7 +123,7 @@ The `(app)` directory is a route group and does not appear in URLs.
 | `/settings/data/export/json` | GET Route Handler | Protected private JSON attachment |
 | `/protected` | Page | Protected compatibility route that redirects to `/dashboard`; it no longer renders starter claims/tutorial content |
 
-No `/statistics` or `/api/*` route exists. Loading, error, not-found, layout, favicon, and metadata-image files are framework boundaries/assets, not routes.
+No `/api/*` route exists. Loading, error, not-found, layout, favicon, and metadata-image files are framework boundaries/assets, not routes.
 
 ## 6. Authentication Architecture
 
@@ -130,7 +133,7 @@ No `/statistics` or `/api/*` route exists. Loading, error, not-found, layout, fa
 - Session proxy: root `proxy.ts` delegates to `lib/supabase/proxy.ts`, preserves every Supabase cookie mutation, calls `auth.getClaims()`, and redirects anonymous protected prefixes to `/auth/login`.
 - The protected `app/(app)/layout.tsx` repeats the verified-claims boundary through `lib/supabase/auth.ts` and owner-filters the profile by `claims.sub`.
 - Settings, library mutations, imports, exports, discovery reads, and
-  destructive operations use fresh `auth.getUser()` checks where current
+  Statistics reads, and destructive operations use fresh `auth.getUser()` checks where current
   Auth-server data is required.
 - Login calls `signInWithPassword()`, then replaces navigation with `/dashboard` and refreshes Server Components.
 - Signup calls `signUp()` with an email redirect to `/auth/callback?next=/dashboard`, then shows `/auth/sign-up-success`.
@@ -296,7 +299,7 @@ Status describes repository implementation, not unverified remote migrations.
 | Delete library data | Complete | `/settings/data` | Deletes current user's relationships only |
 | Delete account | Partial | `/settings/data` | Code complete; deployed FK cascades/two-user exercise unverified |
 | Dashboard statistics | Partial | `/dashboard` | Summary lists only; no KPIs/charts/ranges |
-| Statistics page | Not started | None | No `/statistics`, module, test, or chart dependency |
+| Statistics page | Complete locally; authenticated QA blocked | `/statistics`, `lib/statistics/*`, `components/statistics/*` | Private server calculation, ten summary metrics, distributions/timeline, watched lists, bounded coverage, loading/error/empty states; local gate passed and current work remains uncommitted |
 | Advanced library search | Complete | `/library`, `watchflow_library_rows` | Literal substring title/original/director/cast/genre search, max 100 characters |
 | Advanced filters | Complete | `/library` | Status, watched, favourite, genre, director, exact/range year, personal-rating range |
 | Sorting controls | Complete | `/library`, `lib/library/query.ts` | Twelve stable database sorts; nullable rating/year/watched values last |
@@ -322,9 +325,37 @@ Status describes repository implementation, not unverified remote migrations.
 
 Every summary has an empty state; missing profile/provider metadata has safe fallbacks.
 
-There are no numeric KPIs, charts, range filters, watched-month grouping, statistics queries/tests, or chart dependency. Generic Tailwind chart colors are not a chart feature.
+Part 15.1 adds a separate protected `/statistics` page without turning the
+dashboard into an analytics surface. It provides total, watched, unwatched,
+Watch Next, favourite, valid scheduled, average personal rating, known watched
+runtime, watched-this-month, and watched-this-year summary cards. Additional
+sections show the current status distribution, up to eight normalized common
+genres, a zero-filled 12-month watched timeline, five personal-rating ranges,
+up to five top-rated watched movies, and up to five recently watched movies.
 
-Private reads use request-scoped cookie clients. `getAuthContext()` uses React `cache()` for render/request deduplication only; no private statistics result uses shared persistent caching. TMDB fetches/exports are no-store.
+Definitions are explicit: watched is exact `watched`; unwatched is every other
+status; a counted schedule requires exact `scheduled` plus a valid
+`scheduled_for`; ratings include only valid 0-10 personal values; watched
+runtime includes only watched movies with positive integer metadata; timeline
+and recent activity require `watched_at` and never infer from relationship
+creation/update time. Unknown stored statuses are labelled rather than silently
+mapped to a valid status.
+
+`lib/statistics/supabase-statistics.ts` calls fresh `auth.getUser()`, queries
+the authenticated member's `user_movies` through both an explicit owner filter
+and RLS, joins only required shared metadata, and processes at most 1,000 rows
+with an exact total/partial-coverage notice. One small owner-filtered profile
+query supplies a validated timezone. Raw library rows stay on the server; the
+page calls Next.js `connection()` to establish an explicit request-time
+boundary under Cache Components and uses no admin client, TMDB call, global
+cache, static private output, public metadata, migration, RPC, new index,
+dependency, or environment variable.
+
+Private reads use request-scoped cookie clients. `getAuthContext()` uses React
+`cache()` for render/request deduplication only; no private Statistics result
+uses shared persistent caching. The visualizations use semantic HTML and CSS,
+not a chart dependency, and retain visible text values and screen-reader
+summaries.
 
 ## 14. CSV Import and Export
 
@@ -464,6 +495,10 @@ failure occurred. `/statistics` correctly exposed the repository's known 404.
 The generated signup fallback could not yield a confirmed QA session, so no
 authenticated or destructive library flow was attempted.
 
+That 2026-07-28 Statistics result is retained as historical evidence only. The
+new Part 15.1 route supersedes the known 404; local route/build verification
+passed, while guarded authenticated verification remains blocked.
+
 The 2026-07-29 Part 13 Playwright MCP pass confirmed that anonymous `/lists`
 and a UUID `/lists/[listId]` redirect to `/auth/login`, while
 `/auth/sign-up` remains public and loads. Its development-server console
@@ -494,19 +529,21 @@ or mutate data.
 
 | Check | Status | Latest evidence |
 |---|---|---|
-| Lint | Passed | `npm run lint`, 2026-07-30; Next 16 native flat config, no rule suppressions |
-| TypeScript | Passed | `npx tsc --noEmit`, 2026-07-30 |
-| Unit/contract tests | Passed | `npm test`: 55 files, 534 tests, 2026-07-30 |
+| Lint | Passed | `npm run lint`, 2026-08-02; Next 16 native flat config, no rule suppressions |
+| TypeScript | Passed | `npx tsc --noEmit`, 2026-08-02 |
+| Unit/contract tests | Passed | `npm test`: 59 files, 596 tests, 2026-08-02 |
+| Focused Part 15.1 tests | Passed | `npx vitest run lib/statistics`: 4 files, 62 tests covering metrics, mapping, query/isolation/error, route/UI/accessibility/revalidation contracts |
 | Focused Part 14 tests | Passed | `npx vitest run lib/discovery`: 7 files, 113 tests covering moods, picker parsing/matching/randomness, recommendation rules, mapping, authenticated adapter, action, and UI/security contracts |
 | Focused Part 13 tests | Passed | `npx vitest run lib/lists`: 6 files, 75 tests, 2026-07-29 |
 | Focused Part 13/Part 12 regressions | Passed | 13 files, 184 tests covering lists plus removal/query/bulk contracts, 2026-07-29 |
 | Live database integration | Skipped | `npm run test:integration` loaded 1 file/5 tests, but all were skipped because the live development guard/QA credentials were absent |
 | Production route smoke | Passed, public only | Clean Playwright MCP: canonical signup, auth failure/not-found, protected redirects, mobile overflow/touch size, clean storage, safe console/network/HTML |
-| Playwright public/protection E2E | Passed | `npx playwright test --workers=1`: 35 passed, 6 credential-gated skipped, 2026-07-30 |
+| Playwright safe selected E2E | Passed, public only | 35 passed, 15 guarded/skipped on 2026-08-02; `/statistics` protection and `/auth/sign-up` passed, all 10 authenticated Statistics cases skipped, account deletion excluded |
 | Authenticated Part 12-15 E2E/live RLS | Not verified | No confirmed QA credentials or applied-migration evidence; guarded suites exist but were not executed |
-| Client secret scan | Passed | 462 artifacts, no forbidden/configured-value leak; one reviewed Supabase SDK sentinel |
+| Client secret scan | Passed | 478 artifacts, no forbidden/configured-value leak; one reviewed Supabase SDK sentinel, 2026-08-02 |
 | Dependency audits | Passed | Production-only and full `npm audit`: zero vulnerabilities |
-| Production build | Passed | `npm run build` on Next.js `16.2.12`; TypeScript and 34 static page generations completed, 2026-07-30 |
+| Production build | Passed | `npm run build` on Next.js `16.2.12`; TypeScript and 35 static shell generations completed and route output listed `◐ /statistics`, 2026-08-02 |
+| Part 15.1 Statistics verification | Local gate passed; authenticated QA blocked | Lint, TypeScript, 62 focused/596 full tests, 35 safe browser checks, secret scan, and build passed; 15 browser cases were guarded/skipped and changes remain uncommitted |
 
 Mark Passed only after that exact command succeeds.
 
@@ -530,7 +567,8 @@ Mark Passed only after that exact command succeeds.
 | Resolved locally | `.env.example` lists server/test variable names without real secret values |
 | Resolved locally | `README.md` is WatchFlow-specific and documents guarded setup/migration/testing steps |
 | Resolved locally | `/protected` redirects to the dashboard and no longer renders claims JSON |
-| Active | `statistics-v1` points to the settings commit; there is no Part 11 statistics implementation |
+| Historical mismatch preserved | `statistics-v1` points to `8f92cbe`, the same settings commit/tree as `settings-v1`; investigation found no Part 11 implementation in normal history, reflog, or alternate route. The tag is not moved; Part 15.1 is a new implementation |
+| Resolved locally; authenticated QA blocked | `/statistics` now has page/loading/error files, focused server query/calculation/UI modules, authenticated navigation, and tests. Final local commands passed; credentialed QA remains blocked |
 | Resolved/guarded | Shared CSV escaping neutralizes formula-leading values, including after whitespace or line breaks, in exports and import failure reports |
 | Resolved locally | `/library` previously fetched every row before filtering/slicing; Part 12 now filters, counts, sorts, and ranges through a private database function |
 | Migration-dependent | Part 12 requires `202607280001_part_12_library_improvements.sql`; without it `/library` and favourite/bulk actions show a safe migration-required error |
@@ -558,25 +596,29 @@ Migrations 1 and parts of 2 are not safely repeatable; never rerun old SQL blind
 
 ## 20. Current Project State
 
-- Latest work: **Part 15 testing and production hardening**. Its hardening and
-  test architecture are implemented locally; the required authenticated
-  workflow matrix and live Preview verification remain incomplete.
-- Part 11 statistics/dashboard upgrade: **not evidenced in the repository**.
+- Committed baseline: **Part 15 testing and production hardening** at
+  `f6b15d4`. Its required authenticated workflow matrix and live Preview
+  verification remain incomplete.
+- Latest work: **Part 15.1 personal viewing Statistics**, implemented as
+  current uncommitted review work with the local quality gate passed and
+  guarded authenticated QA blocked.
+- Historical Part 11 statistics/dashboard upgrade: **never implemented or
+  committed**. Part 15.1 rebuilds the requested feature from current architecture.
 - Next milestone: **Part 16 — Preview Deployment**.
-- Branch/base HEAD: `master`, `6d5352a` (`feat: add random movie picker and rule-based recommendations`); Part 15 is uncommitted. Tags `settings-v1` and misleading `statistics-v1` remain historical.
+- Branch/base HEAD: `master`, `f6b15d4` (`test: complete Part 15 local hardening`). Tags `settings-v1` and misleading `statistics-v1` remain historical; `statistics-v1` is not moved.
 - Latest migration: `202607300001_part_15_tmdb_rate_limits.sql` (local only, unapplied).
 - Latest feature set: private custom lists plus a URL-filtered random picker,
   eight explicit moods, bounded in-session repeat avoidance, and transparent
   scored/deduplicated/diversified private-library recommendations.
-- Baseline Git state at `6d5352a` was clean; the current worktree contains the
-  Part 15 hardening/test architecture, SQL verification, migration, dependency,
-  and documentation changes.
+- Baseline Git state at `f6b15d4` was clean; the current worktree contains the
+  focused Part 15.1 implementation and documentation for manual review.
 - Part 15 requires manual migration application and database-object
   verification in the Preview development project. No remote schema was
   changed during this milestone.
 - Public/protection Playwright is green; authenticated Part 12-15 and live RLS
   coverage is blocked as described above.
-- Missing `/statistics` is unimplemented functionality, not a runtime failure.
+- `/statistics` now exists locally; its final automated gate and guarded
+  authenticated/two-user browser evidence are not yet recorded.
 
 ## 21. Next Development Queue
 
@@ -726,7 +768,7 @@ Implemented contract:
 
 ### Local hardening and test architecture
 
-Part 15 hardening and test architecture are implemented locally. The required
+Part 15 hardening and test architecture are committed at `f6b15d4`. The required
 authenticated workflow matrix and live Preview verification are incomplete;
 this is not a production-readiness claim.
 
@@ -779,8 +821,8 @@ Final local results on 2026-07-30:
   configured secret value leaked.
 - `npm audit --omit=dev` and full `npm audit`: zero vulnerabilities.
 - `npm run build`: passed on Next `16.2.12`, including TypeScript and all 34
-  static page generations. The route output confirms that `/statistics` is
-  still absent.
+  static page generations. That historical Part 15 baseline route output
+  confirmed `/statistics` was absent before the current Part 15.1 work.
 
 ### Security, RLS, and database readiness
 
@@ -881,7 +923,8 @@ Final local results on 2026-07-30:
   controlled and contain no raw errors.
 - Dashboard, library, Watch Next, schedule, import, lists, picker, and
   recommendations expose contextual empty/limited states and a relevant next
-  action. The absent statistics feature has no false zero-metric placeholder.
+  action. Part 15.1 Statistics adds distinct empty-library, no-watched,
+  no-rating, missing-metadata, and partial-coverage states without false values.
 - Native Next 16 linting exposed render-inside-catch and synchronous
   effect-state patterns. They were refactored through data result objects,
   keyed state scopes, derived selections, input refs, and
@@ -905,8 +948,9 @@ Final local results on 2026-07-30:
 - Account deletion is blocked until the dedicated one-shot account and target
   cascade verification are available. QA A/B or a developer account must
   never substitute.
-- `/statistics` is proxy-protected but has no route or implementation. This is
-  a scope discrepancy, not a passing protected feature.
+- Part 15.1 `/statistics` exists in the current uncommitted worktree. Its local
+  command gate passed; authenticated metric/revalidation/responsive/two-user
+  browser flows require guarded disposable QA data and remain blocked.
 - Search provider pagination, list-summary pagination, schedule/dashboard
   large-library bounds, cross-instance metadata refresh deduplication,
   concurrent queue-append retry, slow-network image checks, authenticated
@@ -916,13 +960,71 @@ Final local results on 2026-07-30:
 - `docs/PRODUCTION_READINESS.md` is the status checklist. Recommendation:
   proceed only to a controlled Part 16 Preview setup, not public production.
 
-Current milestone: Part 15 Testing and Production Hardening. Local hardening
-and test architecture are implemented; the required authenticated matrix and
-live Preview gates remain incomplete.
+Current milestone: Part 15.1 Personal Viewing Statistics. The implementation
+is uncommitted and its local quality gate passed. Part 15 is committed at
+`f6b15d4`; the required authenticated matrix and live Preview gates remain
+incomplete.
 
 Next milestone: Part 16 Preview Deployment.
 
-## 26. Agent Handoff Protocol
+## 26. Part 15.1 Statistics Implementation Notes
+
+Current uncommitted contract:
+
+- Routes: protected `app/(app)/statistics/{page,loading,error}.tsx` with a
+  request-time `connection()` boundary compatible with Cache Components, a
+  structure-matched announced skeleton, and shared safe retry/dashboard error
+  UI. Authenticated navigation contains one active-state Statistics item and
+  preserves mobile/keyboard behavior.
+- Main module:
+  `lib/statistics/{types,mapping,calculations,formatting,errors,supabase-statistics}.ts`;
+  presentation: `components/statistics/*`. Database retrieval, untrusted-row
+  normalization, pure aggregation, formatting, empty-state flags, and UI are
+  separate.
+- Authentication/isolation: fresh `auth.getUser()`, normal cookie-bound SSR
+  client, explicit `user_movies.user_id = verified user`, existing RLS, and an
+  owner-filtered profile timezone read. No input accepts `user_id`; no admin
+  client, TMDB request, public metadata, static private generation, or global
+  private cache is used.
+- Query: one exact-column `user_movies -> movies!inner` read selects only IDs,
+  status, favourite, personal rating, watched/scheduled dates, title, poster,
+  release year, runtime, and genres. It is ordered by creation/relationship ID,
+  ranges 0-999, obtains an exact total, and exposes honest coverage state.
+- Summary: total, exact watched, all non-watched, exact Watch Next, favourites,
+  valid scheduled, average valid personal rating, known watched runtime,
+  watched this month, and watched this year. Missing rating/runtime/date values
+  are excluded and shown as unavailable where appropriate.
+- Distributions/activity: current valid statuses plus an explicit nonzero
+  unknown fallback; top eight normalized library genres; zero-filled last 12
+  months; five personal-rating buckets (`0-2`, `>2-4`, `>4-6`, `>6-8`,
+  `>8-10`); top five personally rated watched movies; and five most recent
+  watched-date records with stable title/movie/relationship tie-breaks.
+- Genre normalization accepts JSON strings or objects with `name`, collapses
+  whitespace, ignores blank/malformed entries, deduplicates case-insensitively
+  within a movie, and counts one movie once per label. Watched activity never
+  substitutes `created_at` or `updated_at`.
+- Empty/accessibility/responsive behavior: separate empty-library,
+  no-watched, no-rating, missing-genre/runtime, and partial-coverage copy;
+  Search/Import/Library/Watch Next actions; semantic headings/definition lists;
+  visible counts/percentages and screen-reader summaries; CSS bars that do not
+  rely on color; wrapped responsive grids; poster fallbacks and focus-visible
+  movie links.
+- Database: no Part 15.1 migration, table, RPC, index, trigger, policy, grant,
+  dependency, or environment variable. Existing Part 12 owner/status/
+  favourite/rating/watched indexes and the schedule index are sufficient for
+  the documented several-hundred-to-1,000-row target.
+- Tests: focused calculation/mapping/formatting/adapter/safe-error and
+  route/navigation/protection/rendering coverage plus guarded Statistics
+  Playwright coverage are part of this work. Final command counts/outcomes and
+  credentialed QA execution must be added only after they complete; they are
+  currently pending, not passed.
+- History: investigation found no prior implementation in reachable Git,
+  reflog-only commits, deleted paths, or another route. `statistics-v1` and
+  `settings-v1` both point to commit `8f92cbe` and tree `38b1e70`; the tag is
+  deliberately not moved. Part 15.1 is a new implementation on the committed
+  Part 15 baseline `f6b15d4` and remains uncommitted for review.
+
+## 27. Agent Handoff Protocol
 
 Before starting any task, every coding agent must:
 
@@ -948,6 +1050,32 @@ context elsewhere, or add secrets/actual environment values. Keep this document
 concise, internally consistent, and grounded in repository evidence.
 
 ## Context Change Log
+
+### 2026-08-02 - Codex Part 15.1 personal viewing Statistics
+
+- Historical audit: no Statistics implementation existed in reachable Git,
+  reflog-only history, deleted paths, or an alternate route. The misleading
+  `statistics-v1` tag remains unchanged on the Part 10B settings commit/tree.
+- Baseline correction: Part 15 is committed at `f6b15d4`; the Part 15.1 work is
+  the current uncommitted diff and does not rewrite prior history.
+- Added protected `/statistics`, authenticated navigation, focused loading and
+  safe error boundaries, server-only owner-scoped retrieval, defensive mapping,
+  pure metrics/distributions/timeline calculations, lightweight accessible
+  visualizations, watched-movie lists, coverage reporting, and distinct empty
+  states.
+- Security/data: fresh `auth.getUser()`, explicit owner filter plus RLS, no
+  browser user ID, admin client, TMDB call, full-library Client Component
+  payload, global cache, static private data, or public metadata.
+- Database: no migration, RPC, index, table, policy, grant, dependency, or
+  environment variable. The query analyzes at most 1,000 owned relationships
+  and reports an exact-total/partial-coverage state.
+- Tests/verification: lint and direct TypeScript passed; Statistics focused
+  tests passed (4 files, 62 tests); full Vitest passed (59 files, 596 tests);
+  the safe Playwright selection passed 35 and guarded/skipped 15; the
+  post-build secret scan passed across 478 browser artifacts; and the Next.js
+  16.2.12 build completed 35 static shells with `◐ /statistics` in its route
+  table. All 10 authenticated Statistics browser cases were skipped by the
+  unavailable development QA guard and are not claimed as passing.
 
 ### 2026-07-30 - Codex Part 15 testing and production hardening
 

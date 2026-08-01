@@ -28,6 +28,7 @@ function getString(formData: FormData, key: string) {
 function revalidateMovieViews() {
   revalidatePath("/dashboard");
   revalidatePath("/library", "layout");
+  revalidatePath("/statistics");
   revalidatePath("/watch-next");
   revalidatePath("/schedule");
   revalidatePath("/lists", "layout");

@@ -579,6 +579,96 @@ Part 14 adds no migration, table, persisted recommendation row, index, RLS
 policy, grant, trigger, or RPC. It reuses the current schema and existing
 authenticated mutation architecture.
 
+## Part 15.1 personal Statistics architecture
+
+Part 15.1 adds `/statistics` inside the authenticated `(app)` route group. The
+proxy already protects the prefix, the shared layout retains its verified-
+claims defense in depth, and the page calls Next.js `connection()` before its
+focused data boundary performs a fresh `auth.getUser()` check. Under Cache
+Components, the build may prerender the public shell while all private
+statistics remain behind that request-time boundary; no private value appears
+in static output or public metadata.
+
+```text
+protected Statistics route
+  -> request-scoped cookie-bound Supabase client
+  -> auth.getUser()
+  -> bounded user_movies -> movies!inner read
+       -> explicit verified user_movies.user_id filter
+       -> existing RLS
+       -> exact total + stable range 0..999
+  -> owner-filtered profile timezone read
+  -> defensive row normalization
+  -> pure server-side aggregation
+  -> small calculated result rendered by Server Components
+```
+
+The focused module is `lib/statistics/`:
+
+- `types.ts` defines normalized records, summary, distribution, timeline,
+  activity, coverage, period, and final result contracts.
+- `mapping.ts` validates relationship/movie identifiers and optional metadata,
+  normalizes stored dates and genres, and maps an unsupported status to an
+  explicit `unknown` value rather than another valid status.
+- `calculations.ts` contains metric, status, genre, timeline, rating,
+  top-rated, recent-activity, coverage, and empty-state calculations as pure
+  functions.
+- `formatting.ts` owns counts, percentages, personal ratings, runtime, and
+  watched-date display.
+- `errors.ts` exposes only safe authentication, schema, relationship,
+  authorization, and persistence categories.
+- `supabase-statistics.ts` is the only database adapter and is marked
+  `server-only`.
+
+### Query and ownership boundary
+
+The Statistics select is limited to `user_movies.id`, `status`, `favourite`,
+`personal_rating`, `watched_at`, and `scheduled_for`, plus inner-joined
+`movies.id`, `title`, `poster_path`, `release_year`, `runtime_minutes`, and
+`genres`. It does not select `user_id`, reviews, schedule notes, cast,
+overview, shared public rating, list data, credentials, or unrelated profile
+fields. The browser cannot submit an owner through search parameters, route
+parameters, FormData, JSON, or Client Component state.
+
+The authenticated SSR client applies both
+`user_movies.user_id = authenticatedUser.id` and current RLS. No Statistics
+path imports the Supabase admin client or calls TMDB. The exact relationship
+count accompanies one stable `created_at desc`, relationship-ID ordered range.
+Calculations process at most 1,000 normalized rows and expose coverage metadata
+so the UI distinguishes an exact total from partial distributions for a larger
+library. A second small owner-filtered profile query provides a validated IANA
+timezone, falling back to UTC through the existing timezone utility.
+
+The existing Part 12 owner/status/favourite/personal-rating/watched indexes and
+the schedule index cover this bounded target-scale read. Part 15.1 creates no
+migration, RPC, index, RLS policy, grant, table, dependency, or environment
+variable.
+
+### Calculation and rendering boundary
+
+All raw private relationship rows remain on the server. The page passes only a
+calculated `StatisticsResult` into presentation components; there is no
+full-library Client Component payload. Watched means exact `watched`,
+unwatched means every other status, Watch Next means exact `watch_next`, and a
+counted schedule requires exact `scheduled` plus a valid `scheduled_for`
+instant. Valid personal ratings are 0 through 10 and exclude nulls; watched
+runtime requires watched status plus a positive integer runtime. Missing
+watched dates are never replaced by relationship creation/update dates.
+
+The UI uses semantic definition lists, sections, ordered/unordered lists, and
+lightweight CSS bars. Counts, percentages, labels, and screen-reader summaries
+remain visible independently of color. The 12-month timeline includes zero
+months and uses the configured timezone for the current reporting period.
+Movie result lists link to the existing stored-movie detail route and retain
+poster fallback behavior.
+
+The route-specific loading boundary mirrors the summary/distribution layout
+and announces private Statistics loading without false values. Its Client
+Component error boundary reuses `components/route-error.tsx`, offers a retry
+and stable dashboard navigation, and never displays a raw database message or
+stack trace. Empty-library, no-watched, and no-personal-rating states remain
+separate and provide relevant authenticated actions.
+
 ## Browser QA architecture
 
 `playwright.config.ts` runs headless Chrome against `E2E_BASE_URL`,
@@ -589,6 +679,7 @@ may be reused outside CI. The specs are:
 - `e2e/authentication.spec.ts`
 - `e2e/protected-routes.spec.ts`
 - `e2e/responsive.spec.ts`
+- `e2e/statistics.spec.ts`
 - `e2e/authenticated-smoke.spec.ts`
 - `e2e/authenticated-isolation.spec.ts`
 - `e2e/account-deletion.spec.ts`
@@ -624,7 +715,8 @@ codes—not raw provider messages—in the URL.
 
 The protected `/protected` starter route redirects to `/dashboard` instead of
 rendering claims JSON. `/statistics` was added to proxy protection for
-defense-in-depth, but no statistics page exists.
+defense in depth; Part 15.1 now provides the protected page without weakening
+that boundary.
 
 ### TMDB request flow
 
@@ -693,7 +785,8 @@ are the correctness boundaries. A distributed refresh lease is deferred until
 Preview metrics justify it.
 
 Private `user_movies`, profiles, preferences, lists, exports, picker datasets,
-and recommendations remain request/user scoped and are never globally cached.
+recommendations, and Statistics results remain request/user scoped and are
+never globally cached.
 
 ### CSV and export boundaries
 
@@ -715,11 +808,11 @@ no-store, no-cache, nosniff attachments, including safe error responses.
 
 - Important product routes stream through the authenticated group loading
   skeleton. Import, lists/list detail, picker, and recommendations add focused
-  route loading states. Long-running interactive forms expose pending state and
-  prevent repeat submission.
+  route loading states; Part 15.1 adds a focused Statistics loader. Long-running
+  interactive forms expose pending state and prevent repeat submission.
 - The app shell plus library, search, import, lists, picker,
-  recommendations, and settings have controlled error boundaries using
-  `components/route-error.tsx`. Retry is offered where safe and a stable
+  recommendations, Statistics, and settings have controlled error boundaries
+  using `components/route-error.tsx`. Retry is offered where safe and a stable
   navigation action is always available.
 - Invalid movie/list routes use route not-found boundaries; the root app has a
   controlled not-found page.

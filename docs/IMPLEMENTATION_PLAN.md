@@ -459,7 +459,7 @@ two-user browser verification still depends on available confirmed sessions.
 
 ## Part 15: testing and production hardening
 
-Status: hardening and test architecture implemented locally; the required
+Status: hardening and test architecture committed at `f6b15d4`; the required
 authenticated workflow matrix, target migration verification, and Preview
 operational verification remain incomplete.
 
@@ -585,8 +585,9 @@ never globally cached.
 - Configure Preview-only Supabase/Vercel values, access controls, backups,
   monitoring, SMTP, domain/Auth redirects, legal pages, and TMDB attribution/
   licensing evidence before broader release.
-- Reconcile the requested `/statistics` route. It is proxy-protected but no
-  page, chart, query module, or testable feature exists.
+- Preserve the historical finding that no earlier Statistics implementation
+  existed. The misleading `statistics-v1` tag points to the Part 10B settings
+  commit/tree and must not be moved or rewritten.
 
 Recorded final local verification: lint and direct TypeScript passed; the unit/
 source suite passed 55 files and 534 tests; the guarded integration command
@@ -601,6 +602,77 @@ tests skip without confirmed disposable credentials; delivered email and
 account deletion remain blocked; in-flight metadata refresh deduplication is
 process-local; list summaries/dashboard/schedule retain documented scaling
 limits; and production/Preview infrastructure was not configured.
+
+## Part 15.1: personal viewing statistics
+
+Status: implemented as current uncommitted review work; the final local
+automated gate passed, while guarded authenticated browser verification remains
+blocked by unavailable disposable development credentials/target approval.
+
+- Add protected `/statistics` with `page.tsx`, layout-matched `loading.tsx`, and
+  a Client Component `error.tsx` that reuses the shared safe route-error UI.
+- Add one Statistics item to the authenticated navigation with the existing
+  icon, active-route, responsive, and keyboard conventions.
+- Add focused `lib/statistics/` types, defensive mapping, pure calculations,
+  formatting, safe domain errors, and one server-only Supabase adapter rather
+  than calculating data in the route page.
+- Authenticate with `auth.getUser()`, query `user_movies` through the normal
+  SSR client with both an explicit verified-owner filter and RLS, and never
+  accept or select a browser-supplied user ID. Do not use the admin client.
+- Select only relationship status/favourite/rating/watched/scheduled fields and
+  joined movie identity/title/poster/year/runtime/genres. Use an exact count,
+  stable ordering, and a 1,000-row processing cap with an honest partial-data
+  notice. Read the owner profile timezone in one small focused query.
+- Calculate total, watched, unwatched, Watch Next, favourite, valid scheduled,
+  average personal rating, known watched runtime, watched-this-month, and
+  watched-this-year metrics on the server. Preserve unavailable values as an
+  em dash/explanation instead of a misleading zero.
+- Add text-labelled status and genre distributions, a zero-filled 12-month
+  watched timeline, five personal-rating buckets, top-rated watched movies,
+  and recently watched movies. Use only personal ratings and real
+  `watched_at`; never infer activity from `created_at`.
+- Normalize string/object genre JSON defensively, collapse whitespace,
+  deduplicate within a movie case-insensitively, ignore malformed values, and
+  show at most eight genres. Keep unknown statuses explicit so totals remain
+  auditable.
+- Add empty-library, no-watched, no-rating, missing-genre, missing-runtime, and
+  bounded-coverage states with meaningful Search, Import, Library, and Watch
+  Next actions.
+- Use semantic HTML and lightweight CSS bars with visible counts,
+  percentages, screen-reader summaries, and mobile wrapping. Add no chart
+  dependency.
+- Add pure calculation/mapping/formatting tests, authenticated adapter/error
+  tests, route/navigation/protection/UI contracts, and a guarded Statistics
+  Playwright flow covering the page, metrics, details navigation,
+  revalidation, two-user isolation, empty/no-watched states, mobile layout,
+  and safe diagnostics.
+
+### Part 15.1 database decision
+
+Create no migration, table, RPC, index, trigger, policy, grant, environment
+variable, or dependency. The existing owner/status/favourite/rating/watched/
+schedule indexes and current several-hundred-to-1,000-row library target support
+the bounded authenticated read. Revisit database-side aggregation only after
+measured Preview plans or larger-library requirements justify it.
+
+### Part 15.1 verification checklist
+
+- Completed: focused Statistics unit, adapter, route, and UI tests (4 files,
+  62 tests); full Vitest (59 files, 596 tests); lint; direct TypeScript;
+  post-build secret scan (478 artifacts); and the Next.js 16.2.12 production
+  build. The route output contains `◐ /statistics`.
+- Completed public browser evidence: the safe selected Playwright set passed
+  35 tests, including `/statistics` protection and `/auth/sign-up`; 15 guarded
+  cases were skipped. Account deletion was deliberately excluded.
+- Blocked, not passed: all 10 authenticated Statistics Playwright cases,
+  including QA A/B data, mutation revalidation, empty/no-watched accounts, and
+  the five authenticated Statistics viewports, because the development target
+  guard and disposable credentials were unavailable.
+- Reconfirm `/auth/sign-up`, all existing authenticated navigation items,
+  Part 15 rate limiting, individual/bulk deletion, queue normalization,
+  private lists, non-mutating picker behavior, and private recommendations.
+- Keep every Part 15.1 file uncommitted for manual review; do not move
+  `statistics-v1` or alter existing history.
 
 ## Next milestones
 

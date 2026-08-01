@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   CalendarDays,
+  ChartBarBig,
   Clapperboard,
   Dices,
   FileUp,
@@ -21,6 +22,7 @@ const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/search", label: "Search Movies", icon: Search },
   { href: "/library", label: "My Library", icon: Library },
+  { href: "/statistics", label: "Statistics", icon: ChartBarBig },
   { href: "/lists", label: "My Lists", icon: ListPlus },
   { href: "/picker", label: "Movie Picker", icon: Dices },
   { href: "/recommendations", label: "Recommendations", icon: Sparkles },

@@ -92,6 +92,7 @@ export async function updateProfileSettingsAction(
 
     revalidatePath("/dashboard");
     revalidatePath("/schedule");
+    revalidatePath("/statistics");
     revalidatePath("/settings/profile");
     return { status: "success", message: "Profile saved.", fieldErrors: {} };
   } catch (error) {
@@ -126,7 +127,13 @@ export async function updateApplicationPreferencesAction(
       session.user.id,
       parsed.data,
     );
-    for (const path of ["/dashboard", "/search", "/library", "/schedule"]) {
+    for (const path of [
+      "/dashboard",
+      "/search",
+      "/library",
+      "/schedule",
+      "/statistics",
+    ]) {
       revalidatePath(path);
     }
     revalidatePath("/settings/preferences");
@@ -200,6 +207,7 @@ export async function deleteLibraryDataAction(
     "/lists",
     "/picker",
     "/recommendations",
+    "/statistics",
     "/settings/data",
   ]) {
     revalidatePath(path);

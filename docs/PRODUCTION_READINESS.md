@@ -4,7 +4,7 @@
 
 **Overall status: Needs Preview verification.**
 
-Part 15 hardening and test architecture are implemented locally, while the
+Part 15 hardening and test architecture are committed at `f6b15d4`, while the
 required authenticated workflow matrix and live verification remain
 incomplete. The repository may advance only to a controlled Part 16 Preview
 environment to finish that work; this is not a production-launch approval. No
@@ -106,7 +106,7 @@ match/review/partial-failure/queue-order testing remains.
 
 **Ready for local boundaries; Needs Preview verification for service
 failures.** The app shell plus library, search, import, lists, picker,
-recommendations, and settings have controlled error boundaries. Movie/list
+recommendations, Statistics, and settings have controlled error boundaries. Movie/list
 not-found states are nonrevealing. Auth/provider/database errors map to safe
 messages; raw stack/Postgres details are not rendered. Preview must exercise
 session expiry and unavailable services.
@@ -142,8 +142,9 @@ failed-image fallbacks. Slow-network and remote 404 behavior needs browser QA.
 **Needs Preview verification.** Library filtering/count/range is server-side
 and uses the member's page-size preference with URL persistence and page
 clamping. List add is capped at 50 results, recommendations at 16, discovery at
-1,000 relationships, and Watch Next at 500 with an explicit truncation notice.
-TMDB search currently returns provider page one without application pagination.
+1,000 relationships, Statistics at 1,000 analyzed relationships with an exact
+total/partial-coverage notice, and Watch Next at 500 with an explicit
+truncation notice. TMDB search currently returns provider page one without application pagination.
 List summaries and dashboard/schedule legacy reads also remain unpaginated;
 monitor their target sizes during Preview rather than adding speculative
 pagination.
@@ -154,7 +155,9 @@ pagination.
 primary/unique/partial and Part 12/13 indexes cover current owner, status,
 favourite, rating, watched, queue, schedule, list-update, membership-order, and
 reverse-membership queries. The Part 15 limiter primary key supports its exact
-user/operation access. No speculative metadata/search index was added. Capture
+user/operation access. Part 15.1 Statistics reuses those owner/time/status
+indexes for one bounded private read and adds no speculative aggregate,
+metadata, or genre index. Capture
 representative Preview query plans before changing this decision.
 
 ## Backups
@@ -180,6 +183,27 @@ response process is configured.
 
 **Deferred.** No analytics product or consent model is implemented. Add only
 after privacy/legal review; it is not required for core Preview QA.
+
+## Personal viewing Statistics
+
+**Implemented as uncommitted Part 15.1 work; local verification passed.** The
+protected `/statistics` page calculates only the signed-in member's library
+metrics on the server after `auth.getUser()`, an explicit owner filter, and
+RLS. It uses neither global/product analytics nor third-party tracking and adds
+no public statistics, comparisons, leaderboards, predictions, or AI insights.
+
+The implementation provides ten documented summary metrics, status/genre/
+rating distributions, a 12-month watched timeline, top-rated watched and
+recently watched lists, bounded-coverage messaging, distinct empty states, and
+safe loading/error UI. Missing ratings/runtime/dates remain unavailable rather
+than becoming false zero/activity values. The one private dataset query is
+bounded to 1,000 relationships; an exact count identifies larger libraries.
+No migration, RPC, dependency, environment variable, or shared cache was
+added. Lint, TypeScript, 62 focused Statistics tests, the 596-test full suite,
+post-build secret scanning, and the production build passed; `/statistics`
+appears in the route table. Public/protection Playwright passed, while all 10
+credentialed Statistics cases were guarded/skipped. Two-user and controlled-
+data checks therefore remain a Preview gate.
 
 ## Legal pages
 
@@ -215,7 +239,9 @@ tests are not configured or verified.
 **Needs Preview verification.** Semantic headings/labels, announced
 auth/mutation/errors, visible focus, status/favourite text plus icons, minimum
 button target sizes, current-route state, loading announcements, and meaningful
-empty states are present. The public sign-up route is covered at five
+empty states are present. Part 15.1 Statistics adds visible chart counts and
+percentages, screen-reader summaries, text status/rating labels, and semantic
+sections rather than color-only meaning. The public sign-up route is covered at five
 viewports. There is no automated axe integration, and protected pages/dialog
 focus/keyboard behavior still require authenticated manual/browser QA.
 
@@ -224,7 +250,8 @@ focus/keyboard behavior still require authenticated manual/browser QA.
 **Needs Preview verification.** Focused improvements remove the browser
 Supabase SDK from logout, replace queue resequencing updates with one RPC,
 query only Watch Next rows, bound queue/import/discovery/recommendation/list-
-picker work, deduplicate provider requests, and reuse shared metadata.
+picker/Statistics work, deduplicate provider requests, and reuse shared
+metadata.
 
 The final raw route-entry audit measured `/library` at 486,629 bytes (largest),
 signup at 333,136, login at 332,827, import at 218,819, list detail at 214,464,
@@ -242,6 +269,7 @@ render, and interaction profiling.
 | TMDB details were fetched without a freshness reuse contract | 30-day compatible shared `movies` cache | Preview needs cache hit/refresh metrics and stale-refresh concurrency evidence |
 | CSV rows could repeat searches/details | Normalized lookup/detail caches, four-search concurrency, bounded batches | A maximum-size 500-row import still needs Preview duration/provider testing |
 | Discovery/list picker/recommendations could grow | Explicit 1,000/50/16 result caps | List summaries and movie-detail list selector retain documented unpaginated/bounded MVP behavior |
+| Personal Statistics could download an unbounded private library or add one query per card | One exact-column owner query analyzes at most 1,000 rows and calculates every card/distribution on the server | Larger libraries receive an exact-total/partial-coverage notice; reconsider database aggregation after measured Preview demand |
 
 ## Dependencies
 
@@ -260,14 +288,21 @@ Vitest/Playwright toolchain for tests.
 |---|---|
 | ESLint | Ready — completed successfully |
 | Direct TypeScript | Ready — `npx tsc --noEmit` completed successfully |
-| Unit/source/contract tests | Ready — 55 files, 534 passing |
+| Unit/source/contract tests | Ready — 59 files, 596 passing |
 | Supabase integration | Needs Preview verification — command completed with all 5 tests skipped by the absent development/credential guard |
-| Playwright repository suite | Ready for public regression — 35 passing, 6 guarded/skipped, automatic redacted console/network assertions |
+| Playwright safe selected suite | Ready for public regression — 35 passing, 15 guarded/skipped (including 10 authenticated Statistics cases), automatic redacted console/network assertions; account deletion excluded |
 | Playwright MCP | Ready for public smoke only — clean-restart public routes passed; authenticated workflows/screenshots blocked |
 | Dependency audits | Ready — production-only and full audits both reported 0 vulnerabilities |
-| Production build | Ready locally — Next.js 16.2.12 build passed and completed the 34-page generation step |
-| Client secret scan | Ready locally — 462 artifacts checked, no forbidden/configured-value leak; one reviewed Supabase SDK sentinel |
+| Production build | Ready locally — Next.js 16.2.12 build passed, completed the 35-page generation step, and listed `◐ /statistics` |
+| Client secret scan | Ready locally — 478 artifacts checked, no forbidden/configured-value leak; one reviewed Supabase SDK sentinel |
 | Live database catalog/RLS | Needs Preview verification — SQL files are ready but were not run against a confirmed disposable target |
+
+Part 15.1 Statistics gate: **Local gate passed; authenticated QA blocked.** The
+current implementation remains uncommitted. Lint, TypeScript, 62 focused and
+596 full Vitest tests, 35 safe Playwright checks, the 478-artifact post-build
+secret scan, and the production build passed. Fifteen browser cases were
+guarded/skipped, including all 10 authenticated Statistics cases; none is
+claimed as passing.
 
 ## Known blockers
 
@@ -283,8 +318,9 @@ Vitest/Playwright toolchain for tests.
    access controls.
 7. Add legal pages and TMDB attribution/licensing evidence before a public or
    paid launch.
-8. Reconcile the requested `/statistics` feature with reality: the proxy
-   protects the prefix, but no route, page, chart, or statistics module exists.
+8. Run guarded authenticated/two-user Statistics QA when disposable
+   credentials and controlled data are available; the local gate and
+   `/statistics` production route output are complete.
 
 ## Recommendation
 

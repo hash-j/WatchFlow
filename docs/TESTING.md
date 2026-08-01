@@ -2,8 +2,9 @@
 
 ## Purpose
 
-This document describes the Part 15 test architecture and the evidence required
-before Preview sign-off. It deliberately separates repository tests from tests
+This document describes the Part 15 test architecture, the current uncommitted
+Part 15.1 Statistics extension, and the evidence required before Preview
+sign-off. It deliberately separates repository tests from tests
 that exercise a real development Supabase project. A passing mocked test does
 not establish that a migration, RLS policy, grant, Auth redirect, or email
 template is installed in a target project.
@@ -117,6 +118,9 @@ selectors. The main files are:
   headers, bodies, cookies, credentials, and tokens are never recorded.
 - `e2e/helpers/environment.ts`: development, credential, and destructive-suite
   guards.
+- `e2e/statistics.spec.ts`: Part 15.1 public route existence/protection plus a
+  guarded authenticated personal-statistics, revalidation, isolation, empty-
+  state, mobile, and safe-diagnostics flow.
 
 The authenticated and account-deletion specs disable traces and video because
 real passwords are present during login. Default screenshots are failure-only;
@@ -167,7 +171,11 @@ public suite.
 
 Repository unit/source tests cover the implemented library, detail, queue,
 schedule, import, settings, exports, lists, picker, recommendations, rate
-limiting, caching, image URLs, and safe error paths. The guarded browser suite
+limiting, caching, image URLs, and safe error paths. Part 15.1 adds focused
+Statistics calculation, normalization, formatting, authenticated-query,
+safe-error, route, navigation, protection, and rendered-UI contracts; their
+final execution result is not recorded until the current milestone gate
+completes. The guarded browser suite
 provides only a compact authenticated smoke and list-isolation check; it is not
 the exhaustive mutation matrix requested for Preview.
 
@@ -180,14 +188,38 @@ Still requiring live authenticated Playwright coverage:
 - the complete CSV match/review/confirm/result matrix;
 - settings persistence, private CSV/JSON download inspection, full list
   membership/reordering, picker combinations, and recommendation integrations;
+- controlled Statistics counts/distributions/timeline/movie links,
+  mutation-driven revalidation, empty/no-watched states, and QA A/B isolation;
 - account-delete cascades and direct database confirmation that shared movies
   remain; and
-- protected mobile/tablet layouts, dialogs, focus restoration, charts (none
-  exist), and the requested authenticated screenshot catalogue.
+- protected mobile/tablet layouts, dialogs, focus restoration, Statistics
+  visualizations, and the requested authenticated screenshot catalogue.
 
-The `/statistics` prefix is protected from anonymous access, but the repository
-contains no `/statistics` page. It cannot be tested as a preserved implemented
-feature.
+Part 15.1 now provides `/statistics` under the already protected prefix. Public
+route/protection tests must establish that it no longer returns the WatchFlow
+404 and still redirects anonymous visitors to `/auth/login`. Authenticated
+metrics and cross-user behavior remain guarded and must be reported as blocked,
+not passed, when disposable QA credentials or controlled library fixtures are
+unavailable.
+
+### Part 15.1 Statistics coverage
+
+The focused source suite is expected to cover empty and no-watched libraries;
+all ten summary metrics; null/boundary/invalid ratings and runtimes; current
+month/year grouping; known and unknown statuses; string/object/malformed and
+duplicate genres; top-eight sorting; zero-filled 12-month timelines; five
+rating buckets; top-rated and recent-watched stable ordering; timezone period
+selection; the explicit owner-filter query contract; safe error mapping; and
+server-only/no-admin/no-user-ID source boundaries.
+
+Route and presentation contracts cover the three route files, authenticated
+navigation without duplicates, protection, login redirect, sign-up stability,
+empty/rating-empty states, summary/status/genre/timeline rendering, safe error
+copy, existing navigation preservation, semantic headings, screen-reader chart
+summaries, and no color-only values. `e2e/statistics.spec.ts` is guarded by the
+same development-project pin and in-memory QA contexts as other authenticated
+suites. It may inspect existing controlled QA data but must not expose private
+row values in diagnostics or broaden cleanup/deletion behavior.
 
 ## Database and RLS verification
 
@@ -259,3 +291,28 @@ Final recorded local Part 15 results:
   assertions; the clean-restart Playwright MCP public smoke also passed. Those
   skips represent live authenticated and destructive coverage, not passing
   workflows.
+
+## Current Part 15.1 verification status
+
+The `/statistics` route/module/navigation implementation remains uncommitted
+for review. Final local evidence from 2026-08-02:
+
+- `npm run lint`: passed.
+- `npx tsc --noEmit`: passed.
+- `npx vitest run lib/statistics`: 4 files and 62 tests passed.
+- `npm test`: 59 files and 596 tests passed.
+- safe Playwright selection (Statistics, protection, authentication,
+  responsive, authenticated smoke, and isolation; account deletion excluded):
+  35 passed and 15 guarded/skipped. All 10 authenticated Statistics cases were
+  skipped because `E2E_TARGET_ENV=development` and disposable QA credentials
+  were unavailable. Logged-out `/statistics` protection and canonical public
+  `/auth/sign-up` passed.
+- `npm run build`: passed on Next.js 16.2.12, generated 35 static shells, and
+  listed `◐ /statistics` with private data behind the request-time boundary.
+- `npm run scan:client-secrets`: passed after the build; 478 browser artifact
+  files were checked with no forbidden pattern category or configured-secret
+  leak.
+
+Credentialed QA A/B metrics, revalidation, data isolation, populated/empty
+states, and Statistics viewport behavior remain blocked rather than passed.
+The historical Part 15 evidence remains tied to commit `f6b15d4`.

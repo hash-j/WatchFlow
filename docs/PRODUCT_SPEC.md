@@ -600,9 +600,70 @@ workflows, password-reset email delivery, and the disposable deletion account.
   MVP reads that need Preview measurements.
 - Monitoring, backups/restore, SMTP, legal pages, TMDB attribution/licensing,
   isolated production infrastructure, and domain redirects are not configured.
-- The requested `/statistics` feature is not present in the repository. Its
-  prefix is protected, but there is no page, chart, query module, or route to
-  preserve/test.
+
+Historical correction: Statistics was never implemented in the earlier
+milestones. The lightweight `statistics-v1` tag points to the same Part 10B
+settings commit and tree as `settings-v1`; it is retained as historical Git
+metadata and is not evidence of a Statistics implementation.
+
+## Part 15.1: personal viewing statistics
+
+Status: implemented as current uncommitted work; final repository and browser
+verification is in progress.
+
+Part 15.1 adds protected `/statistics` navigation and a private, request-scoped
+Server Component experience calculated only from the authenticated member's
+own WatchFlow library. The page provides ten explicit summary metrics:
+
+- total library movies;
+- watched movies, where `status === "watched"`;
+- unwatched movies, where `status !== "watched"`;
+- Watch Next movies, where `status === "watch_next"`;
+- private favourites;
+- scheduled-status movies with a valid stored `scheduled_for` instant;
+- average valid personal rating, excluding unrated or invalid values;
+- total known positive runtime for watched movies;
+- watched movies with a stored watched date in the current month; and
+- watched movies with a stored watched date in the current year.
+
+Unavailable ratings and runtimes render as unavailable rather than a false
+zero. Ratings use only `user_movies.personal_rating`, never the shared public
+rating. Runtime totals use only watched movies with valid positive
+`movies.runtime_minutes`. Watched activity never substitutes `created_at` or
+`updated_at` for a missing `watched_at` value.
+
+The page also shows the current valid status distribution, up to eight most
+common normalized library genres, a zero-filled 12-month watched timeline,
+five documented personal-rating ranges, up to five top-rated watched movies,
+and up to five recently watched movies. Genre values may be stored as strings
+or structured objects with a `name`; blank/malformed values are ignored,
+whitespace is normalized, labels are deduplicated case-insensitively within a
+movie, and each movie counts once per genre. Unknown stored statuses are
+labelled rather than silently renamed, preserving distribution totals.
+
+Statistics uses a fresh `auth.getUser()` result, the normal cookie-bound
+Supabase server client, an explicit verified-owner filter, and existing RLS.
+It does not accept a user ID, construct the admin client, call TMDB, globally
+cache private results, statically generate private data, or send the raw
+library to a Client Component. One exact-column joined read processes at most
+the newest 1,000 owned relationships and reports partial coverage when the
+exact count is larger. A small owner-filtered profile read supplies the
+configured timezone. No migration, RPC, index, dependency, environment
+variable, or public metadata was added.
+
+Distinct empty states cover an empty library, a library with no watched
+movies, and a library with no personal ratings. The route has layout-matched
+loading UI and a safe retry/navigation error boundary. Lightweight semantic
+HTML and CSS bars retain visible counts, percentages, text summaries, headings,
+focus styles, and mobile wrapping without adding a chart package or relying on
+color alone.
+
+Part 15.1 adds pure calculation/mapping/formatting coverage, authenticated
+query and safe-error contracts, route/navigation/protection/UI contracts, and
+a guarded Statistics Playwright flow. Final command results and credentialed
+two-user browser execution must be recorded only after those checks complete;
+the authenticated flow remains blocked when disposable QA credentials are not
+available.
 
 ## Next milestone
 

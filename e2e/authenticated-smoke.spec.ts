@@ -33,6 +33,7 @@ function declareAuthenticatedSmokeSuite() {
         { path: "/lists", heading: "My Lists" },
         { path: "/picker", heading: "Movie Picker" },
         { path: "/recommendations", heading: "Recommendations" },
+        { path: "/statistics", heading: "Statistics" },
         { path: "/settings", heading: "Settings" },
       ] as const;
 

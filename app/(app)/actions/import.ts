@@ -198,6 +198,7 @@ export async function confirmCsvImportAction(input: {
 
     revalidatePath("/dashboard");
     revalidatePath("/library", "layout");
+    revalidatePath("/statistics");
     revalidatePath("/watch-next");
     revalidatePath("/schedule");
     revalidatePath("/picker");
