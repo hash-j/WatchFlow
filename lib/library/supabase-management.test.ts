@@ -257,6 +257,37 @@ describe("authenticated Supabase movie updates", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("does not report a profile permission denial as a missing scheduling RPC", async () => {
+    const lookup = createBuilder({
+      data: { id: "owned-row-id", movie_id: 42 },
+      error: null,
+    });
+    const client = {
+      from: vi.fn().mockReturnValue(lookup),
+      rpc: vi.fn().mockResolvedValue({
+        data: null,
+        error: {
+          code: "42501",
+          message: "permission denied for column updated_at of relation profiles",
+        },
+      }),
+    } as unknown as SupabaseClient;
+
+    const error = await scheduleAuthenticatedUserMovie(
+      client,
+      "verified-user-id",
+      "owned-row-id",
+      {
+        scheduledFor: "2099-07-22T14:30:00.000Z",
+        timezone: "Asia/Karachi",
+        scheduleNote: null,
+      },
+    ).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(LibraryAuthorizationError);
+    expect(error).not.toBeInstanceOf(LibrarySchemaError);
+  });
+
   it("reports a missing scheduling RPC explicitly", async () => {
     const lookup = createBuilder({
       data: { id: "owned-row-id", movie_id: 42 },

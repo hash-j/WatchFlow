@@ -3,13 +3,29 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const migrationName = "202607300001_part_15_tmdb_rate_limits.sql";
+const schedulingPermissionMigrationName =
+  "202608030001_schedule_profile_permissions.sql";
+const migrationsDirectory = resolve(process.cwd(), "supabase/migrations");
 const migration = readFileSync(
-  resolve(process.cwd(), "supabase/migrations", migrationName),
+  resolve(migrationsDirectory, migrationName),
   "utf8",
 )
   .toLowerCase()
   .replaceAll("\r\n", "\n");
 const compactMigration = migration.replace(/\s+/g, " ");
+const schedulingPermissionMigration = readFileSync(
+  resolve(migrationsDirectory, schedulingPermissionMigrationName),
+  "utf8",
+)
+  .toLowerCase()
+  .replaceAll("\r\n", "\n");
+const allMigrationSql = readdirSync(migrationsDirectory)
+  .filter((name) => name.endsWith(".sql"))
+  .sort()
+  .map((name) => readFileSync(resolve(migrationsDirectory, name), "utf8"))
+  .join("\n")
+  .toLowerCase()
+  .replaceAll("\r\n", "\n");
 
 const securityAudit = readFileSync(
   resolve(
@@ -33,6 +49,14 @@ function functionSql(name: string) {
   const end = migration.indexOf("\ncomment on function", start);
 
   return migration.slice(start, end < 0 ? migration.length : end);
+}
+
+function executableStatements(sql: string) {
+  return sql
+    .replace(/^\s*--.*$/gm, "")
+    .split(";")
+    .map((statement) => statement.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
 }
 
 describe("Part 15 database migration contract", () => {
@@ -131,7 +155,23 @@ describe("Part 15 database migration contract", () => {
       expect(functionBody).not.toContain("p_user_id");
     }
     expect(management).toContain("schedule_timezone = case");
+    expect(scheduling).toContain(
+      "where id = p_library_id and user_id = v_user_id for update",
+    );
+    expect(scheduling).toContain("if not found then return false");
+    const ownerLookup = scheduling.indexOf(
+      "perform 1 from public.user_movies where id = p_library_id and user_id = v_user_id for update",
+    );
+    const profileUpdate = scheduling.indexOf(
+      "update public.profiles set timezone = p_timezone, updated_at = pg_catalog.now() where id = v_user_id",
+    );
+    expect(ownerLookup).toBeGreaterThanOrEqual(0);
+    expect(profileUpdate).toBeGreaterThan(ownerLookup);
+    expect(scheduling).toContain("status = 'scheduled'");
+    expect(scheduling).toContain("queue_position = null");
+    expect(scheduling).toContain("scheduled_for = p_scheduled_for");
     expect(scheduling).toContain("schedule_timezone = p_timezone");
+    expect(scheduling).toContain("return true");
   });
 
   it("creates one private counter row per Auth user and operation", () => {
@@ -229,6 +269,84 @@ describe("Part 15 database migration contract", () => {
     expect(compactMigration).toContain(
       "grant execute on function public.watchflow_take_tmdb_rate_limit(text, integer) to authenticated",
     );
+  });
+});
+
+describe("scheduling profile permission patch contract", () => {
+  it("contains only the transaction and exact two-column authenticated grant", () => {
+    expect(executableStatements(schedulingPermissionMigration)).toEqual([
+      "begin",
+      "grant update (timezone, updated_at) on table public.profiles to authenticated",
+      "commit",
+    ]);
+    expect(schedulingPermissionMigration).toContain(
+      "security invoker scheduling rpc updates these two columns",
+    );
+    expect(schedulingPermissionMigration).toContain("owned profile row");
+  });
+
+  it("does not add a table-level grant, another role, policy, or function", () => {
+    expect(schedulingPermissionMigration).not.toMatch(
+      /grant\s+update\s+on\s+(?:table\s+)?public\.profiles/,
+    );
+    expect(schedulingPermissionMigration).not.toMatch(
+      /\bto\s+(?:public|anon)\b/,
+    );
+    expect(schedulingPermissionMigration).not.toMatch(
+      /\b(?:create|alter|drop)\s+(?:policy|function|table)\b/,
+    );
+    expect(schedulingPermissionMigration).not.toContain(
+      "disable row level security",
+    );
+  });
+
+  it("keeps version-controlled profile UPDATE access limited to intended columns", () => {
+    const grantedColumns = new Set<string>();
+    const columnGrantPattern =
+      /grant\s+update\s*\(([a-z_,\s]+)\)\s+on\s+(?:table\s+)?public\.profiles\s+to\s+authenticated\s*;/g;
+
+    for (const match of allMigrationSql.matchAll(columnGrantPattern)) {
+      for (const column of match[1].split(",")) {
+        grantedColumns.add(column.trim());
+      }
+    }
+
+    expect([...grantedColumns].sort()).toEqual([
+      "avatar_url",
+      "country",
+      "full_name",
+      "timezone",
+      "updated_at",
+    ]);
+    const tableGrantPattern =
+      /grant\s+([^;(]+?)\s+on\s+(?:table\s+)?public\.profiles\s+to\s+authenticated\s*;/g;
+    const tablePrivileges = [...allMigrationSql.matchAll(tableGrantPattern)]
+      .flatMap((match) => match[1].split(","))
+      .map((privilege) => privilege.replace(/\s+/g, " ").trim());
+    expect(tablePrivileges).not.toContain("update");
+    expect(tablePrivileges).not.toContain("all");
+    expect(tablePrivileges).not.toContain("all privileges");
+    expect(readinessAudit).toContain(
+      "'profiles.authenticated_table_update'",
+    );
+    expect(readinessAudit).toContain("has_column_privilege");
+    for (const column of [
+      "full_name",
+      "avatar_url",
+      "country",
+      "timezone",
+      "updated_at",
+    ]) {
+      expect(readinessAudit).toContain(`'${column}'`);
+    }
+  });
+
+  it("leaves ownership RLS intact and requires it in the live audit", () => {
+    expect(schedulingPermissionMigration).not.toContain("policy");
+    expect(securityAudit).toContain("('profiles', 'update', true)");
+    expect(securityAudit).toContain("when 'update' then");
+    expect(securityAudit).toContain("coalesce(policies.qual, '')");
+    expect(securityAudit).toContain("coalesce(policies.with_check, '')");
   });
 });
 

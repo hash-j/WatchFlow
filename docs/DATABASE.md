@@ -42,14 +42,20 @@ Phase 1 application contract:
 
 The deployed table also contains required `timezone` (default `UTC`) and
 `subscription_plan` fields. Phase 3 updates `timezone` through an authenticated,
-security-invoker scheduling function scoped to `auth.uid()`.
+security-invoker scheduling function scoped to `auth.uid()`. That function also
+sets the profile `updated_at` audit timestamp.
 
 Migration `202607220003_user_settings.sql` ensures optional `full_name`,
 `avatar_url`, and `country` plus `timezone`, `created_at`, and `updated_at` are
 available without removing any existing profile column. Authenticated profile
-UPDATE privileges are restricted to `full_name`, `avatar_url`, `country`, and
-`timezone`; RLS still decides which row may be updated. Application forms expose
-only full name, country, and timezone in this milestone.
+UPDATE privileges were restricted to `full_name`, `avatar_url`, `country`, and
+`timezone`; the missing `updated_at` privilege caused the confirmed scheduling
+failure because the RPC is `SECURITY INVOKER`. Patch migration
+`202608030001_schedule_profile_permissions.sql` grants only
+`UPDATE (timezone, updated_at)` to `authenticated`. It does not grant table-level
+UPDATE or access to `PUBLIC`/`anon`. RLS still decides which owned row may be
+updated. Application forms expose only full name, country, and timezone in this
+milestone.
 
 ### `user_preferences`
 
@@ -242,6 +248,36 @@ The schedule/queue fix migration enables RLS and adds authenticated-only
 policies equivalent to `auth.uid() = user_id` for SELECT and both UPDATE
 expressions. It does not add unrestricted access or grant mutation functions to
 `anon`.
+
+The confirmed target already has
+`watchflow_schedule_movie(uuid,timestamptz,text,text)`, authenticated EXECUTE,
+the invoker queue-normalization function, the required `user_movies` privileges
+and ownership policies, profile SELECT, and ownership-based profile UPDATE RLS.
+The scheduling RPC is `SECURITY INVOKER` and explicitly updates both
+`profiles.timezone` and `profiles.updated_at`. Authenticated could update the
+first column but not the second, so PostgreSQL rejected the profile update
+before the owned movie schedule could commit.
+
+Migration `202608030001_schedule_profile_permissions.sql` is the focused fix:
+
+```sql
+grant update (timezone, updated_at)
+  on table public.profiles
+  to authenticated;
+```
+
+The patch leaves profile and `user_movies` RLS enabled, preserves the existing
+ownership policies, does not recreate either Part 15 scheduling function, and
+does not grant unrestricted profile UPDATE or anything to `PUBLIC`/`anon`.
+It was created locally on 2026-08-03 but was not applied to Supabase by this
+task. Consequently, post-patch owner/cross-user scheduling, timezone
+persistence, and queue-normalization retesting was not run against the live
+database and remains pending after manual application.
+
+The duplicate ownership-equivalent `user_movies` SELECT and UPDATE policies
+were reviewed and retained. The repository lacks the original base policy
+migration, and current regression coverage does not prove that removing either
+deployed policy set is safe.
 
 ## RLS expectations
 
@@ -804,8 +840,8 @@ Use database objects—not migration-history rows—as the source of truth:
 - `supabase/verification/development_readiness.sql` reports required tables,
   columns, RLS, policy operations, functions/execute grants, function
   hardening, constraints/cascades, indexes, triggers, profile/preference
-  backfill gaps, and historical regression objects as `INSTALLED` or
-  `MISSING`.
+  backfill gaps, the exact effective profile UPDATE-column matrix/no table-level
+  UPDATE, and historical regression objects as `INSTALLED` or `MISSING`.
 - `supabase/verification/production_security_audit.sql` reports table scopes,
   all policies, effective/raw authenticated and anonymous privileges, limiter
   exposure, and findings for missing ownership or unrestricted-true policies.
@@ -814,28 +850,31 @@ Both files are catalog/read-only queries and do not depend on Supabase's
 migration-history table. Run them manually against the intended development or
 Preview database and investigate every missing/review result.
 
-### Manual Part 15 application
+### Part 15 application history and scheduling patch
 
-The migration was created but not applied remotely during Part 15. After
-verifying that the six earlier incremental migrations are represented in the
-target:
+Part 15 originally recorded its migration as locally created and unapplied.
+The current confirmed target inspection now establishes that the scheduling
+RPC, its authenticated EXECUTE privilege, `watchflow_normalize_queue()`, the
+required `user_movies` privileges and ownership policies, and the relevant
+profile access are present. Those selected objects do not independently prove
+the complete Part 15 migration ledger or parity for unrelated limiter/cache
+objects.
 
-1. review and manually run
-   `supabase/migrations/202607300001_part_15_tmdb_rate_limits.sql`;
-2. commit the transaction and inspect errors;
-3. as a separate SQL Editor action, run:
+Do not rerun or rewrite
+`supabase/migrations/202607300001_part_15_tmdb_rate_limits.sql` on the inspected
+target. Apply only the new focused
+`supabase/migrations/202608030001_schedule_profile_permissions.sql` after
+review, then run the read-only verification scripts and retest with two
+disposable authenticated users. The owner test must persist the requested
+instant and timezone and preserve queue normalization; the other user's call
+must return no success and make no change.
 
-   ```sql
-   notify pgrst, 'reload schema';
-   ```
-
-4. run both verification scripts; and
-5. exercise separate-user allowances, over-limit responses, expiry, metadata
-   freshness/adult/locale behavior, and direct table denial with disposable
-   authenticated accounts.
-
-Do not apply the migration to an unknown or production project automatically.
-Vitest migration contracts prove only the SQL text, not target installation.
+This task created the patch but did not apply it to Supabase, and no post-patch
+live scheduling retest was run. Vitest migration contracts prove only the SQL
+and application error-handling contracts, not target installation or live RLS
+behavior. Fresh targets still require the full ordered migration history
+through the normal reviewed deployment process; no migration should be applied
+blindly to an unknown or production project.
 
 ## Schema-change policy
 

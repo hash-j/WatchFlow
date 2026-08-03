@@ -209,10 +209,17 @@ select
       and policies.cmd in (required.command_name, 'ALL')
       and (
         not required.ownership_required
-        or position(
-          'auth.uid()' in coalesce(policies.qual, '')
-            || coalesce(policies.with_check, '')
-        ) > 0
+        or case required.command_name
+          when 'INSERT' then
+            position('auth.uid()' in coalesce(policies.with_check, '')) > 0
+          when 'UPDATE' then
+            position('auth.uid()' in coalesce(policies.qual, '')) > 0
+            and position(
+              'auth.uid()' in coalesce(policies.with_check, '')
+            ) > 0
+          else
+            position('auth.uid()' in coalesce(policies.qual, '')) > 0
+        end
       )
   ) then 'INSTALLED' else 'MISSING' end as status
 from required
@@ -657,6 +664,85 @@ left join (
     and classes.relkind in ('r', 'p')
 ) as tables on tables.relname = expected.table_name
 order by expected.object_name;
+
+-- The scheduling RPC is SECURITY INVOKER, so authenticated needs UPDATE on
+-- both owned scheduling-related profile columns. The settings columns remain
+-- intentionally editable, while identity, subscription, and creation fields
+-- (plus any unexpected profile column) must remain denied. A table-level
+-- UPDATE would make every column effective and therefore fail this matrix.
+with profile_columns as (
+  select
+    tables.oid as table_oid,
+    attributes.attnum,
+    attributes.attname as column_name
+  from pg_catalog.pg_class as tables
+  inner join pg_catalog.pg_namespace as namespaces
+    on namespaces.oid = tables.relnamespace
+  inner join pg_catalog.pg_attribute as attributes
+    on attributes.attrelid = tables.oid
+  where namespaces.nspname = 'public'
+    and tables.relname = 'profiles'
+    and tables.relkind in ('r', 'p')
+    and attributes.attnum > 0
+    and not attributes.attisdropped
+),
+evaluated as (
+  select
+    profile_columns.*,
+    profile_columns.column_name in (
+      'full_name',
+      'avatar_url',
+      'country',
+      'timezone',
+      'updated_at'
+    ) as authenticated_should_have,
+    pg_catalog.has_column_privilege(
+      'authenticated',
+      profile_columns.table_oid,
+      profile_columns.attnum,
+      'UPDATE'
+    ) as authenticated_has,
+    pg_catalog.has_column_privilege(
+      'anon',
+      profile_columns.table_oid,
+      profile_columns.attnum,
+      'UPDATE'
+    ) as anon_has
+  from profile_columns
+)
+select
+  'profiles.update.' || evaluated.column_name as object_name,
+  case
+    when evaluated.authenticated_has is distinct from
+      evaluated.authenticated_should_have then 'MISSING'
+    when evaluated.anon_has then 'MISSING'
+    else 'INSTALLED'
+  end as status,
+  evaluated.authenticated_should_have,
+  evaluated.authenticated_has,
+  evaluated.anon_has
+from evaluated
+order by evaluated.attnum;
+
+select
+  'profiles.authenticated_table_update' as object_name,
+  case
+    when pg_catalog.to_regclass('public.profiles') is null then 'MISSING'
+    when pg_catalog.has_table_privilege(
+      'authenticated',
+      'public.profiles',
+      'UPDATE'
+    ) then 'MISSING'
+    else 'INSTALLED'
+  end as status,
+  case
+    when pg_catalog.to_regclass('public.profiles') is null then false
+    else pg_catalog.has_table_privilege(
+      'authenticated',
+      'public.profiles',
+      'UPDATE'
+    )
+  end as authenticated_table_update;
 
 -- 10. Existing-user backfills. query_to_xml keeps relation lookup dynamic so
 -- a missing prerequisite is reported instead of aborting the whole script.
