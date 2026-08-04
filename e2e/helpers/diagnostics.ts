@@ -97,6 +97,12 @@ function browserMessageCategory(value: string) {
   if (normalized.includes("websocket") || normalized.includes("hmr")) {
     return "development-transport";
   }
+  if (
+    normalized.includes("is rendering with server caches disabled") &&
+    normalized.includes("react devtools")
+  ) {
+    return "development-cache-diagnostics";
+  }
   if (normalized.includes("content security policy")) return "csp";
   if (normalized.includes("accessibility")) return "accessibility";
   if (normalized.includes("warning:")) return "react-warning";

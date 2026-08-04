@@ -74,7 +74,12 @@ function isMissingRateLimitRpc(error: { code?: unknown; message?: unknown }) {
   return (
     code === "PGRST202" ||
     code === "42883" ||
-    /watchflow_take_tmdb_rate_limit/i.test(message)
+    /could not find (?:the )?function[^\n]*watchflow_take_tmdb_rate_limit/i.test(
+      message,
+    ) ||
+    /function[^\n]*watchflow_take_tmdb_rate_limit[^\n]*does not exist/i.test(
+      message,
+    )
   );
 }
 

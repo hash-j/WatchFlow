@@ -1,11 +1,11 @@
 # WatchFlow Project Context
 
-Last updated: 2026-08-03
+Last updated: 2026-08-04
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: focused scheduling permission patch on the committed Part 15.1 Statistics baseline; manual Supabase application and live scheduling retest remain pending
-Current branch: `master` at `0c05fc8` (`feat: add personal viewing statistics`), tagged `statistics-v2`
-Local status: the focused scheduling profile-permission migration, regression/readiness tests, and documentation are uncommitted review work; no remote database/account/data change was made by this task
+Current phase: guarded Part 15 TMDB rate-limit verification completed against the pinned development application/Supabase project; direct PostgreSQL catalog parity checks remain blocked
+Current branch: `master` at `2708afd` (`fix: grant scheduling profile permissions`), tagged `schedule-permissions-fix`
+Local status: focused limiter unit/integration/Playwright coverage and testing documentation are uncommitted review work; live tests changed only disposable QA limiter counters, and exact cleanup removed those eight rows
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
@@ -78,7 +78,7 @@ versions to audited compatible releases. Final production-only and full
 | `docs/` | Architecture, database, product, testing/security/readiness reports, implementation plan, and this canonical context |
 | `supabase/migrations/` | Eight incremental SQL migrations; the original base schema is absent |
 | `supabase/verification/` | Read-only database readiness and production security audit scripts |
-| `integration/`, `vitest.integration.config.ts` | Guarded, read-only, two-user real-Supabase RLS verification |
+| `integration/`, `vitest.integration.config.ts` | Guarded two-user real-Supabase RLS verification plus a separately opted-in limiter contract/concurrency harness with read-only privileged diagnostics |
 | `scripts/` | Post-build client-secret-pattern scanner |
 | `lib/**/*.test.ts` | Vitest unit, adapter, route/source, and migration-contract tests |
 | `e2e/`, `playwright.config.ts` | Public auth/protection/responsive tests plus guarded in-memory QA fixtures, two-user isolation, controlled mutation, CSV, and disposable deletion coverage |
@@ -188,6 +188,10 @@ Names only are recorded here; values must never enter this file.
 | `E2E_RUN_ACCOUNT_DELETION` | Explicit one-shot deletion opt-in | Test runtime | Required only for deletion QA |
 | `E2E_TEST_MOVIE_QUERY` | Controlled QA search title | Test runtime | Optional |
 | `RUN_SUPABASE_INTEGRATION_TESTS` | Explicit real-development-project RLS suite opt-in | Test runtime | Required for live integration |
+| `RUN_TMDB_RATE_LIMIT_INTEGRATION_TESTS` | Explicit authenticated limiter RPC contract/concurrency opt-in | Test runtime | Required only for live limiter integration |
+| `E2E_RATE_LIMIT_BUCKETS_ARE_FRESH` | Operator confirmation used in addition to a read-only freshness check | Test runtime | Required only for live limiter integration |
+| `RUN_TMDB_RATE_LIMIT_E2E` | Explicit opt-in for sequential real TMDB search traffic | Test runtime | Required only for limiter browser QA |
+| `E2E_RATE_LIMIT_UI_BUCKETS_ARE_FRESH` | Operator confirmation that QA UI search buckets are fresh | Test runtime | Required only for limiter browser QA |
 | `CI` | Enables CI retries, one worker, and strict `test.only` rejection | Test runtime | Optional |
 
 `.env.example` records these names and non-secret local placeholders only.
@@ -228,7 +232,7 @@ Personal data placement is mandatory:
 
 | Object | Current version-controlled or documented rule |
 |---|---|
-| `profiles` | Own-row RLS remains authoritative; versioned grants allow `full_name`, `avatar_url`, `country`, and `timezone`, while the pending scheduling patch narrowly adds/reaffirms `timezone` and adds `updated_at` without table-level UPDATE |
+| `profiles` | Own-row RLS remains authoritative; versioned grants allow `full_name`, `avatar_url`, `country`, and `timezone`; the committed scheduling patch narrowly adds/reaffirms `timezone` and adds `updated_at` without table-level UPDATE |
 | `movies` | Shared reads follow deployed policy; only the protected secret client performs metadata upserts |
 | `user_movies` | Existing own SELECT/UPDATE policies remain; Part 12 narrowly grants authenticated SELECT/UPDATE on `favourite`; existing INSERT/DELETE policies and base grants remain unversioned |
 | `user_preferences` | Own SELECT, INSERT, UPDATE policies; no normal DELETE policy |
@@ -252,7 +256,7 @@ Nuance: `202607220003_user_settings.sql` used column-level preference grants, bu
 | `202607280001_part_12_library_improvements.sql` | Adds private `favourite`, five owner/query indexes, private row/facet query functions, and transactional bulk-status/bulk-delete functions | Deployed API exposes the bulk-removal function and the user reports Part 12 working; full migration parity/grants still need authenticated inspection |
 | `202607290001_part_13_private_custom_lists.sql` | Creates private `lists`/`list_movies`, constraints/indexes/triggers, eight RLS policies, scoped grants, one summary query, five atomic membership/order RPCs, and cascade-delete compaction | Created locally only; do not execute automatically. Apply manually after all five prior migrations and reload PostgREST |
 | `202607300001_part_15_tmdb_rate_limits.sql` | Adds durable authenticated TMDB rate-limit buckets/RPC, canonical shared-cache columns, browser write revocation for `movies`, transactional management/schedule RPC replacements, and preference-default repair | Confirmed target has the scheduling RPC, its authenticated EXECUTE privilege, and queue normalization; full migration parity/history is not proven. Do not rerun it on the inspected target |
-| `202608030001_schedule_profile_permissions.sql` | Grants authenticated UPDATE only on `profiles.timezone` and `profiles.updated_at` so the SECURITY INVOKER scheduling RPC can persist its owned profile changes | Created locally; not manually applied by this task. Live owner/cross-user scheduling retest remains pending |
+| `202608030001_schedule_profile_permissions.sql` | Grants authenticated UPDATE only on `profiles.timezone` and `profiles.updated_at` so the SECURITY INVOKER scheduling RPC can persist its owned profile changes | Version-controlled at `2708afd`; manual target application and live owner/cross-user scheduling retest are not verified in this session |
 
 Original creation migrations for `profiles`, `movies`, and `user_movies` are absent. Contract tests inspect SQL text only; they do not prove remote application or multi-user isolation.
 
@@ -289,7 +293,7 @@ Status describes repository implementation, not unverified remote migrations.
 | Favourite field | Complete | `/library`, `/library/[movieId]`, Part 12 migration/actions | Private `user_movies.favourite`; migration-dependent |
 | Watch Next queue | Complete | `/watch-next` | One-based private queue |
 | Queue reordering | Complete | `move_watch_queue_item` | Migration-dependent up/down controls |
-| Scheduling | Permission patch ready; live retest pending | `/schedule`, movie detail, transactional management RPCs | Confirmed RPC failed because its SECURITY INVOKER role lacked `profiles.updated_at` UPDATE; the focused two-column grant is uncommitted and unapplied |
+| Scheduling | Permission patch committed; live retest pending | `/schedule`, movie detail, transactional management RPCs | Confirmed RPC failed because its SECURITY INVOKER role lacked `profiles.updated_at` UPDATE; the focused two-column grant is version-controlled, while remote application remains unverified here |
 | Watched/unwatched UI | Complete | `/library?watched=` | Unwatched means every non-watched status; legacy `filter` remains accepted |
 | CSV import | Complete | `/import`, `lib/import/*` | In-memory, review before write |
 | CSV export | Complete | `/settings/data/export/csv` | Private no-store attachment |
@@ -530,22 +534,23 @@ or mutate data.
 
 | Check | Status | Latest evidence |
 |---|---|---|
-| Lint | Passed | `npm run lint`, 2026-08-03; Next 16 native flat config, no rule suppressions |
-| TypeScript | Passed | `npx tsc --noEmit`, 2026-08-03 |
-| Unit/contract tests | Passed | `npm test`: 59 files, 601 tests, 2026-08-03 |
+| Lint | Passed | `npm run lint`, 2026-08-04; Next 16 native flat config, no rule suppressions |
+| TypeScript | Passed | `npx tsc --noEmit`, 2026-08-04 |
+| Unit/contract tests | Passed | `npm test`: 59 files, 611 tests, 2026-08-04 |
+| Focused Part 15 limiter tests | Passed locally and live | The guarded development limiter integration passed all 10 live tests; the final focused Playwright run passed its one live test after natural bucket expiry. Exact catalog ACL/RLS/constraint parity remains blocked |
 | Focused scheduling permission tests | Passed | 3 files, 45 tests covering the exact grant, effective profile columns, ownership RLS audit, owner/foreign scheduling, timezone persistence, queue normalization, and permission-vs-missing-RPC mapping |
 | Focused Part 15.1 tests | Passed | `npx vitest run lib/statistics`: 4 files, 62 tests covering metrics, mapping, query/isolation/error, route/UI/accessibility/revalidation contracts |
 | Focused Part 14 tests | Passed | `npx vitest run lib/discovery`: 7 files, 113 tests covering moods, picker parsing/matching/randomness, recommendation rules, mapping, authenticated adapter, action, and UI/security contracts |
 | Focused Part 13 tests | Passed | `npx vitest run lib/lists`: 6 files, 75 tests, 2026-07-29 |
 | Focused Part 13/Part 12 regressions | Passed | 13 files, 184 tests covering lists plus removal/query/bulk contracts, 2026-07-29 |
-| Live database integration | Skipped | `npm run test:integration` loaded 1 file/5 tests, but all were skipped because the live development guard/QA credentials were absent |
+| Live database integration | Limiter passed; unrelated suite skipped | `npm run test:integration` passed all 10 development limiter tests in 132.27 seconds; the five separately guarded baseline RLS tests remained skipped |
 | Production route smoke | Passed, public only | Clean Playwright MCP: canonical signup, auth failure/not-found, protected redirects, mobile overflow/touch size, clean storage, safe console/network/HTML |
 | Playwright safe selected E2E | Passed, public only | 35 passed, 15 guarded/skipped on 2026-08-02; `/statistics` protection and `/auth/sign-up` passed, all 10 authenticated Statistics cases skipped, account deletion excluded |
-| Authenticated Part 12-15 E2E/live RLS | Not verified | The new permission patch was not manually applied and no live scheduling retest was run; guarded suites exist but were not executed |
-| Client secret scan | Passed | 478 freshly built artifacts, no forbidden/configured-value leak; one reviewed Supabase SDK sentinel, 2026-08-03 |
+| Authenticated Part 12-15 E2E/live RLS | Part 15 limiter verified only | Disposable QA A/B authenticated against the pinned development project; limiter RPC/database behavior and real search UX passed. Broader Part 12-15 live RLS coverage remains separate |
+| Client secret scan | Passed | 478 freshly built artifacts, no forbidden/configured-value leak; one reviewed Supabase SDK sentinel, 2026-08-04 |
 | Dependency audits | Passed | Production-only and full `npm audit`: zero vulnerabilities |
-| Production build | Passed | `npm run build` on Next.js `16.2.12`; TypeScript and 35 static shell generations completed and route output listed `/auth/sign-up`, `/schedule`, and `/statistics`, 2026-08-03 |
-| Scheduling permission patch application | Not applied | `202608030001_schedule_profile_permissions.sql` remains local and uncommitted; no remote schema or data mutation occurred |
+| Production build | Passed | `npm run build` on Next.js `16.2.12`; TypeScript and 35 static shell generations completed and route output listed `/auth/sign-up`, `/schedule`, and `/statistics`, 2026-08-04 |
+| Scheduling permission patch application | Unverified remotely | `202608030001_schedule_profile_permissions.sql` is committed at `2708afd`; this session did not connect to or mutate a Supabase project |
 | Scheduling live retest | Not run | Owner/cross-user scheduling, timezone persistence, and live queue normalization remain pending after manual patch application |
 | Part 15.1 Statistics verification | Committed; authenticated QA blocked | Committed at `0c05fc8`; its earlier local gate passed, while guarded authenticated browser cases remain unexecuted |
 
@@ -557,14 +562,15 @@ Mark Passed only after that exact command succeeds.
 |---|---|
 | Resolved/guarded | `/auth/sign-up` was accidentally removed and returned 404; it now exists with a route-contract test |
 | Resolved/guarded | `CardTitle` rendered a `div` and auth errors rendered plain paragraphs; page titles are now `h1` and auth errors use `role="alert"` |
-| Operational unknown | Repository migration files do not prove remote application; all eight incremental migration states must be checked, with the new scheduling patch known to be unapplied by this task |
+| Operational unknown | Repository migration files do not prove remote application; all eight incremental migration states, including the committed scheduling patch, must be checked against the intended target |
 | Resolved locally | `user_preferences` had RLS but insufficient INSERT/UPDATE privileges; the latest patch grants SELECT/INSERT/UPDATE, no DELETE |
 | Operational unknown | Preference backfill exists in SQL; existing profile/preference rows and onboarding triggers still require target-project verification |
 | Preserved boundary | Shared movie writes require the authenticated-first, server-only admin path; never weaken this to solve RLS errors |
 | Resolved/guarded | Empty FormData values previously caused numeric/date update errors; current validators map optional rating/date/text values safely |
 | Resolved locally | Individual removal called the undeployed legacy `watchflow_remove_library_movie(p_library_id)` RPC and failed with `PGRST202`; it now submits one validated `user_movies.id` UUID through the working Part 12 removal RPC shared with bulk deletion |
 | Migration-dependent | Queue reordering requires `move_watch_queue_item`; missing RPC errors are mapped to a migration message |
-| Resolved in versioned patch; manual application pending | Scheduling RPC and fields exist, but its SECURITY INVOKER profile update lacked authenticated UPDATE on `profiles.updated_at`; `202608030001_schedule_profile_permissions.sql` adds only the required `timezone`/`updated_at` column grant |
+| Resolved in committed patch; remote verification pending | Scheduling RPC and fields exist, but its SECURITY INVOKER profile update lacked authenticated UPDATE on `profiles.updated_at`; `202608030001_schedule_profile_permissions.sql` adds only the required `timezone`/`updated_at` column grant |
+| Partially verified live | The Part 15 table/RPC were reachable, authenticated RPC execution worked, anonymous RPC and authenticated/anonymous direct table reads were denied, and all limiter contracts passed. Exact catalog ACL representation, RLS flag, primary/check constraints, function security attributes/body, and full migration parity remain blocked without a direct PostgreSQL catalog connection or manual SQL-editor report |
 | Reviewed/preserved | Duplicate ownership-equivalent `user_movies` SELECT/UPDATE policies remain because the original base policy migration is absent and no regression coverage proves removal safe |
 | Resolved/guarded | Detail-form schedule editing now defaults to its saved schedule zone and persists/clears zone and note through the dedicated contract |
 | Resolved/documented | The preference privilege patch is table-level; architecture/database/security verification now use that source-of-truth contract |
@@ -601,32 +607,35 @@ Migrations 1 and parts of 2 are not safely repeatable; never rerun old SQL blind
 
 ## 20. Current Project State
 
-- Committed baseline: **Part 15.1 personal viewing Statistics** at `0c05fc8`,
-  tagged `statistics-v2`. Its guarded authenticated browser verification
-  remains incomplete.
-- Latest work: **focused scheduling permission patch**, currently uncommitted.
-  It grants authenticated profile UPDATE only on `timezone` and `updated_at`
-  for the existing SECURITY INVOKER scheduling RPC.
+- Committed baseline: **scheduling profile-permission patch** at `2708afd`,
+  tagged `schedule-permissions-fix`, on Part 15.1 Statistics at `0c05fc8`.
+  Guarded authenticated browser verification remains incomplete.
+- Latest work: **Part 15 TMDB limiter verification harness**, currently
+  uncommitted. It adds separately opted-in authenticated RPC and Playwright
+  coverage without changing the Part 15 migration or limiter thresholds.
 - Historical Part 11 statistics/dashboard upgrade: **never implemented or
   committed**. Part 15.1 rebuilds the requested feature from current architecture.
-- Next operational step: manually apply and verify the scheduling patch in the
+- Next operational step: pin and verify the
   intended Supabase project, then continue **Part 16 — Preview Deployment**.
-- Branch/base HEAD: `master`, `0c05fc8` (`feat: add personal viewing statistics`).
+- Before limiter execution, provide disposable QA A/B, run both read-only SQL
+  audits, and confirm the fixed operation buckets are fresh.
+- Branch/base HEAD: `master`, `2708afd` (`fix: grant scheduling profile permissions`).
   Tags `settings-v1` and misleading `statistics-v1` remain historical;
   `statistics-v1` is not moved.
-- Latest migration: `202608030001_schedule_profile_permissions.sql` (local,
-  uncommitted, and not manually applied).
+- Latest migration: `202608030001_schedule_profile_permissions.sql`
+  (version-controlled; remote application unverified in this session).
 - Latest feature set: private custom lists plus a URL-filtered random picker,
   eight explicit moods, bounded in-session repeat avoidance, and transparent
   scored/deduplicated/diversified private-library recommendations, plus the
   committed personal Statistics page.
-- Baseline Git state at `0c05fc8` was clean; the current worktree contains only
-  the focused scheduling migration, regression/readiness tests, and docs.
+- Baseline Git state at `2708afd` was clean; the current worktree contains only
+  the limiter test/error-classification review and related documentation.
 - Confirmed target findings establish the Part 15 scheduling/normalization
   objects and relevant RLS/grants, but not full Part 15 migration parity. The
   old Part 15 migration must not be rerun on that target.
-- No remote schema or user data was changed during this patch task; manual
-  patch application and live owner/cross-user scheduling retest are pending.
+- No Supabase/TMDB authentication or request was attempted and no remote schema
+  or user data was changed during this limiter task because the safety guard
+  was not satisfied.
 - Public/protection Playwright is green; authenticated Part 12-15 and live RLS
   coverage is blocked as described above.
 - `/statistics` is committed; its guarded authenticated/two-user browser
@@ -977,10 +986,10 @@ Final local results on 2026-07-30:
 - `docs/PRODUCTION_READINESS.md` is the status checklist. Recommendation:
   proceed only to a controlled Part 16 Preview setup, not public production.
 
-Current milestone: focused scheduling profile-permission patch on the committed
-Part 15.1 baseline. The patch is uncommitted and manually unapplied; its live
-owner/cross-user scheduling retest and the broader authenticated Preview gates
-remain incomplete.
+Current milestone: guarded Part 15 TMDB limiter verification on the committed
+scheduling-permission baseline. Static and mocked coverage is available, but
+live database, concurrency, expiry, and browser results remain blocked by the
+missing development pin and disposable QA configuration.
 
 Next milestone: Part 16 Preview Deployment.
 
@@ -1066,6 +1075,77 @@ context elsewhere, or add secrets/actual environment values. Keep this document
 concise, internally consistent, and grounded in repository evidence.
 
 ## Context Change Log
+
+### 2026-08-04 - Codex live Part 15 TMDB limiter verification
+
+- Safety guards passed before any allowance was consumed: the target was
+  explicitly `development`, the application and expected Supabase URLs matched
+  exactly without being printed, QA A/B were configured and distinct, and the
+  existing loopback app's CSP matched the same development project at runtime.
+- Live effective-access preflight passed: the limiter table was readable only
+  through the scoped privileged diagnostic, the named RPC executed for an
+  authenticated QA client, anonymous RPC access failed, and authenticated and
+  anonymous direct table reads failed. Invalid operation/cost probes and the
+  missing-RPC control did not consume valid allowance. Exact PostgreSQL catalog
+  ACL/RLS/PK/CHECK/function-definition checks remain blocked because no direct
+  database URL, CLI link, or management/catalog runner is configured.
+- All ten guarded limiter integration tests passed: search 30/31, details
+  20/21, RPC-only import search/details 120/121, batched costs, user and
+  operation isolation, natural expiry/restart, invalid input, unauthenticated
+  and expired sessions, ten concurrent accepts, and exactly 30 accepted/five
+  denied out of 35 concurrent search calls with final accepted cost 30.
+- The focused real-browser search limiter test passed with one worker and no
+  retries: request 31 showed the friendly rate-limit copy via the documented
+  application-level HTTP 200 response, QA B remained available, click/double-
+  click/Enter each emitted one search navigation, query edits emitted none,
+  browser/network diagnostics were clean apart from the specifically classified
+  Next development cache diagnostic, and search recovered after the UI-reported
+  retry interval. Poster optimization was locally fulfilled to avoid unrelated
+  image-provider traffic.
+- Final exact-user diagnostics found four valid operation rows per QA user,
+  expected counts, valid timestamp ordering, no duplicates/unknown operations/
+  negative counts, and then removed exactly the eight disposable QA limiter
+  rows. No QA account or normal user data was deleted.
+- Final repository checks passed: lint, direct TypeScript, 59 files/611 unit
+  tests, the 10-test live limiter integration suite, one focused live
+  Playwright test, the Next 16.2.12 build with 35 generated shells, and the
+  post-build 478-artifact client-secret scan. The five unrelated integration
+  tests remained explicitly skipped and are not counted as passing.
+
+### 2026-08-04 - Codex Part 15 TMDB limiter verification harness
+
+- Safety gate: the local application URL is loopback and application Supabase/
+  TMDB variable names are present, but `E2E_TARGET_ENV=development`, the exact
+  `E2E_EXPECTED_SUPABASE_URL` pin, disposable QA A/B credentials, and a direct
+  catalog connection are absent. No login, limiter RPC, TMDB request, remote
+  schema read/write, or QA-row cleanup was attempted.
+- Static verification: the unchanged Part 15 migration defines the four exact
+  per-user/operation buckets, private counter table, RLS, composite primary
+  key, operation/nonnegative checks, authenticated-only SECURITY DEFINER RPC,
+  fixed empty search path, advisory/row locking, natural window reset, and
+  denial-without-increment behavior. Migration text is not claimed as live
+  installation evidence.
+- Added separately guarded `integration/rate-limit.integration.test.ts` and
+  `e2e/tmdb-rate-limit.spec.ts`. The integration harness calls the limiter only
+  through normal authenticated clients and reserves the server-secret client
+  for exact read-only QA-row diagnostics. The browser suite uses sequential
+  unique searches, in-memory QA contexts, safe response checks, and no
+  trace/video. Neither suite can run live without its explicit traffic/fresh-
+  bucket opt-in in addition to the existing development pin.
+- Added import bucket-routing assertions and focused failure-classification/
+  invalid-cost regressions. Permission failures that name the limiter are no
+  longer classified as a missing RPC; true PostgREST schema-cache/missing-
+  function responses remain distinct.
+- Executed local evidence: lint and direct TypeScript passed; 7 focused files/
+  65 tests and the full 59-file/611-test Vitest suite passed; the full live
+  integration selection loaded 2 files/15 tests and skipped all 15; the focused
+  limiter Playwright selection loaded one test and skipped it; the production
+  build generated 35 static shells; and the fresh 478-artifact secret scan
+  passed. Skipped live cases are not counted as passing.
+- Live database object, ACL/RLS/constraint, threshold, expiry, concurrency,
+  two-user, UI denial, cache, final-row, and cleanup results remain blocked,
+  not passed. Run both read-only SQL audits in the confirmed development SQL
+  editor before enabling the new live suites.
 
 ### 2026-08-03 - Codex scheduling profile-permission patch
 

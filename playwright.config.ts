@@ -14,6 +14,9 @@ const pinnedAuthenticatedQaRun =
   process.env.E2E_TARGET_ENV === "development" &&
   Boolean(configuredSupabaseUrl) &&
   configuredSupabaseUrl === expectedSupabaseUrl;
+const reuseVerifiedDevelopmentServer =
+  process.env.E2E_REUSE_VERIFIED_DEVELOPMENT_SERVER === "true" &&
+  pinnedAuthenticatedQaRun;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -46,7 +49,11 @@ export default defineConfig({
     // A credentialed run must start the configured command with this process's
     // pinned Supabase environment instead of trusting an unknown server already
     // listening on the loopback port.
-    reuseExistingServer: !process.env.CI && !pinnedAuthenticatedQaRun,
+    // Live limiter runs may reuse an already-running workspace server only
+    // after an external runtime check confirms its pinned development origin.
+    reuseExistingServer:
+      !process.env.CI &&
+      (!pinnedAuthenticatedQaRun || reuseVerifiedDevelopmentServer),
     timeout: 120_000,
   },
 });

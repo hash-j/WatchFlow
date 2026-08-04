@@ -105,7 +105,7 @@ describe("authenticated TMDB rate limiting", () => {
     });
   });
 
-  it("reports a missing Preview migration separately", async () => {
+  it("reports a missing Part 15 migration separately", async () => {
     const { client } = clientWithResult({
       data: null,
       error: {
@@ -118,6 +118,46 @@ describe("authenticated TMDB rate limiting", () => {
       MovieRateLimitConfigurationError,
     );
     expect(logSupabaseError).toHaveBeenCalledOnce();
+  });
+
+  it("does not report an RPC permission failure as a missing migration", async () => {
+    const { client } = clientWithResult({
+      data: null,
+      error: {
+        code: "42501",
+        message:
+          "permission denied for function watchflow_take_tmdb_rate_limit",
+      },
+    });
+
+    const failure = await enforceTmdbRateLimit(client, "search").catch(
+      (error: unknown) => error,
+    );
+
+    expect(failure).toBeInstanceOf(MovieProviderError);
+    expect(failure).not.toBeInstanceOf(MovieRateLimitConfigurationError);
+    expect(failure).toMatchObject({
+      message: "Movie requests are temporarily unavailable. Please try again.",
+    });
+  });
+
+  it.each([
+    { code: "42883", message: "function does not exist" },
+    {
+      code: "PGRST202",
+      message: "Could not find the function in the schema cache",
+    },
+    {
+      code: "",
+      message:
+        "Could not find the function public.watchflow_take_tmdb_rate_limit",
+    },
+  ])("recognizes a genuine missing RPC response %#", async (error) => {
+    const { client } = clientWithResult({ data: null, error });
+
+    await expect(enforceTmdbRateLimit(client, "search")).rejects.toBeInstanceOf(
+      MovieRateLimitConfigurationError,
+    );
   });
 
   it("fails closed on malformed or unexpected database responses", async () => {
@@ -135,11 +175,14 @@ describe("authenticated TMDB rate limiting", () => {
     ).rejects.toBeInstanceOf(MovieProviderError);
   });
 
-  it("rejects invalid request cost before calling the database", async () => {
-    const { client, rpc } = clientWithResult({ data: null, error: null });
-    await expect(enforceTmdbRateLimit(client, "search", 0)).rejects.toBeInstanceOf(
-      MovieProviderError,
-    );
-    expect(rpc).not.toHaveBeenCalled();
-  });
+  it.each([0, -1, 21, 1.5, null])(
+    "rejects invalid request cost %s before calling the database",
+    async (cost) => {
+      const { client, rpc } = clientWithResult({ data: null, error: null });
+      await expect(
+        enforceTmdbRateLimit(client, "search", cost as number),
+      ).rejects.toBeInstanceOf(MovieProviderError);
+      expect(rpc).not.toHaveBeenCalled();
+    },
+  );
 });

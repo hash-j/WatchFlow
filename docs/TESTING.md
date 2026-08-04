@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document describes the Part 15 test architecture, the current uncommitted
-Part 15.1 Statistics extension, and the evidence required before Preview
-sign-off. It deliberately separates repository tests from tests
+This document describes the Part 15 test architecture, the committed Part 15.1
+Statistics extension, and the evidence required before Preview sign-off. It
+deliberately separates repository tests from tests
 that exercise a real development Supabase project. A passing mocked test does
 not establish that a migration, RLS policy, grant, Auth redirect, or email
 template is installed in a target project.
@@ -18,7 +18,7 @@ exports, traces containing passwords, or Supabase access/refresh tokens.
 | Layer | Command or path | Data source | Mutation | What it proves |
 |---|---|---|---|---|
 | Unit and source-contract | `npm test` / `lib/**/*.test.ts` | Pure fixtures and mocked adapters | None outside process memory | Parsing, validation, mapping, rule behavior, action orchestration, safe errors, source boundaries, and migration SQL contracts |
-| Integration | `npm run test:integration` / `integration/**/*.integration.test.ts` | Development Supabase when explicitly enabled | Current suite is read-only apart from Auth sign-in/sign-out | Two-user and anonymous read isolation for profiles, preferences, library rows, lists, memberships, and shared movies |
+| Integration | `npm run test:integration` / `integration/**/*.integration.test.ts` | Development Supabase when explicitly enabled | Baseline RLS suite is read-only apart from Auth; the separately opted-in limiter suite mutates only disposable QA counter rows | Two-user/anonymous RLS plus live limiter contracts, operation/user isolation, expiry, and concurrency when their distinct guards are satisfied |
 | Database catalog verification | `supabase/verification/*.sql` | Manually selected development or Preview database | None | Installed objects, columns, RLS, policies, grants, functions, constraints, indexes, triggers, and backfill gaps |
 | Public/regression E2E | `npm run test:e2e` | Local application; public routes | Local form state only, except the invalid-provider-login case when the development guard is enabled | Auth route existence, callback failure handling, logged-out protection, keyboard order, responsive sign-up layout, and the `/auth/sign-up` non-404 regression |
 | Authenticated E2E | Guarded Playwright suites | Loopback app connected to a confirmed development Supabase project | Controlled QA movie/list/preferences data, followed by targeted cleanup | Authenticated route smoke, controlled search/add/remove, in-memory CSV upload, and two-user list isolation |
@@ -58,13 +58,18 @@ be exposed to browser code. The Supabase secret and TMDB token are server-only.
 - `E2E_DELETE_ACCOUNT_PASSWORD`
 - `E2E_RUN_ACCOUNT_DELETION`
 - `E2E_TEST_MOVIE_QUERY`
+- `RUN_TMDB_RATE_LIMIT_E2E`
+- `E2E_RATE_LIMIT_UI_BUCKETS_ARE_FRESH`
 
 ### Supabase integration suite
 
 - `RUN_SUPABASE_INTEGRATION_TESTS`
+- `RUN_TMDB_RATE_LIMIT_INTEGRATION_TESTS`
+- `E2E_RATE_LIMIT_BUCKETS_ARE_FRESH`
 - `E2E_TARGET_ENV`
 - `E2E_EXPECTED_SUPABASE_URL`
 - the two public Supabase names
+- `SUPABASE_SECRET_KEY` for exact read-only QA-row diagnostics
 - QA User A and QA User B email/password names
 
 No actual value belongs in documentation, screenshots, reports, committed Auth
@@ -82,8 +87,10 @@ Authenticated Playwright tests run only when:
 4. both QA accounts are configured.
 
 When that project pin is satisfied, Playwright does not reuse an unknown
-process already listening on the loopback port; it starts the configured
-server command with the pinned environment.
+process already listening on the loopback port by default. A test operator may
+set `E2E_REUSE_VERIFIED_DEVELOPMENT_SERVER=true` only after a read-only runtime
+check confirms that the existing workspace server's CSP contains the exact
+pinned development Supabase HTTPS and WebSocket origins.
 
 The account-deletion suite adds two more requirements:
 
@@ -97,6 +104,29 @@ the public Supabase variables are present, and
 `E2E_EXPECTED_SUPABASE_URL` exactly matches `NEXT_PUBLIC_SUPABASE_URL`. It does
 not use the application base URL, so the operator must still verify the pinned
 project is disposable development infrastructure, never production.
+
+The live limiter suites have additional, separate opt-ins because they consume
+real allowances:
+
+- `integration/rate-limit.integration.test.ts` requires
+  `RUN_TMDB_RATE_LIMIT_INTEGRATION_TESTS=true` and
+  `E2E_RATE_LIMIT_BUCKETS_ARE_FRESH=true`. Limiter calls always use ordinary
+  authenticated QA clients and pass only `p_operation` and `p_cost`. The
+  secret-key client is limited to exact, read-only QA-row diagnostics and never
+  invokes the RPC or performs cleanup.
+- `e2e/tmdb-rate-limit.spec.ts` requires `RUN_TMDB_RATE_LIMIT_E2E=true` and
+  `E2E_RATE_LIMIT_UI_BUCKETS_ARE_FRESH=true`. It performs sequential unique
+  searches through the local UI, disables traces/video, checks one request per
+  submit, verifies QA User B isolation, and waits only for the reported retry
+  duration plus a small buffer.
+
+Before either opt-in is set, run both read-only SQL verification reports in the
+confirmed development project and inspect the live limiter object, ACL, RLS,
+primary key, and constraints. Do not run the RPC and UI suites back-to-back on
+the same QA search buckets unless the first suite's reported 60-second window
+has naturally expired. The harnesses never delete limiter rows; fixed windows
+expire naturally, while the disposable QA counter rows remain for later
+read-only review.
 
 ## Playwright structure
 
@@ -121,6 +151,8 @@ selectors. The main files are:
 - `e2e/statistics.spec.ts`: Part 15.1 public route existence/protection plus a
   guarded authenticated personal-statistics, revalidation, isolation, empty-
   state, mobile, and safe-diagnostics flow.
+- `e2e/tmdb-rate-limit.spec.ts`: separately opted-in real-search exhaustion,
+  duplicate-submit, two-user isolation, safe denial, and natural-expiry flow.
 
 The authenticated and account-deletion specs disable traces and video because
 real passwords are present during login. Default screenshots are failure-only;
@@ -143,6 +175,10 @@ any retained artifact must be inspected before sharing.
   for a later run.
 - No automated test uses a member's original full CSV. CSV contents are
   processed in memory and are not persisted by the application.
+- The limiter integration suite sends no TMDB traffic. Its valid RPC calls
+  change only the four fixed operation buckets for disposable QA Users A/B.
+- The limiter Playwright suite sends real sequential search traffic only; it
+  never performs 120 provider calls for either import bucket.
 
 Cleanup is best effort after a failed browser mutation. A failed cleanup must
 be reviewed manually using only the disposable QA identities; do not broaden a
@@ -294,8 +330,8 @@ Final recorded local Part 15 results:
 
 ## Current Part 15.1 verification status
 
-The `/statistics` route/module/navigation implementation remains uncommitted
-for review. Final local evidence from 2026-08-02:
+The `/statistics` route/module/navigation implementation is committed at
+`0c05fc8`. Final local evidence from 2026-08-02:
 
 - `npm run lint`: passed.
 - `npx tsc --noEmit`: passed.
@@ -316,3 +352,47 @@ for review. Final local evidence from 2026-08-02:
 Credentialed QA A/B metrics, revalidation, data isolation, populated/empty
 states, and Statistics viewport behavior remain blocked rather than passed.
 The historical Part 15 evidence remains tied to commit `f6b15d4`.
+
+## Current Part 15 limiter verification status
+
+Local evidence from 2026-08-04:
+
+- `npm run lint` and `npx tsc --noEmit` passed.
+- Seven focused limiter/search/cache/import files passed 65 tests; `npm test`
+  passed 59 files and 611 tests.
+- The explicit development guard and exact application/expected Supabase URL
+  comparison passed without printing either URL. A live effective-access
+  preflight confirmed table/RPC reachability, authenticated RPC execution,
+  anonymous RPC denial, and authenticated/anonymous direct-table denial.
+- `npm run test:integration` passed all ten live limiter tests in 132.27
+  seconds; the five separately guarded baseline integration tests remained
+  skipped. Search denied call 31, details denied call 21, and both RPC-only
+  import buckets denied call 121. User/operation isolation, reported-window
+  expiry, invalid operation/cost, unauthenticated/expired sessions, ten
+  concurrent accepts, and the 35-call split of exactly 30 accepted/five denied
+  with final cost 30 all passed.
+- The final focused Playwright run passed one test in 1.3 minutes with one
+  worker, no retry, no trace/video, and local poster-image fulfillment. It
+  verified 30 allowed UI searches, friendly denial on request 31 via the
+  documented application-level HTTP 200 response, QA-B independence, one
+  request per click/double-click/Enter, no request for edit-only changes, clean
+  console/network diagnostics apart from the explicitly classified Next
+  development cache notice, and recovery after the UI-reported retry.
+- Final privileged diagnostics verified four valid rows per QA user with exact
+  post-browser counts and timestamp ordering, then an exact-user/four-operation
+  cleanup removed eight disposable QA limiter rows and verified none remained.
+  QA accounts and normal application data were not deleted.
+- `npm run build` passed with 35 generated static shells. The post-build client
+  secret scan passed across 478 browser artifacts with no configured-secret
+  leak.
+
+Exact PostgreSQL catalog ACL representation, the RLS-enabled flag, primary and
+check constraints, function security attributes/body, and full migration parity
+remain blocked: this environment has no direct database URL, Supabase CLI link,
+management token, or other safe catalog runner. Run the repository's read-only
+SQL reports manually in the confirmed development SQL Editor before treating
+those properties as verified.
+
+
+Create .env.test.local and fill in disposable QA User A and QA User B
+credentials. Never commit the file or use production accounts.

@@ -1,16 +1,26 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const enforceTmdbRateLimit = vi.hoisted(() => vi.fn());
+const searchMovies = vi.hoisted(() => vi.fn());
+const resolveSharedMovieMetadata = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
 vi.mock("../supabase/error-logging", () => ({ logSupabaseError: vi.fn() }));
 vi.mock("../supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("../movies/tmdb-provider", () => ({ tmdbMovieProvider: {} }));
-vi.mock("../movies/rate-limit", () => ({ enforceTmdbRateLimit: vi.fn() }));
+vi.mock("../movies/tmdb-provider", () => ({
+  tmdbMovieProvider: { searchMovies },
+}));
+vi.mock("../movies/rate-limit", () => ({ enforceTmdbRateLimit }));
 vi.mock("../movies/shared-metadata", () => ({
-  resolveSharedMovieMetadata: vi.fn(),
+  resolveSharedMovieMetadata,
 }));
 
-import { saveImportedMovie } from "./supabase-import";
+import {
+  createImportMatchingDependencies,
+  createMovieImportDependencies,
+  saveImportedMovie,
+} from "./supabase-import";
 import type { ConfirmedImportMovie } from "./service";
 import type { SharedMovieReference } from "../movies/shared-metadata";
 
@@ -53,6 +63,53 @@ function chainedLookup(data: unknown) {
   builder.eq.mockReturnValue(builder);
   return builder;
 }
+
+beforeEach(() => {
+  enforceTmdbRateLimit.mockReset();
+  searchMovies.mockReset();
+  resolveSharedMovieMetadata.mockReset();
+});
+
+describe("CSV import TMDB rate-limit routing", () => {
+  it("uses the import-search bucket before provider matching", async () => {
+    const client = {} as SupabaseClient;
+    const session = { userId: "verified-user", client };
+    enforceTmdbRateLimit.mockResolvedValue({ allowed: true });
+    searchMovies.mockResolvedValue([]);
+
+    const result = await createImportMatchingDependencies().searchMovies(
+      session,
+      "Arrival",
+    );
+
+    expect(result).toEqual([]);
+    expect(enforceTmdbRateLimit).toHaveBeenCalledWith(
+      client,
+      "import_search",
+    );
+    expect(searchMovies).toHaveBeenCalledWith("Arrival");
+    expect(enforceTmdbRateLimit.mock.invocationCallOrder[0]).toBeLessThan(
+      searchMovies.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("routes uncached import details through the import-details bucket", async () => {
+    const client = {} as SupabaseClient;
+    const session = { userId: "verified-user", client };
+    resolveSharedMovieMetadata.mockResolvedValue(movie);
+
+    await expect(
+      createMovieImportDependencies().resolveSharedMovie(session, 27205),
+    ).resolves.toEqual(movie);
+    expect(resolveSharedMovieMetadata).toHaveBeenCalledWith({
+      client,
+      verifiedUserId: "verified-user",
+      tmdbId: 27205,
+      includeAdult: false,
+      rateLimitOperation: "import_details",
+    });
+  });
+});
 
 describe("Supabase CSV import persistence", () => {
   it("inserts normalized personal fields for resolved shared metadata", async () => {
