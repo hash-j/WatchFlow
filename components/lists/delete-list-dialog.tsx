@@ -7,6 +7,7 @@ import { deleteListAction } from "@/app/(app)/actions/lists";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DialogCloseButton, ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import {
   initialListActionState,
   type CustomList,
@@ -48,14 +49,15 @@ export function DeleteListDialog({
         Delete
       </Button>
 
-      <dialog
+      <ResponsiveDialog
         ref={dialogRef}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         onClose={() => triggerRef.current?.focus()}
-        className="w-[min(34rem,calc(100%-2rem))] rounded-xl border bg-background p-0 text-foreground shadow-xl backdrop:bg-black/60"
+        className="max-w-xl"
       >
-        <form action={action} className="space-y-5 p-5 sm:p-6">
+        <form action={action} className="relative space-y-5 p-4 pt-16 sm:p-6 sm:pt-16">
+          <DialogCloseButton onClick={() => dialogRef.current?.close()} />
           <input type="hidden" name="listId" value={list.id} />
           <div>
             <h2 id={titleId} className="text-xl font-semibold">
@@ -121,7 +123,7 @@ export function DeleteListDialog({
             </Button>
           </div>
         </form>
-      </dialog>
+      </ResponsiveDialog>
     </>
   );
 }

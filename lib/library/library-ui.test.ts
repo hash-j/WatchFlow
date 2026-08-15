@@ -216,7 +216,8 @@ describe("Part 12 library UI contracts", () => {
     expect(selection).toContain("Select movies");
     expect(selection).toContain("Clear selection");
     expect(selection).toContain("Exit selection");
-    expect(selection).toContain("<dialog");
+    expect(selection).toContain("<ResponsiveDialog");
+    expect(source("components/ui/responsive-dialog.tsx")).toContain("<dialog");
     expect(selection).toContain("showModal()");
     expect(selection).toContain("aria-labelledby");
     expect(selection).toContain("aria-describedby");

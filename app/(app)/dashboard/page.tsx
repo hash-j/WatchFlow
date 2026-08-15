@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { CalendarDays, Library, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
 import { listLibraryMovies } from "@/lib/library/service";
 import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
 import {
@@ -127,22 +128,19 @@ async function DashboardContent() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <p className="text-sm font-medium text-muted-foreground">Dashboard</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">
-          Welcome{profileName ? `, ${profileName}` : " to WatchFlow"}
-        </h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Your private workspace for organizing what you want to watch.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Dashboard"
+        title={<>Welcome{profileName ? `, ${profileName}` : " to WatchFlow"}</>}
+        description="Your private workspace for organizing what you want to watch."
+        className="mb-0"
+      />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {quickActions.map(({ href, title, description, icon: Icon }) => (
           <Link
             key={href}
             href={href}
-            className="group rounded-xl border bg-card p-5 shadow-sm transition-colors hover:border-foreground/20"
+            className="group min-w-0 rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-foreground/20 sm:p-5"
           >
             <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
             <h2 className="mt-4 font-semibold group-hover:underline">{title}</h2>
@@ -156,7 +154,7 @@ async function DashboardContent() {
           Your viewing overview
         </h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <article className="rounded-xl border bg-card p-5 shadow-sm">
+          <article className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
             <h3 className="font-semibold">Next movie</h3>
             <MovieList
               items={queue.slice(0, 1)}
@@ -164,7 +162,7 @@ async function DashboardContent() {
               detail={() => "First in Watch Next"}
             />
           </article>
-          <article className="rounded-xl border bg-card p-5 shadow-sm">
+          <article className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
             <h3 className="font-semibold">Scheduled today</h3>
             <MovieList
               items={scheduledToday}
@@ -181,14 +179,14 @@ async function DashboardContent() {
               }
             />
           </article>
-          <article className="rounded-xl border bg-card p-5 shadow-sm">
+          <article className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
             <h3 className="font-semibold">Recently added</h3>
             <MovieList
               items={recentlyAdded}
               emptyMessage="Your library is empty."
             />
           </article>
-          <article className="rounded-xl border bg-card p-5 shadow-sm">
+          <article className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
             <h3 className="font-semibold">Recently watched</h3>
             <MovieList
               items={recentlyWatched}
@@ -241,10 +239,10 @@ async function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <div className="mx-auto max-w-6xl">
+    <PageContainer className="max-w-6xl">
       <Suspense fallback={<DashboardLoading />}>
         <DashboardContent />
       </Suspense>
-    </div>
+    </PageContainer>
   );
 }

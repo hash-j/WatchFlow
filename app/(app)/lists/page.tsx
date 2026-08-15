@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { FolderHeart } from "lucide-react";
+import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
 import { redirect } from "next/navigation";
 
 import { CreateListDialog } from "@/components/lists/create-list-dialog";
@@ -67,7 +68,7 @@ async function ListsContent({ searchParams }: ListsPageProps) {
         </p>
       ) : null}
 
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div className="flex min-w-0 flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-sm text-muted-foreground" aria-live="polite">
             {lists.length} {lists.length === 1 ? "list" : "lists"} total
@@ -109,21 +110,16 @@ async function ListsContent({ searchParams }: ListsPageProps) {
 
 export default function ListsPage({ searchParams }: ListsPageProps) {
   return (
-    <div className="mx-auto max-w-7xl">
-      <div className="mb-8">
-        <p className="text-sm font-medium text-muted-foreground">
-          Private collections
-        </p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">My Lists</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Create private collections and arrange personal-library movies in the
-          order that makes sense to you.
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Private collections"
+        title="My Lists"
+        description="Create private collections and arrange personal-library movies in the order that makes sense to you."
+      />
 
       <Suspense fallback={<ListsLoading />}>
         <ListsContent searchParams={searchParams} />
       </Suspense>
-    </div>
+    </PageContainer>
   );
 }

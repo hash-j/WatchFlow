@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { StatisticsDashboard } from "@/components/statistics/statistics-dashboard";
+import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
 import { StatisticsAuthenticationError } from "@/lib/statistics/errors";
 import { getPersonalStatistics } from "@/lib/statistics/supabase-statistics";
 
@@ -20,19 +21,15 @@ export default async function StatisticsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
-      <header>
-        <p className="text-sm font-medium text-muted-foreground">
-          Personal viewing insights
-        </p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">Statistics</h1>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          A private, server-calculated view of the movies, ratings, and watched
-          dates stored in your own WatchFlow library.
-        </p>
-      </header>
+    <PageContainer className="space-y-8">
+      <PageHeader
+        eyebrow="Personal viewing insights"
+        title="Statistics"
+        description="A private, server-calculated view of the movies, ratings, and watched dates stored in your own WatchFlow library."
+        className="mb-0"
+      />
 
       <StatisticsDashboard result={statistics} />
-    </div>
+    </PageContainer>
   );
 }

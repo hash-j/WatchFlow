@@ -65,4 +65,16 @@
   body {
     @apply bg-background text-foreground;
   }
+  html {
+    min-width: 320px;
+  }
+  body {
+    overflow-wrap: anywhere;
+  }
+  html:has(dialog[open]) {
+    overflow: hidden;
+  }
+  dialog::backdrop {
+    cursor: default;
+  }
 }

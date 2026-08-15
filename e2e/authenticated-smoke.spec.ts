@@ -56,6 +56,7 @@ function declareAuthenticatedSmokeSuite() {
       qaUserAPage,
       qaUserAAudit,
     }) => {
+      test.slow();
       let movie: ControlledMovie | null = null;
 
       try {
@@ -75,7 +76,11 @@ function declareAuthenticatedSmokeSuite() {
         }
       }
 
-      expectNoUnexpectedBrowserFailures(qaUserAAudit);
+      expectNoUnexpectedBrowserFailures(qaUserAAudit, {
+        // Successful add/remove Server Action redirects may cancel their POST
+        // fetch after the asserted destination has committed.
+        allowedCategories: ["aborted"],
+      });
     });
 
     test("the CSV helper uploads an in-memory fixture without importing rows", async ({

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { SettingsNav } from "@/components/settings/settings-nav";
+import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
 import { authenticateSettings } from "@/lib/settings/supabase-settings";
 
 export default async function SettingsLayout({
@@ -12,19 +13,17 @@ export default async function SettingsLayout({
   if (!session) redirect("/auth/login");
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <div>
-        <p className="text-sm font-medium text-muted-foreground">Your account</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Manage your private profile, WatchFlow defaults, and account data.
-        </p>
-      </div>
+    <PageContainer className="max-w-6xl">
+      <PageHeader
+        eyebrow="Your account"
+        title="Settings"
+        description="Manage your private profile, WatchFlow defaults, and account data."
+      />
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start">
         <SettingsNav />
         <div className="min-w-0">{children}</div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

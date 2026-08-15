@@ -23,7 +23,7 @@ type MovieManagementFormProps = {
 };
 
 const fieldClassName =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+  "flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function MovieManagementForm({
   item,
@@ -42,7 +42,7 @@ export function MovieManagementForm({
       <input type="hidden" name="libraryId" value={item.libraryId} />
       <input type="hidden" name="movieId" value={item.movie.id} />
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="movie-status">Status</Label>
           <select
@@ -112,12 +112,12 @@ export function MovieManagementForm({
           rows={5}
           maxLength={5000}
           defaultValue={item.review ?? ""}
-          className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="min-w-0 max-w-full w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           placeholder="Your private thoughts about this movie"
         />
       </div>
 
-      <label className="flex min-h-10 cursor-pointer items-center gap-3 rounded-md border p-3 text-sm font-medium">
+      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3 text-sm font-medium">
         <input
           type="checkbox"
           name="wouldWatchAgain"
@@ -131,7 +131,7 @@ export function MovieManagementForm({
       {status === "scheduled" ? (
         <fieldset className="space-y-4 rounded-lg border p-4">
           <legend className="px-1 text-sm font-semibold">Viewing schedule</legend>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="scheduled-date">Date</Label>
               <Input
@@ -175,7 +175,7 @@ export function MovieManagementForm({
               rows={3}
               maxLength={1000}
               defaultValue={item.scheduleNote ?? ""}
-              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="min-w-0 max-w-full w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="Movie night, venue, or anything else to remember"
             />
           </div>
@@ -183,7 +183,7 @@ export function MovieManagementForm({
       ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
           <Save className="size-4" aria-hidden="true" />
           {isPending ? "Saving..." : "Save changes"}
         </Button>

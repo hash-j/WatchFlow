@@ -14,6 +14,7 @@ import { MoviePoster } from "@/components/movies/movie-poster";
 import { MovieRating } from "@/components/movies/movie-rating";
 import { MovieStatusBadge } from "@/components/movies/movie-status-badge";
 import { buttonVariants } from "@/components/ui/button";
+import { ResponsiveActions } from "@/components/ui/responsive-layout";
 import type { PickerResult as PickerResultValue } from "@/lib/discovery/types";
 
 export function PickerResult({
@@ -30,8 +31,8 @@ export function PickerResult({
 
   return (
     <article className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-      <div className="grid min-w-0 gap-6 p-5 sm:grid-cols-[12rem_minmax(0,1fr)] sm:p-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <div className="mx-auto w-full max-w-52 sm:max-w-none">
+      <div className="grid min-w-0 gap-6 p-4 sm:p-6 md:grid-cols-[12rem_minmax(0,1fr)] lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <div className="mx-auto w-full max-w-48 md:max-w-none">
           <MoviePoster
             path={movie.posterPath}
             title={movie.title}
@@ -121,7 +122,7 @@ export function PickerResult({
             </ul>
           </section>
 
-          <div className="mt-6 flex flex-wrap items-start gap-2">
+          <ResponsiveActions className="mt-6 items-start">
             <Link
               href={`/library/${movie.movieId}`}
               className={buttonVariants({
@@ -156,7 +157,7 @@ export function PickerResult({
               <ListPlus aria-hidden="true" />
               Add to Custom List
             </Link>
-          </div>
+          </ResponsiveActions>
         </div>
       </div>
     </article>

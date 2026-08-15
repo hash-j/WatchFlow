@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export default function ListNotFound() {
   return (
-    <div className="mx-auto max-w-xl rounded-xl border bg-card p-8 text-center shadow-sm">
+    <div className="mx-auto min-w-0 max-w-xl rounded-xl border bg-card p-4 text-center shadow-sm sm:p-8">
       <FolderX
         className="mx-auto size-10 text-muted-foreground"
         aria-hidden="true"
@@ -14,7 +14,7 @@ export default function ListNotFound() {
       <p className="mt-2 text-sm text-muted-foreground">
         This private list is unavailable, or the supplied list ID is invalid.
       </p>
-      <Button asChild className="mt-6">
+      <Button asChild className="mt-6 w-full sm:w-auto">
         <Link href="/lists">Return to My Lists</Link>
       </Button>
     </div>

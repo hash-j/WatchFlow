@@ -10,6 +10,12 @@ import { LibraryMovieCard } from "@/components/movies/library-movie-card";
 import { LibraryMovieListItem } from "@/components/movies/library-movie-list-item";
 import { buttonVariants } from "@/components/ui/button";
 import {
+  EmptyState,
+  PageContainer,
+  PageHeader,
+  ResponsiveActions,
+} from "@/components/ui/responsive-layout";
+import {
   buildClearLibraryFiltersUrl,
   buildLibraryUrl,
   countActiveLibraryFilters,
@@ -62,25 +68,16 @@ async function LibraryContent({ searchParams }: LibraryPageProps) {
 
       {data.items.length === 0 ? (
         data.facets.counts.all === 0 ? (
-          <div className="rounded-xl border border-dashed p-8 text-center">
-            <LibraryBig
-              className="mx-auto size-9 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <h2 className="mt-4 text-lg font-semibold">
-              Your library is empty
-            </h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-              Search TMDB and add a movie to begin building your private
-              library.
-            </p>
-            <Link
-              href="/search"
-              className={`${buttonVariants({ variant: "default" })} mt-5`}
-            >
-              Search movies
-            </Link>
-          </div>
+          <EmptyState
+            icon={<LibraryBig className="size-9" aria-hidden="true" />}
+            title="Your library is empty"
+            description="Search TMDB and add a movie to begin building your private library."
+            actions={
+              <Link href="/search" className={buttonVariants()}>
+                Search movies
+              </Link>
+            }
+          />
         ) : (
           <div className="rounded-xl border border-dashed p-8 text-center">
             <SearchX
@@ -96,7 +93,7 @@ async function LibraryContent({ searchParams }: LibraryPageProps) {
               Clear the search or remove one or more filters to see other
               personal-library records.
             </p>
-            <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <ResponsiveActions className="mx-auto mt-5 max-w-md justify-center">
               {data.state.q ? (
                 <Link
                   href={buildLibraryUrl(
@@ -117,7 +114,7 @@ async function LibraryContent({ searchParams }: LibraryPageProps) {
                   Clear filters
                 </Link>
               ) : null}
-            </div>
+            </ResponsiveActions>
           </div>
         )
       ) : (
@@ -130,7 +127,7 @@ async function LibraryContent({ searchParams }: LibraryPageProps) {
           }))}
         >
           {data.state.view === "grid" ? (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:grid-cols-3 lg:gap-5 xl:grid-cols-4">
               {data.items.map((item) => (
                 <LibraryMovieCard key={item.libraryId} item={item} />
               ))}
@@ -152,21 +149,16 @@ async function LibraryContent({ searchParams }: LibraryPageProps) {
 
 export default function LibraryPage({ searchParams }: LibraryPageProps) {
   return (
-    <div>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-muted-foreground">
-          Private collection
-        </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">My Library</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Search, filter, sort, favourite, and manage only the movies saved to
-          your account.
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Private collection"
+        title="My Library"
+        description="Search, filter, sort, favourite, and manage only the movies saved to your account."
+      />
 
       <Suspense fallback={<LibraryLoading />}>
         <LibraryContent searchParams={searchParams} />
       </Suspense>
-    </div>
+    </PageContainer>
   );
 }

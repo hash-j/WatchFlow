@@ -12,7 +12,7 @@ export function LibraryMovieListItem({ item }: { item: LibraryMovieSummary }) {
   return (
     <article
       data-tmdb-id={item.movie.tmdbId}
-      className="grid gap-4 rounded-xl border bg-card p-4 shadow-sm sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:items-center"
+      className="grid min-w-0 gap-4 rounded-xl border bg-card p-4 shadow-sm md:grid-cols-[5rem_minmax(0,1fr)_auto] md:items-center"
     >
       <div className="w-20">
         <MoviePoster
@@ -43,7 +43,7 @@ export function LibraryMovieListItem({ item }: { item: LibraryMovieSummary }) {
           </p>
         ) : null}
       </div>
-      <div className="min-w-0 sm:min-w-48">
+      <div className="min-w-0 md:min-w-48">
         <LibraryItemActions
           userMovieId={item.libraryId}
           movieId={item.movie.id}

@@ -7,6 +7,7 @@ import {
   getSafeDiscoveryLoadError,
 } from "@/components/discovery/discovery-load-error";
 import { MoviePicker } from "@/components/discovery/movie-picker";
+import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
 import { DiscoveryAuthenticationError } from "@/lib/discovery/errors";
 import {
   getAvailableGenres,
@@ -87,25 +88,16 @@ async function PickerContent({ searchParams }: PickerPageProps) {
 
 export default function PickerPage(props: PickerPageProps) {
   return (
-    <div className="mx-auto max-w-6xl">
-      <header className="mb-8">
-        <p className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Dices className="size-4" aria-hidden="true" />
-          Private library discovery
-        </p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">
-          Movie Picker
-        </h1>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          Choose transparent filters, then let WatchFlow randomly select one
-          eligible movie from your own library. No movie is changed by being
-          picked.
-        </p>
-      </header>
+    <PageContainer className="max-w-6xl">
+      <PageHeader
+        eyebrow={<span className="inline-flex items-center gap-2"><Dices className="size-4" aria-hidden="true" />Private library discovery</span>}
+        title="Movie Picker"
+        description="Choose transparent filters, then let WatchFlow randomly select one eligible movie from your own library. No movie is changed by being picked."
+      />
 
       <Suspense fallback={<PickerContentLoading />}>
         <PickerContent {...props} />
       </Suspense>
-    </div>
+    </PageContainer>
   );
 }

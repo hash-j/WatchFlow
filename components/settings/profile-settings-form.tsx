@@ -86,7 +86,7 @@ export function ProfileSettingsForm({ profile }: { profile: ProfileSettings }) {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="submit" disabled={isPending} className="min-h-10">
+        <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
           <Save className="size-4" aria-hidden="true" />
           {isPending ? "Saving..." : "Save profile"}
         </Button>

@@ -29,11 +29,11 @@ export default function Home() {
   return (
     <main className="min-h-svh bg-muted/30">
       <nav className="border-b bg-background/90">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6">
           <Link href="/" className="font-semibold tracking-tight">
             WatchFlow
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
             <Suspense
               fallback={<div className="h-8 w-36 animate-pulse rounded bg-muted" />}
             >
@@ -53,14 +53,14 @@ export default function Home() {
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Your movies, in flow
           </p>
-          <h1 className="mt-5 max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl">
+          <h1 className="mt-5 max-w-3xl break-words text-3xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
             Spend less time choosing. Watch more great movies.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
             WatchFlow gives you one calm place to build your library, decide
             what to watch next, and plan the perfect movie night.
           </p>
-          <Button asChild size="lg" className="mt-8">
+          <Button asChild size="lg" className="mt-8 w-full min-[420px]:w-auto">
             <Link href="/auth/sign-up">
               Create your workspace
               <ArrowRight className="ml-2 size-4" aria-hidden="true" />

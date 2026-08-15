@@ -53,7 +53,7 @@ function MovieSearchFormFields({ initialQuery }: { initialQuery: string }) {
             aria-describedby={error ? "movie-query-error" : undefined}
           />
         </div>
-        <Button type="submit" disabled={isPending} className="sm:min-w-32">
+        <Button type="submit" disabled={isPending} className="w-full sm:min-w-32 sm:w-auto">
           <Search className="mr-2 size-4" aria-hidden="true" />
           {isPending ? "Searching..." : "Search"}
         </Button>

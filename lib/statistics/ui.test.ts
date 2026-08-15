@@ -72,8 +72,9 @@ describe("Statistics route, navigation, and protection contracts", () => {
     }
   });
 
-  it("adds exactly one Statistics item to authenticated navigation with the existing active-route convention", () => {
+  it("adds exactly one Statistics item to the responsive authenticated navigation", () => {
     const navigation = source("components/app-navigation.tsx");
+    const mobileNavigation = source("components/mobile-app-navigation.tsx");
     const entries = navigation.match(
       /\{ href: "\/statistics", label: "Statistics", icon: [A-Za-z]+ \}/g,
     );
@@ -82,8 +83,11 @@ describe("Statistics route, navigation, and protection contracts", () => {
     expect(navigation).toContain("pathname === href");
     expect(navigation).toContain('pathname.startsWith(`${href}/`)');
     expect(navigation).toContain('aria-current={current ? "page" : undefined}');
-    expect(navigation).toContain("overflow-x-auto");
+    expect(navigation).not.toContain("overflow-x-auto");
     expect(navigation).toContain("focus-visible:ring-2");
+    expect(mobileNavigation).toContain("<dialog");
+    expect(mobileNavigation).toContain('aria-label="Open main navigation"');
+    expect(mobileNavigation).toContain("triggerRef.current?.focus()");
 
     for (const existingLabel of [
       "Dashboard",
@@ -119,7 +123,9 @@ describe("Statistics route, navigation, and protection contracts", () => {
     expect(page).toContain("getPersonalStatistics()");
     expect(page).toContain("StatisticsAuthenticationError");
     expect(page).toContain('redirect("/auth/login")');
-    expect(page.match(/<h1\b/g)).toHaveLength(1);
+    expect(page).toContain("<PageHeader");
+    expect(page).toContain('title="Statistics"');
+    expect(source("components/ui/responsive-layout.tsx").match(/<h1\b/g)).toHaveLength(1);
     expect(page).not.toContain("generateMetadata");
     expect(page).not.toContain("export const metadata");
   });

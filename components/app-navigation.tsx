@@ -18,7 +18,7 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
-const navigation = [
+export const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/search", label: "Search Movies", icon: Search },
   { href: "/library", label: "My Library", icon: Library },
@@ -32,13 +32,29 @@ const navigation = [
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
-export function AppNavigation() {
+export function getNavigationTitle(pathname: string) {
+  const match = navigation.find(
+    ({ href }) =>
+      pathname === href ||
+      (href !== "/dashboard" && pathname.startsWith(`${href}/`)),
+  );
+
+  return match?.label ?? "WatchFlow";
+}
+
+export function AppNavigation({
+  onNavigate,
+  className,
+}: {
+  onNavigate?: () => void;
+  className?: string;
+}) {
   const pathname = usePathname();
 
   return (
     <nav
       aria-label="Primary navigation"
-      className="flex gap-2 overflow-x-auto p-3 lg:flex-1 lg:flex-col lg:overflow-visible"
+      className={cn("flex min-w-0 flex-col gap-1 p-3", className)}
     >
       {navigation.map(({ href, label, icon: Icon }) => {
         const current =
@@ -50,13 +66,14 @@ export function AppNavigation() {
             key={href}
             href={href}
             aria-current={current ? "page" : undefined}
+            onClick={onNavigate}
             className={cn(
-              "flex min-h-11 shrink-0 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "flex min-h-11 min-w-0 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               current && "bg-accent text-accent-foreground",
             )}
           >
-            <Icon className="size-4" aria-hidden="true" />
-            {label}
+            <Icon className="size-4 shrink-0" aria-hidden="true" />
+            <span className="min-w-0 break-words">{label}</span>
           </Link>
         );
       })}

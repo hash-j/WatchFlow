@@ -22,7 +22,7 @@ export function LibraryItemActions({
   const { isSelecting } = useLibrarySelection();
 
   return (
-    <div className="flex flex-wrap items-start gap-2">
+    <div className="grid min-w-0 grid-cols-1 gap-2 min-[520px]:flex min-[520px]:flex-wrap min-[520px]:items-start [&_form]:min-w-0 [&_form]:w-full min-[520px]:[&_form]:w-auto [&_button]:w-full min-[520px]:[&_button]:w-auto">
       <LibrarySelectionCheckbox libraryId={userMovieId} title={title} />
       <FavouriteToggleForm
         libraryId={userMovieId}

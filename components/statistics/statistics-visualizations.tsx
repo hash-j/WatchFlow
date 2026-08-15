@@ -108,10 +108,10 @@ export function WatchedTimeline({
           .map((entry) => `${entry.label}, ${entry.count}`)
           .join("; ")}.
       </p>
-      <ol className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+      <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {entries.map((entry) => (
           <li key={entry.monthKey} className="min-w-0 rounded-lg bg-muted/50 p-3">
-            <p className="truncate text-xs text-muted-foreground" title={entry.label}>
+            <p className="break-words text-xs leading-5 text-muted-foreground">
               {entry.label}
             </p>
             <p className="mt-1 text-lg font-semibold">

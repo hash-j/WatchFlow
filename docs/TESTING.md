@@ -27,6 +27,30 @@ exports, traces containing passwords, or Supabase access/refresh tokens.
 | Client secret scan | `npm run scan:client-secrets` after `npm run build` | `.next/static` and rendered App Router payloads | None | Forbidden server-variable names, configured secret values, and secret-shaped values are absent from browser artifacts |
 | Production build | `npm run build` | Local production build | Build artifacts only | App Router compilation, server/client boundaries, route generation, image configuration, and production bundling |
 
+## Responsive browser coverage
+
+The responsive milestone adds `e2e/helpers/responsive.ts`, which checks page
+`scrollWidth` against `clientWidth`, reports visible elements outside viewport
+bounds, verifies form/card/dialog containment, and permits horizontal scrolling
+only below an ancestor marked `data-horizontal-scroll="approved"`.
+
+- `e2e/responsive.spec.ts` exercises `/`, login, signup, forgot/update/reset
+  password, and the auth error state at 320x568, 360x640, 375x667, 390x844,
+  412x915, 600x960, 768x1024, 820x1180, 1024x768, 1280x720, 1366x768,
+  1440x900, and 1920x1080.
+- `e2e/responsive-authenticated.spec.ts` uses the existing guarded QA fixture
+  for all protected static routes at the required mobile/tablet widths and
+  1366/1440/1920 desktop widths. It additionally checks drawer Escape/focus
+  return and route close, Library filters and bulk actions at 320px, shared
+  dialogs at 320x568, and owned movie/list/Add Movies layouts.
+- The QA fixture begins route-level browser diagnostics after login so an
+  intentional cancelled Next.js prefetch during the auth redirect is not
+  misclassified as an application failure. All subsequent console, page,
+  network, and HTTP diagnostics remain strict.
+
+See `docs/RESPONSIVE_UX_AUDIT.md` for the route inventory, visual evidence,
+root causes, and remaining manual-device limitations.
+
 ## Environment-variable names
 
 Keep values in an ignored local environment file or the invoking process. The

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { removeMovieFromListAction } from "@/app/(app)/actions/lists";
 import { Button } from "@/components/ui/button";
+import { DialogCloseButton, ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { initialListActionState } from "@/lib/lists/types";
 
 export function RemoveListMovieDialog({
@@ -44,7 +45,7 @@ export function RemoveListMovieDialog({
         type="button"
         size="sm"
         variant="ghost"
-        className="min-h-10 text-destructive hover:text-destructive"
+        className="min-h-11 text-destructive hover:text-destructive"
         onClick={() => dialogRef.current?.showModal()}
         aria-label={`Remove ${title} from ${listName}`}
       >
@@ -52,14 +53,15 @@ export function RemoveListMovieDialog({
         Remove
       </Button>
 
-      <dialog
+      <ResponsiveDialog
         ref={dialogRef}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         onClose={() => triggerRef.current?.focus()}
-        className="w-[min(32rem,calc(100%-2rem))] rounded-xl border bg-background p-0 text-foreground shadow-xl backdrop:bg-black/60"
+        className="max-w-lg"
       >
-        <form action={action} className="space-y-5 p-5 sm:p-6">
+        <form action={action} className="relative space-y-5 p-4 pt-16 sm:p-6 sm:pt-16">
+          <DialogCloseButton onClick={() => dialogRef.current?.close()} />
           <input type="hidden" name="listMovieId" value={listMovieId} />
           <div>
             <h2 id={titleId} className="text-lg font-semibold">
@@ -95,7 +97,7 @@ export function RemoveListMovieDialog({
             </Button>
           </div>
         </form>
-      </dialog>
+      </ResponsiveDialog>
     </>
   );
 }

@@ -5,6 +5,7 @@ import { AddToLibraryForm } from "@/components/movies/add-to-library-form";
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { MovieRating } from "@/components/movies/movie-rating";
 import { MovieSearchForm } from "@/components/movies/search-form";
+import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
 import {
   EmptyMovieQueryError,
   MovieProviderError,
@@ -98,9 +99,9 @@ async function SearchResults({ searchParams }: SearchPageProps) {
           <article
             key={movie.tmdbId}
             data-tmdb-id={movie.tmdbId}
-            className="flex overflow-hidden rounded-xl border bg-card shadow-sm"
+            className="flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card shadow-sm min-[430px]:flex-row"
           >
-            <div className="w-32 shrink-0 p-3 pr-0">
+            <div className="mx-auto w-full max-w-44 shrink-0 p-3 min-[430px]:mx-0 min-[430px]:w-32 min-[430px]:pr-0">
               <MoviePoster
                 path={movie.posterPath}
                 title={movie.title}
@@ -134,14 +135,14 @@ async function SearchResults({ searchParams }: SearchPageProps) {
 
 export default function SearchPage({ searchParams }: SearchPageProps) {
   return (
-    <div className="mx-auto max-w-6xl">
+    <PageContainer className="max-w-6xl">
       <div>
-        <p className="text-sm font-medium text-muted-foreground">WatchFlow</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">Search Movies</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Search TMDB securely from the server, then save complete movie details
-          to your personal library.
-        </p>
+        <PageHeader
+          eyebrow="WatchFlow"
+          title="Search Movies"
+          description="Search TMDB securely from the server, then save complete movie details to your personal library."
+          className="mb-0"
+        />
         <Suspense fallback={<div className="mt-6 h-10 max-w-2xl animate-pulse rounded bg-muted" />}>
           <MovieSearchForm />
         </Suspense>
@@ -150,6 +151,6 @@ export default function SearchPage({ searchParams }: SearchPageProps) {
       <Suspense fallback={<SearchLoading />}>
         <SearchResults searchParams={searchParams} />
       </Suspense>
-    </div>
+    </PageContainer>
   );
 }

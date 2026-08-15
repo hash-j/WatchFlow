@@ -23,7 +23,7 @@ export function SettingsNav() {
   return (
     <nav
       aria-label="Settings sections"
-      className="flex gap-2 overflow-x-auto rounded-xl border bg-card p-2 shadow-sm lg:flex-col"
+      className="grid min-w-0 grid-cols-2 gap-1 rounded-xl border bg-card p-2 shadow-sm sm:grid-cols-4 lg:grid-cols-1"
     >
       {links.map(({ href, label, icon: Icon }) => (
         <Link
@@ -31,12 +31,12 @@ export function SettingsNav() {
           href={href}
           aria-current={pathname === href ? "page" : undefined}
           className={cn(
-            "inline-flex min-h-11 shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "inline-flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:gap-3 sm:px-3",
             pathname === href && "bg-accent text-accent-foreground",
           )}
         >
           <Icon className="size-4" aria-hidden="true" />
-          {label}
+          <span className="min-w-0 break-words">{label}</span>
         </Link>
       ))}
     </nav>

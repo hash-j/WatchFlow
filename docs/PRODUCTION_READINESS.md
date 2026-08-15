@@ -4,6 +4,22 @@
 
 **Overall status: Needs Preview verification.**
 
+The 2026-08-12 responsive milestone is implemented in the uncommitted working
+tree. Shared page/layout/dialog/navigation primitives now provide a deliberate
+mobile and tablet presentation, and automated public plus authenticated route
+matrices report no page-level horizontal overflow. This improves local UI
+readiness but does not replace the remaining Preview, database, email, and
+destructive-account verification gates below. Full evidence and screenshot
+locations are in `docs/RESPONSIVE_UX_AUDIT.md`.
+
+Recorded responsive gate: lint, direct TypeScript, 611 unit/source-contract
+tests, 13 public viewport cases, the final 10-case protected responsive matrix,
+the five-viewport Statistics regression, the 35-shell production build, and
+the 478-artifact client-secret scan passed. The live controlled TMDB
+search/add/remove smoke timed out at search navigation and is not claimed as
+passed; direct provider reachability returned HTTP 200. Account deletion was
+not executed.
+
 Part 15 hardening and test architecture are committed at `f6b15d4`, while the
 required authenticated workflow matrix and live verification remain
 incomplete. The repository may advance only to a controlled Part 16 Preview

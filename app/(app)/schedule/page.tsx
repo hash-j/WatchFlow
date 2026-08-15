@@ -4,6 +4,7 @@ import { CalendarClock } from "lucide-react";
 
 import { ScheduleMovieForm } from "@/components/movies/schedule-movie-form";
 import { Button } from "@/components/ui/button";
+import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
 import { listLibraryMovies } from "@/lib/library/service";
 import {
   getScheduleTimezone,
@@ -108,7 +109,7 @@ async function ScheduleWorkspace() {
 
   if (movies.length === 0) {
     return (
-      <div className="mt-8 rounded-xl border bg-card p-10 text-center shadow-sm">
+      <div className="mt-8 rounded-xl border bg-card px-4 py-8 text-center shadow-sm sm:p-10">
         <CalendarClock className="mx-auto size-9 text-muted-foreground" aria-hidden="true" />
         <h2 className="mt-4 text-lg font-semibold">
           Add a movie to your library before scheduling it.
@@ -124,7 +125,7 @@ async function ScheduleWorkspace() {
   }
 
   return (
-    <div className="mt-8 grid gap-8 lg:grid-cols-[22rem_1fr]">
+    <div className="mt-8 grid min-w-0 gap-8 xl:grid-cols-[22rem_minmax(0,1fr)]">
       <div>
         <ScheduleMovieForm
           movies={movies.map((item) => ({
@@ -161,7 +162,7 @@ async function ScheduleWorkspace() {
             />
           </>
         ) : (
-          <div className="rounded-xl border bg-card p-8 text-center shadow-sm">
+          <div className="rounded-xl border bg-card px-4 py-8 text-center shadow-sm sm:p-8">
             <CalendarClock
               className="mx-auto size-8 text-muted-foreground"
               aria-hidden="true"
@@ -182,16 +183,16 @@ async function ScheduleWorkspace() {
 
 export default function SchedulePage() {
   return (
-    <div className="mx-auto max-w-6xl">
-      <p className="text-sm font-medium text-muted-foreground">Plan ahead</p>
-      <h1 className="mt-1 text-3xl font-bold tracking-tight">Schedule</h1>
-      <p className="mt-2 max-w-2xl text-muted-foreground">
-        Choose a local date, time, and timezone. WatchFlow stores the exact
-        timezone-aware instant for your private schedule.
-      </p>
+    <PageContainer className="max-w-6xl">
+      <PageHeader
+        eyebrow="Plan ahead"
+        title="Schedule"
+        description="Choose a local date, time, and timezone. WatchFlow stores the exact timezone-aware instant for your private schedule."
+        className="mb-0"
+      />
       <Suspense fallback={<ScheduleLoading />}>
         <ScheduleWorkspace />
       </Suspense>
-    </div>
+    </PageContainer>
   );
 }

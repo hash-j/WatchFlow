@@ -34,7 +34,7 @@ import { MOVIES_PER_PAGE_OPTIONS } from "@/lib/settings/types";
 import { cn } from "@/lib/utils";
 
 const fieldClassName =
-  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "flex min-h-11 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function HiddenLibraryParams({
   state,
@@ -165,7 +165,12 @@ export function LibraryControls({
 
   return (
     <div className="space-y-4">
-      <form role="search" method="get" action="/library" className="flex gap-2">
+      <form
+        role="search"
+        method="get"
+        action="/library"
+        className="grid min-w-0 grid-cols-2 gap-2 min-[480px]:grid-cols-[minmax(0,1fr)_auto_auto]"
+      >
         <HiddenLibraryParams state={state} omit={["q"]} />
         <Label htmlFor="library-search" className="sr-only">
           Search your library
@@ -177,17 +182,17 @@ export function LibraryControls({
           maxLength={MAX_LIBRARY_SEARCH_LENGTH}
           defaultValue={state.q}
           placeholder="Search titles, directors, cast, or genres"
-          className="min-h-11"
+          className="col-span-2 min-[480px]:col-span-1"
         />
         <Button type="submit" className="min-h-11">
           <Search className="size-4" aria-hidden="true" />
-          <span className="hidden sm:inline">Search</span>
+          <span>Search</span>
         </Button>
         {state.q ? (
           <Button asChild type="button" variant="outline" className="min-h-11">
             <Link href={clearSearchUrl} aria-label="Clear library search">
               <X className="size-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Clear</span>
+              <span>Clear</span>
             </Link>
           </Button>
         ) : null}
@@ -204,7 +209,7 @@ export function LibraryControls({
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-3 rounded-xl border bg-card p-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+      <div className="min-w-0 space-y-4 rounded-xl border bg-card p-4">
         <p className="text-sm text-muted-foreground" aria-live="polite">
           {pagination.totalItems === 0
             ? "0 matching movies"
@@ -214,10 +219,10 @@ export function LibraryControls({
         <form
           method="get"
           action="/library"
-          className="grid gap-2 sm:grid-cols-[minmax(12rem,1fr)_auto_auto]"
+          className="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-[minmax(14rem,1fr)_10rem_auto] lg:items-end"
         >
           <HiddenLibraryParams state={state} omit={["sort", "perPage"]} />
-          <label className="space-y-1 text-sm font-medium">
+          <label className="col-span-2 space-y-1 text-sm font-medium lg:col-span-1">
             Sort
             <select name="sort" defaultValue={state.sort} className={fieldClassName}>
               {LIBRARY_SORTS.map((sort) => (
@@ -241,12 +246,12 @@ export function LibraryControls({
               ))}
             </select>
           </label>
-          <Button type="submit" variant="outline" className="min-h-10">
+          <Button type="submit" variant="outline" className="col-span-2 lg:col-span-1">
             Apply
           </Button>
         </form>
 
-        <div className="flex flex-wrap items-center gap-2" aria-label="Library view">
+        <div className="grid grid-cols-2 gap-2 min-[520px]:flex min-[520px]:flex-wrap" aria-label="Library view">
           <Link
             href={buildLibraryUrl(
               state,
@@ -256,6 +261,7 @@ export function LibraryControls({
             aria-current={state.view === "grid" ? "page" : undefined}
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
+              "w-full min-[520px]:w-auto",
               state.view === "grid" && "bg-accent",
             )}
           >
@@ -271,6 +277,7 @@ export function LibraryControls({
             aria-current={state.view === "list" ? "page" : undefined}
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
+              "w-full min-[520px]:w-auto",
               state.view === "list" && "bg-accent",
             )}
           >
@@ -283,7 +290,7 @@ export function LibraryControls({
               { favourite: "favourites" },
               { resetPage: true },
             )}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={`${buttonVariants({ variant: "outline", size: "sm" })} col-span-2 w-full min-[520px]:w-auto`}
           >
             <Star className="size-4" aria-hidden="true" />
             Favourites ({facets.counts.favourites})
@@ -482,9 +489,9 @@ export function LibraryControls({
             />
           </fieldset>
 
-          <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-4">
-            <Button type="submit">Apply filters</Button>
-            <Button asChild type="button" variant="outline">
+          <div className="grid grid-cols-1 gap-2 sm:col-span-2 sm:grid-cols-2 lg:col-span-4 lg:flex lg:flex-wrap">
+            <Button type="submit" className="w-full lg:w-auto">Apply filters</Button>
+            <Button asChild type="button" variant="outline" className="w-full lg:w-auto">
               <Link href={buildClearLibraryFiltersUrl(state)}>
                 Clear all filters
               </Link>
@@ -500,7 +507,7 @@ export function LibraryControls({
               key={chip.key}
               href={chip.url}
               aria-label={`Remove filter: ${chip.label}`}
-              className="inline-flex min-h-9 items-center gap-1 rounded-full border bg-background px-3 text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex min-h-11 items-center gap-1 rounded-full border bg-background px-3 text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {chip.label}
               <X className="size-3.5" aria-hidden="true" />

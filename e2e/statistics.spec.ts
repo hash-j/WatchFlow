@@ -49,9 +49,17 @@ async function openStatistics(page: Page) {
   await expect(
     page.getByRole("heading", { level: 1, name: "Statistics" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Statistics", exact: true }),
-  ).toHaveAttribute("aria-current", "page");
+  const activeLink = page.getByRole("link", {
+    name: "Statistics",
+    exact: true,
+  });
+  if ((await activeLink.count()) === 0) {
+    await page.getByRole("button", { name: "Open main navigation" }).click();
+    await expect(activeLink).toHaveAttribute("aria-current", "page");
+    await page.keyboard.press("Escape");
+  } else {
+    await expect(activeLink).toHaveAttribute("aria-current", "page");
+  }
 }
 
 async function metricSnapshot(page: Page) {
@@ -424,6 +432,9 @@ function declareStatisticsSuite() {
           const primaryNavigationLink = document.querySelector(
             'a[href="/statistics"]',
           );
+          const mobileNavigationTrigger = document.querySelector(
+            'button[aria-label="Open main navigation"]',
+          );
           const measuredElements = [
             ...document.querySelectorAll('[data-testid^="stat-"]'),
             ...document.querySelectorAll("main section"),
@@ -437,7 +448,10 @@ function declareStatisticsSuite() {
               return box.left >= -1 && box.right <= window.innerWidth + 1;
             }),
             navigationTargetHeight:
-              primaryNavigationLink?.getBoundingClientRect().height ?? 0,
+              Math.max(
+                primaryNavigationLink?.getBoundingClientRect().height ?? 0,
+                mobileNavigationTrigger?.getBoundingClientRect().height ?? 0,
+              ),
           };
         });
 

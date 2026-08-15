@@ -19,6 +19,14 @@ import {
 } from "@/app/(app)/actions/library";
 import { Button } from "@/components/ui/button";
 import {
+  DialogBody,
+  DialogCloseButton,
+  DialogFooter,
+  DialogHeader,
+  ResponsiveDialog,
+} from "@/components/ui/responsive-dialog";
+import { MobileToolbar } from "@/components/ui/responsive-layout";
+import {
   initialBulkLibraryActionState,
   type BulkLibraryActionState,
 } from "@/lib/library/action-state";
@@ -67,7 +75,7 @@ export function LibrarySelectionCheckbox({
   }
 
   return (
-    <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-md border bg-background px-3 text-sm font-medium focus-within:ring-2 focus-within:ring-ring">
+    <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md border bg-background px-3 text-sm font-medium focus-within:ring-2 focus-within:ring-ring">
       <input
         type="checkbox"
         checked={selectedIds.has(libraryId)}
@@ -135,14 +143,15 @@ function ConfirmationDialog({
         )}
         {triggerLabel}
       </Button>
-      <dialog
+      <ResponsiveDialog
         ref={dialogRef}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         onClose={() => triggerRef.current?.focus()}
-        className="w-[min(32rem,calc(100%-2rem))] rounded-xl border bg-background p-0 text-foreground shadow-xl backdrop:bg-black/60"
+        className="max-w-lg"
       >
-        <form action={action} className="space-y-5 p-6">
+        <form action={action} className="relative">
+          <DialogCloseButton onClick={closeDialog} />
           {selectedIds.map((libraryId) => (
             <input
               key={libraryId}
@@ -152,7 +161,7 @@ function ConfirmationDialog({
             />
           ))}
           {status ? <input type="hidden" name="status" value={status} /> : null}
-          <div>
+          <DialogHeader>
             <h2 id={titleId} className="text-lg font-semibold">
               {title}
             </h2>
@@ -162,13 +171,15 @@ function ConfirmationDialog({
             >
               {description}
             </div>
-          </div>
-          {state.status === "error" && state.message ? (
-            <p className="text-sm text-destructive" role="alert">
-              {state.message}
-            </p>
-          ) : null}
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          </DialogHeader>
+          <DialogBody>
+            {state.status === "error" && state.message ? (
+              <p className="text-sm text-destructive" role="alert">
+                {state.message}
+              </p>
+            ) : null}
+          </DialogBody>
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -184,9 +195,9 @@ function ConfirmationDialog({
             >
               {isPending ? "Working…" : confirmLabel}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </dialog>
+      </ResponsiveDialog>
     </>
   );
 }
@@ -234,7 +245,7 @@ function BulkActions({
   }, [onResult, removeState]);
 
   return (
-    <div className="grid gap-3 rounded-lg border bg-muted/30 p-3 lg:grid-cols-[minmax(12rem,1fr)_auto_auto] lg:items-end">
+    <MobileToolbar className="grid gap-3 sm:rounded-lg sm:border sm:bg-muted/30 sm:p-3 lg:grid-cols-[minmax(12rem,1fr)_auto_auto] lg:items-end">
       <label className="space-y-1 text-sm font-medium">
         Change status
         <select
@@ -242,7 +253,7 @@ function BulkActions({
           onChange={(event) =>
             setTargetStatus(event.target.value as BulkLibraryStatus)
           }
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {BULK_LIBRARY_STATUSES.map((status) => (
             <option key={status} value={status}>
@@ -289,7 +300,7 @@ function BulkActions({
         action={removeAction}
         selectedIds={selectedIds}
       />
-    </div>
+    </MobileToolbar>
   );
 }
 
@@ -369,7 +380,7 @@ function LibrarySelectionWorkspaceState({
             </Button>
           ) : (
             <>
-              <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-md border bg-background px-3 text-sm font-medium focus-within:ring-2 focus-within:ring-ring">
+              <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md border bg-background px-3 text-sm font-medium focus-within:ring-2 focus-within:ring-ring">
                 <input
                   ref={selectAllRef}
                   type="checkbox"

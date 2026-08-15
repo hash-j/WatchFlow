@@ -14,6 +14,7 @@ import { addMoviesToListAction } from "@/app/(app)/actions/lists";
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { MovieStatusBadge } from "@/components/movies/movie-status-badge";
 import { Button } from "@/components/ui/button";
+import { DialogCloseButton, ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -27,7 +28,7 @@ import {
 } from "@/lib/movies/types";
 
 const selectClassName =
-  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function AddMoviesDialog({
   listId,
@@ -122,15 +123,16 @@ export function AddMoviesDialog({
         Add Movies
       </Button>
 
-      <dialog
+      <ResponsiveDialog
         ref={dialogRef}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         onClose={handleClose}
-        className="max-h-[min(52rem,calc(100svh-2rem))] w-[min(58rem,calc(100%-1rem))] overflow-y-auto rounded-xl border bg-background p-0 text-foreground shadow-xl backdrop:bg-black/60 sm:w-[min(58rem,calc(100%-2rem))]"
+        className="max-w-4xl overflow-hidden"
       >
-        <div className="space-y-5 p-4 sm:p-6">
-          <div>
+        <div className="flex max-h-[calc(100svh-1.5rem)] min-h-0 flex-col sm:max-h-[calc(100svh-2rem)]">
+          <div className="relative shrink-0 border-b px-4 py-4 pr-14 sm:px-6 sm:py-5 sm:pr-16">
+            <DialogCloseButton onClick={closeDialog} />
             <h2 id={titleId} className="text-xl font-semibold">
               Add movies to “{listName}”
             </h2>
@@ -143,7 +145,8 @@ export function AddMoviesDialog({
             </p>
           </div>
 
-          <form
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 sm:p-6">
+            <form
             method="get"
             action={basePath}
             role="search"
@@ -162,7 +165,7 @@ export function AddMoviesDialog({
                 maxLength={100}
                 defaultValue={picker.query}
                 placeholder="Title, director, cast, or genre"
-                className="min-h-10"
+                className="min-h-11"
               />
             </div>
             <label className="space-y-1 text-sm font-medium">
@@ -191,7 +194,7 @@ export function AddMoviesDialog({
                 <option value="favourites">Favourites only</option>
               </select>
             </label>
-            <Button type="submit" className="min-h-10 self-end">
+            <Button type="submit" className="self-end">
               <Search className="size-4" aria-hidden="true" />
               Search
             </Button>
@@ -213,7 +216,7 @@ export function AddMoviesDialog({
                 type="button"
                 size="sm"
                 variant="outline"
-                className="min-h-10"
+                className="min-h-11"
                 disabled={availableIds.length === 0}
                 onClick={() => setSelectedIds(new Set(availableIds))}
               >
@@ -224,7 +227,7 @@ export function AddMoviesDialog({
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="min-h-10"
+                className="min-h-11"
                 disabled={orderedSelectedIds.length === 0}
                 onClick={() => setSelectedIds(new Set())}
               >
@@ -347,7 +350,9 @@ export function AddMoviesDialog({
             </div>
           )}
 
-          <form action={action} className="space-y-3 border-t pt-4">
+          </div>
+
+          <form action={action} className="shrink-0 space-y-3 border-t bg-background p-4 sm:p-6">
             <input type="hidden" name="listId" value={listId} />
             {orderedSelectedIds.map((userMovieId) => (
               <input
@@ -392,7 +397,7 @@ export function AddMoviesDialog({
             </div>
           </form>
         </div>
-      </dialog>
+      </ResponsiveDialog>
     </>
   );
 }

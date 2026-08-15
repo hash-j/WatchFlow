@@ -24,7 +24,7 @@ export function QueueControls({
   );
 
   return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
+    <form action={action} className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
       <input type="hidden" name="libraryId" value={libraryId} />
       <Button
         type="submit"
@@ -39,6 +39,7 @@ export function QueueControls({
             : "Move movie earlier in the queue"
         }
         title={isFirst ? "This movie is already first in the queue." : undefined}
+        className="w-full sm:w-auto"
       >
         <ArrowUp className="size-4" aria-hidden="true" />
         Up
@@ -56,6 +57,7 @@ export function QueueControls({
             : "Move movie later in the queue"
         }
         title={isLast ? "This movie is already last in the queue." : undefined}
+        className="w-full sm:w-auto"
       >
         <ArrowDown className="size-4" aria-hidden="true" />
         Down
@@ -64,7 +66,7 @@ export function QueueControls({
         <span
           className={
             state.status === "error"
-              ? "text-xs text-destructive"
+              ? "col-span-2 break-words text-xs text-destructive sm:col-span-1"
               : "sr-only"
           }
           role={state.status === "error" ? "alert" : "status"}

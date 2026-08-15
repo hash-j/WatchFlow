@@ -7,6 +7,7 @@ import { Dices, FilterX, RotateCcw } from "lucide-react";
 import { pickMovieAction } from "@/app/(app)/actions/discovery";
 import { PickerResult } from "@/components/discovery/picker-result";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ResponsiveActions } from "@/components/ui/responsive-layout";
 import {
   initialPickerActionState,
 } from "@/lib/discovery/action-state";
@@ -367,7 +368,7 @@ export function MoviePicker({
           </p>
         ) : null}
 
-        <div className="mt-6 flex flex-wrap gap-2">
+        <ResponsiveActions className="mt-6">
           <Button
             type="submit"
             disabled={isPending || libraryCount === 0}
@@ -389,7 +390,7 @@ export function MoviePicker({
             <FilterX aria-hidden="true" />
             Clear filters
           </Button>
-        </div>
+        </ResponsiveActions>
       </form>
 
       <div aria-live="polite" aria-atomic="true">
@@ -419,7 +420,7 @@ export function MoviePicker({
           <p className="mt-2 text-sm text-muted-foreground">
             Add or import movies before asking WatchFlow to choose one.
           </p>
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <ResponsiveActions className="mx-auto mt-5 max-w-md justify-center">
             <Link href="/search" className={buttonVariants()}>
               Search Movies
             </Link>
@@ -429,7 +430,7 @@ export function MoviePicker({
             >
               Import Movies
             </Link>
-          </div>
+          </ResponsiveActions>
         </div>
       ) : showActionOutput && state.status === "empty" ? (
         <div className="rounded-xl border border-dashed bg-card p-6 text-center">
@@ -443,7 +444,7 @@ export function MoviePicker({
             remove the runtime limit, lower the public rating, or include
             watched movies.
           </p>
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <ResponsiveActions className="mx-auto mt-5 max-w-xl justify-center">
             <Button type="button" variant="outline" onClick={clearFilters}>
               Clear all filters
             </Button>
@@ -456,7 +457,7 @@ export function MoviePicker({
             <Link href="/library" className={buttonVariants()}>
               Open Library
             </Link>
-          </div>
+          </ResponsiveActions>
         </div>
       ) : showActionOutput && state.result?.movie ? (
         <PickerResult result={state.result} headingRef={resultHeadingRef} />

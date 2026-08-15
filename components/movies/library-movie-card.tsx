@@ -20,7 +20,7 @@ export function LibraryMovieCard({ item }: { item: LibraryMovieSummary }) {
     <article
       data-tmdb-id={movie.tmdbId}
       className={cn(
-        "flex flex-col rounded-xl border bg-card p-3 shadow-sm",
+        "flex min-w-0 flex-col rounded-xl border bg-card p-2.5 shadow-sm sm:p-3",
         statusVisual.cardAccentClasses,
       )}
     >
@@ -47,7 +47,7 @@ export function LibraryMovieCard({ item }: { item: LibraryMovieSummary }) {
           ) : null}
         </div>
         <div className="px-1 pb-2 pt-4">
-          <h2 className="font-semibold leading-tight group-hover:underline">
+          <h2 className="break-words text-sm font-semibold leading-tight group-hover:underline sm:text-base">
             {movie.title}
           </h2>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">

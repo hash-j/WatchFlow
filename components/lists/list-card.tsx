@@ -62,7 +62,7 @@ export function ListCard({ list }: { list: CustomListSummary }) {
         </dl>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-2 border-t pt-4">
+      <div className="mt-5 grid grid-cols-1 gap-2 border-t pt-4 min-[420px]:flex min-[420px]:flex-wrap min-[420px]:items-center [&>*]:w-full min-[420px]:[&>*]:w-auto">
         <Button asChild size="sm">
           <Link href={`/lists/${list.id}`}>Open List</Link>
         </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
 import { AlertTriangle, Download, Trash2, UserX } from "lucide-react";
 
 import {
@@ -10,6 +10,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  DialogBody,
+  DialogCloseButton,
+  DialogFooter,
+  DialogHeader,
+  ResponsiveDialog,
+} from "@/components/ui/responsive-dialog";
 import { INITIAL_SETTINGS_ACTION_STATE } from "@/lib/settings/types";
 import { FieldError, FormMessage } from "./form-message";
 
@@ -26,7 +33,7 @@ export function ExportControls() {
           <p className="mt-1 text-sm text-muted-foreground">
             Spreadsheet-ready movie metadata and your personal library fields.
           </p>
-          <Button asChild variant="outline" className="mt-4 min-h-10 w-full">
+          <Button asChild variant="outline" className="mt-4 min-h-11 w-full">
             <a href="/settings/data/export/csv">
               <Download className="size-4" aria-hidden="true" />
               Export movie library as CSV
@@ -38,7 +45,7 @@ export function ExportControls() {
           <p className="mt-1 text-sm text-muted-foreground">
             Profile, preferences, library, queue, and schedule data in JSON.
           </p>
-          <Button asChild variant="outline" className="mt-4 min-h-10 w-full">
+          <Button asChild variant="outline" className="mt-4 min-h-11 w-full">
             <a href="/settings/data/export/json">
               <Download className="size-4" aria-hidden="true" />
               Export complete account data
@@ -95,7 +102,7 @@ export function DeleteLibraryControl({ count }: { count: number }) {
           type="submit"
           variant="destructive"
           disabled={count === 0 || isPending}
-          className="min-h-10"
+          className="min-h-11"
         >
           <Trash2 className="size-4" aria-hidden="true" />
           {isPending ? "Deleting library..." : "Permanently delete library data"}
@@ -107,13 +114,15 @@ export function DeleteLibraryControl({ count }: { count: number }) {
 }
 
 export function DeleteAccountControl() {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [state, action, isPending] = useActionState(
     deleteAccountAction,
     INITIAL_SETTINGS_ACTION_STATE,
   );
 
   return (
-    <form action={action} className="rounded-xl border border-destructive p-5 sm:p-6">
+    <section className="rounded-xl border border-destructive p-4 sm:p-6">
       <div className="flex gap-3">
         <AlertTriangle
           className="mt-0.5 size-5 shrink-0 text-destructive"
@@ -132,48 +141,82 @@ export function DeleteAccountControl() {
         </div>
       </div>
 
-      <div className="mt-5 max-w-md space-y-2">
-        <Label htmlFor="delete-account-confirmation">
-          Type <strong>DELETE</strong> to confirm
-        </Label>
-        <Input
-          id="delete-account-confirmation"
-          name="confirmation"
-          autoComplete="off"
-          disabled={isPending}
-          aria-invalid={Boolean(state.fieldErrors.confirmation)}
-        />
-        <FieldError
-          errors={state.fieldErrors.confirmation}
-          id="delete-account-confirmation-error"
-        />
-      </div>
+      <Button
+        ref={triggerRef}
+        type="button"
+        variant="destructive"
+        className="mt-5 w-full sm:w-auto"
+        onClick={() => dialogRef.current?.showModal()}
+      >
+        <UserX className="size-4" aria-hidden="true" />
+        Review permanent account deletion
+      </Button>
 
-      <label className="mt-4 flex min-h-12 max-w-xl cursor-pointer items-start gap-3 rounded-lg border p-3 focus-within:ring-2 focus-within:ring-ring">
-        <input
-          type="checkbox"
-          name="confirmed"
-          disabled={isPending}
-          className="mt-0.5 size-4 rounded border-input accent-destructive"
-        />
-        <span className="text-sm font-medium">
-          I understand this action is permanent and cannot be undone.
-        </span>
-      </label>
-      <FieldError errors={state.fieldErrors.confirmed} id="delete-account-checkbox-error" />
+      <ResponsiveDialog
+        ref={dialogRef}
+        aria-labelledby="delete-account-dialog-title"
+        aria-describedby="delete-account-dialog-description"
+        onClose={() => triggerRef.current?.focus()}
+        className="max-w-xl"
+      >
+        <form action={action} className="relative">
+          <DialogCloseButton onClick={() => dialogRef.current?.close()} />
+          <DialogHeader>
+            <h2 id="delete-account-dialog-title" className="text-xl font-semibold">
+              Permanently delete your account?
+            </h2>
+            <p id="delete-account-dialog-description" className="mt-2 text-sm leading-6 text-muted-foreground">
+              Confirm the exact phrase and acknowledgement below. This cannot be undone.
+            </p>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="delete-account-confirmation">
+                Type <strong>DELETE</strong> to confirm
+              </Label>
+              <Input
+                id="delete-account-confirmation"
+                name="confirmation"
+                autoComplete="off"
+                disabled={isPending}
+                aria-invalid={Boolean(state.fieldErrors.confirmation)}
+              />
+              <FieldError
+                errors={state.fieldErrors.confirmation}
+                id="delete-account-confirmation-error"
+              />
+            </div>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button
-          type="submit"
-          variant="destructive"
-          disabled={isPending}
-          className="min-h-10"
-        >
+            <label className="flex min-h-12 cursor-pointer items-start gap-3 rounded-lg border p-3 focus-within:ring-2 focus-within:ring-ring">
+              <input
+                type="checkbox"
+                name="confirmed"
+                disabled={isPending}
+                className="mt-0.5 size-4 rounded border-input accent-destructive"
+              />
+              <span className="text-sm font-medium">
+                I understand this action is permanent and cannot be undone.
+              </span>
+            </label>
+            <FieldError errors={state.fieldErrors.confirmed} id="delete-account-checkbox-error" />
+            <FormMessage state={state} />
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isPending}
+              onClick={() => dialogRef.current?.close()}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="destructive" disabled={isPending}>
           <UserX className="size-4" aria-hidden="true" />
           {isPending ? "Deleting account..." : "Permanently delete my account"}
-        </Button>
-        <FormMessage state={state} />
-      </div>
-    </form>
+            </Button>
+          </DialogFooter>
+        </form>
+      </ResponsiveDialog>
+    </section>
   );
 }

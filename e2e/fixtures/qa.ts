@@ -54,14 +54,17 @@ async function provideQaSession(
     storageState: undefined,
   });
   const page = await context.newPage();
-  const audit = monitorBrowserFailures(page);
+  let audit: BrowserFailureCollector | null = null;
 
   try {
     await login(page, getQaCredentials(kind));
+    audit = monitorBrowserFailures(page);
     await provideSession({ context, page, audit });
   } finally {
-    audit.stop();
-    await attachBrowserAudit(testInfo, label, audit);
+    if (audit) {
+      audit.stop();
+      await attachBrowserAudit(testInfo, label, audit);
+    }
     await context.close();
   }
 }

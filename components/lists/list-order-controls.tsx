@@ -32,7 +32,7 @@ export function ListOrderControls({
         value="up"
         size="sm"
         variant="outline"
-        className="min-h-10"
+        className="min-h-11"
         disabled={isPending || isFirst}
         aria-label={
           isFirst
@@ -50,7 +50,7 @@ export function ListOrderControls({
         value="down"
         size="sm"
         variant="outline"
-        className="min-h-10"
+        className="min-h-11"
         disabled={isPending || isLast}
         aria-label={
           isLast

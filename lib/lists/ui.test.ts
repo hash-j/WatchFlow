@@ -101,6 +101,10 @@ describe("Part 13 route and private navigation contracts", () => {
 
 describe("Part 13 dialog accessibility and destructive-copy contracts", () => {
   it("uses labelled native modal dialogs and restores focus to each trigger", () => {
+    const sharedDialog = source("components/ui/responsive-dialog.tsx");
+
+    expect(sharedDialog).toContain("<dialog");
+    expect(sharedDialog).toContain("100svh");
     for (const relativePath of [
       "components/lists/create-list-dialog.tsx",
       "components/lists/edit-list-dialog.tsx",
@@ -110,7 +114,7 @@ describe("Part 13 dialog accessibility and destructive-copy contracts", () => {
     ]) {
       const contents = source(relativePath);
 
-      expect(contents, relativePath).toContain("<dialog");
+      expect(contents, relativePath).toContain("<ResponsiveDialog");
       expect(contents, relativePath).toContain("aria-labelledby=");
       expect(contents, relativePath).toContain("aria-describedby=");
       expect(contents, relativePath).toContain("showModal()");

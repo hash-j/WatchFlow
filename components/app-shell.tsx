@@ -3,6 +3,7 @@ import { Clapperboard } from "lucide-react";
 
 import { AppNavigation } from "@/components/app-navigation";
 import { LogoutButton } from "@/components/logout-button";
+import { MobileAppNavigation } from "@/components/mobile-app-navigation";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 
 type AppShellProps = {
@@ -15,8 +16,8 @@ export function AppShell({ children, email, profileName }: AppShellProps) {
   const identity = profileName ?? email ?? "WatchFlow member";
 
   return (
-    <div className="min-h-svh bg-muted/30 lg:grid lg:grid-cols-[17rem_1fr]">
-      <aside className="border-b bg-background lg:sticky lg:top-0 lg:h-svh lg:border-b-0 lg:border-r">
+    <div className="min-h-svh bg-muted/30 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
+      <aside className="sticky top-0 hidden h-svh border-r bg-background lg:block">
         <div className="flex h-full flex-col">
           <div className="flex h-16 items-center justify-between gap-4 border-b px-5">
             <Link
@@ -28,17 +29,14 @@ export function AppShell({ children, email, profileName }: AppShellProps) {
               </span>
               WatchFlow
             </Link>
-            <div className="lg:hidden">
-              <ThemeSwitcher />
-            </div>
           </div>
 
-          <AppNavigation />
+          <AppNavigation className="flex-1 overflow-y-auto" />
 
-          <div className="hidden border-t p-4 lg:block">
-            <p className="truncate text-sm font-medium">{identity}</p>
+          <div className="border-t p-4">
+            <p className="break-words text-sm font-medium">{identity}</p>
             {profileName && email ? (
-              <p className="truncate text-xs text-muted-foreground">{email}</p>
+              <p className="break-all text-xs text-muted-foreground">{email}</p>
             ) : null}
             <div className="mt-4 flex items-center justify-between gap-2">
               <LogoutButton />
@@ -49,16 +47,10 @@ export function AppShell({ children, email, profileName }: AppShellProps) {
       </aside>
 
       <div className="min-w-0">
-        <header className="flex min-h-16 items-center justify-between gap-4 border-b bg-background px-4 py-3 sm:px-6 lg:px-8">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{identity}</p>
-            <p className="text-xs text-muted-foreground">Your movie workspace</p>
-          </div>
-          <div className="lg:hidden">
-            <LogoutButton />
-          </div>
-        </header>
-        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+        <MobileAppNavigation identity={identity} email={email} />
+        <main className="min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+          {children}
+        </main>
       </div>
     </div>
   );

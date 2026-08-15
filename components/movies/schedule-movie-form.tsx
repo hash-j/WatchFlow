@@ -17,7 +17,7 @@ type ScheduleMovieFormProps = {
 };
 
 const selectClassName =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+  "flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function ScheduleMovieForm({
   movies,
@@ -52,7 +52,7 @@ export function ScheduleMovieForm({
   }, [profileTimezone]);
 
   return (
-    <form action={action} className="space-y-5 rounded-xl border bg-card p-5 shadow-sm">
+    <form action={action} className="min-w-0 space-y-5 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
       <div>
         <h2 className="text-lg font-semibold">Schedule a movie</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -81,7 +81,7 @@ export function ScheduleMovieForm({
         </select>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="schedule-date">Date</Label>
           <Input
@@ -128,12 +128,12 @@ export function ScheduleMovieForm({
           name="scheduleNote"
           rows={3}
           maxLength={1000}
-          className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="min-w-0 max-w-full w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           placeholder="Movie night details"
         />
       </div>
 
-      <Button type="submit" disabled={isPending || movies.length === 0}>
+      <Button type="submit" disabled={isPending || movies.length === 0} className="w-full sm:w-auto xl:w-full 2xl:w-auto">
         <CalendarPlus className="size-4" aria-hidden="true" />
         {isPending ? "Scheduling..." : "Save schedule"}
       </Button>

@@ -39,7 +39,12 @@ function declareAuthenticatedIsolationSuite() {
         await deleteQaList(qaUserAPage, list);
       }
 
-      expectNoUnexpectedBrowserFailures(qaUserAAudit);
+      expectNoUnexpectedBrowserFailures(qaUserAAudit, {
+        // Successful Next.js Server Action redirects cancel their POST fetch
+        // once navigation has committed. The URL and resulting UI were both
+        // asserted by the mutation helpers above.
+        allowedCategories: ["aborted"],
+      });
       expectNoUnexpectedBrowserFailures(qaUserBAudit, {
         allowedHttpFailures: [
           {

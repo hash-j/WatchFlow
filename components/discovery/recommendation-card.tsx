@@ -7,6 +7,7 @@ import { MoviePoster } from "@/components/movies/movie-poster";
 import { MovieRating } from "@/components/movies/movie-rating";
 import { MovieStatusBadge } from "@/components/movies/movie-status-badge";
 import { buttonVariants } from "@/components/ui/button";
+import { ResponsiveActions } from "@/components/ui/responsive-layout";
 import type { RecommendationItem } from "@/lib/discovery/types";
 
 export function RecommendationCard({ item }: { item: RecommendationItem }) {
@@ -14,8 +15,8 @@ export function RecommendationCard({ item }: { item: RecommendationItem }) {
 
   return (
     <article className="flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
-      <div className="grid min-w-0 gap-4 p-4 sm:grid-cols-[7rem_minmax(0,1fr)] lg:grid-cols-1">
-        <div className="mx-auto w-full max-w-40 sm:max-w-none lg:max-w-none">
+      <div className="grid min-w-0 gap-4 p-4 md:grid-cols-[7rem_minmax(0,1fr)] lg:grid-cols-1">
+        <div className="mx-auto w-full max-w-40 md:max-w-none lg:max-w-none">
           <MoviePoster
             path={movie.posterPath}
             title={movie.title}
@@ -64,7 +65,7 @@ export function RecommendationCard({ item }: { item: RecommendationItem }) {
           ))}
         </ul>
 
-        <div className="mt-auto flex flex-wrap items-start gap-2 pt-5">
+        <ResponsiveActions className="mt-auto items-start pt-5">
           <Link
             href={`/library/${movie.movieId}`}
             className={buttonVariants({
@@ -99,7 +100,7 @@ export function RecommendationCard({ item }: { item: RecommendationItem }) {
             <ListPlus aria-hidden="true" />
             Custom Lists
           </Link>
-        </div>
+        </ResponsiveActions>
       </div>
     </article>
   );

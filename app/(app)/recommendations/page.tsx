@@ -10,6 +10,7 @@ import {
 import { RecommendationSection } from "@/components/discovery/recommendation-section";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
 import { DiscoveryAuthenticationError } from "@/lib/discovery/errors";
 import {
   buildRuleBasedRecommendations,
@@ -279,24 +280,16 @@ async function RecommendationsContent({
 
 export default function RecommendationsPage(props: RecommendationsPageProps) {
   return (
-    <div className="mx-auto max-w-7xl">
-      <header className="mb-8">
-        <p className="text-sm font-medium text-muted-foreground">
-          Private library discovery
-        </p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">
-          Recommendations
-        </h1>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          Rediscover unwatched movies already in your WatchFlow library through
-          explicit ratings, genres, directors, runtime, release period, and
-          queue rules.
-        </p>
-      </header>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Private library discovery"
+        title="Recommendations"
+        description="Rediscover unwatched movies already in your WatchFlow library through explicit ratings, genres, directors, runtime, release period, and queue rules."
+      />
 
       <Suspense fallback={<RecommendationsLoading />}>
         <RecommendationsContent {...props} />
       </Suspense>
-    </div>
+    </PageContainer>
   );
 }

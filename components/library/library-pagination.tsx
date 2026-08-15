@@ -62,14 +62,14 @@ export function LibraryPagination({
 
   return (
     <nav
-      className="mt-8 flex flex-wrap items-center justify-center gap-2"
+      className="mt-8 grid grid-cols-2 gap-2 min-[480px]:flex min-[480px]:flex-wrap min-[480px]:items-center min-[480px]:justify-center"
       aria-label="Library pagination"
     >
       {previousDisabled ? (
         <button
           type="button"
           disabled
-          className={buttonVariants({ variant: "outline", size: "sm" })}
+          className={`${buttonVariants({ variant: "outline", size: "sm" })} w-full min-[480px]:w-auto`}
           aria-label="Previous library page"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
@@ -78,7 +78,7 @@ export function LibraryPagination({
       ) : (
         <Link
           href={buildLibraryUrl(state, { page: pagination.page - 1 })}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
+          className={`${buttonVariants({ variant: "outline", size: "sm" })} w-full min-[480px]:w-auto`}
           aria-label="Previous library page"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
@@ -90,7 +90,7 @@ export function LibraryPagination({
         page === "ellipsis" ? (
           <span
             key={`ellipsis-${index}`}
-            className="inline-flex size-9 items-center justify-center"
+            className="hidden size-11 items-center justify-center min-[480px]:inline-flex"
             aria-hidden="true"
           >
             …
@@ -103,6 +103,7 @@ export function LibraryPagination({
             aria-label={`Library page ${page}`}
             className={cn(
               buttonVariants({ variant: "outline", size: "icon" }),
+              "hidden min-[480px]:inline-flex",
               page === pagination.page && "bg-accent font-bold",
             )}
           >
@@ -115,7 +116,7 @@ export function LibraryPagination({
         <button
           type="button"
           disabled
-          className={buttonVariants({ variant: "outline", size: "sm" })}
+          className={`${buttonVariants({ variant: "outline", size: "sm" })} w-full min-[480px]:w-auto`}
           aria-label="Next library page"
         >
           Next
@@ -124,7 +125,7 @@ export function LibraryPagination({
       ) : (
         <Link
           href={buildLibraryUrl(state, { page: pagination.page + 1 })}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
+          className={`${buttonVariants({ variant: "outline", size: "sm" })} w-full min-[480px]:w-auto`}
           aria-label="Next library page"
         >
           Next

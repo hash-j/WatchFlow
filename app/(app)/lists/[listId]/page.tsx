@@ -18,6 +18,10 @@ import {
 import { ListMovieRow } from "@/components/lists/list-movie-row";
 import { Badge } from "@/components/ui/badge";
 import {
+  PageContainer,
+  ResponsiveActions,
+} from "@/components/ui/responsive-layout";
+import {
   ListsAuthenticationError,
   ListsNotFoundError,
 } from "@/lib/lists/errors";
@@ -139,7 +143,7 @@ async function ListDetailContent({
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <ResponsiveActions className="lg:w-auto">
             <AddMoviesDialog
               listId={data.list.id}
               listName={data.list.name}
@@ -153,7 +157,7 @@ async function ListDetailContent({
               list={data.list}
               movieCount={data.movies.length}
             />
-          </div>
+          </ResponsiveActions>
         </div>
 
         <dl className="mt-6 grid gap-3 border-t pt-5 text-sm sm:grid-cols-2">
@@ -225,7 +229,7 @@ async function ListDetailContent({
 
 export default function ListDetailPage(props: ListDetailPageProps) {
   return (
-    <div className="mx-auto max-w-6xl">
+    <PageContainer className="max-w-6xl">
       <Link
         href="/lists"
         className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -236,6 +240,6 @@ export default function ListDetailPage(props: ListDetailPageProps) {
       <Suspense fallback={<DetailLoading />}>
         <ListDetailContent {...props} />
       </Suspense>
-    </div>
+    </PageContainer>
   );
 }

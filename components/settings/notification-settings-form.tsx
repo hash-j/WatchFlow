@@ -79,7 +79,7 @@ export function NotificationSettingsForm({
           id="reminder-offset"
           name="reminderOffsetMinutes"
           defaultValue={String(preferences.reminderOffsetMinutes)}
-          className="flex min-h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {REMINDER_OFFSET_OPTIONS.map((offset) => (
             <option key={offset} value={offset}>
@@ -94,7 +94,7 @@ export function NotificationSettingsForm({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="submit" disabled={isPending} className="min-h-10">
+        <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
           <Save className="size-4" aria-hidden="true" />
           {isPending ? "Saving..." : "Save notification preferences"}
         </Button>

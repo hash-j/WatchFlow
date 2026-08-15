@@ -10,6 +10,7 @@ import { MovieRating } from "@/components/movies/movie-rating";
 import { MovieManagementForm } from "@/components/movies/movie-management-form";
 import { FavouriteToggleForm } from "@/components/movies/favourite-toggle-form";
 import { RemoveFromLibraryForm } from "@/components/movies/remove-from-library-form";
+import { PageContainer } from "@/components/ui/responsive-layout";
 import { getLibraryMovie } from "@/lib/library/service";
 import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
 import {
@@ -153,8 +154,8 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
     : "19:00";
 
   return (
-    <article className="grid gap-8 md:grid-cols-[16rem_1fr]">
-      <div>
+    <article className="grid min-w-0 gap-8 md:grid-cols-[14rem_minmax(0,1fr)] lg:grid-cols-[16rem_minmax(0,1fr)]">
+      <div className="mx-auto w-full max-w-56 md:max-w-none">
         <MoviePoster
           path={movie.posterPath}
           title={movie.title}
@@ -171,7 +172,7 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
         </div>
       </div>
 
-      <div>
+      <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           <span>{year ?? "Release date unavailable"}</span>
           {movie.runtimeMinutes ? (
@@ -183,7 +184,7 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
           <MovieRating rating={movie.voteAverage} />
         </div>
 
-        <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+        <h1 className="mt-3 break-words text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
           {movie.title}
         </h1>
         <div className="mt-4">
@@ -293,7 +294,7 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
 
 export default function MovieDetailPage({ params }: MovieDetailPageProps) {
   return (
-    <div className="mx-auto max-w-5xl">
+    <PageContainer className="max-w-5xl">
       <Link
         href="/library"
         className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
@@ -304,6 +305,6 @@ export default function MovieDetailPage({ params }: MovieDetailPageProps) {
       <Suspense fallback={<DetailLoading />}>
         <MovieDetail params={params} />
       </Suspense>
-    </div>
+    </PageContainer>
   );
 }

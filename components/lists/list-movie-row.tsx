@@ -24,7 +24,7 @@ export function ListMovieRow({
     (item.movie.releaseDate ? item.movie.releaseDate.slice(0, 4) : null);
 
   return (
-    <li className="grid min-w-0 gap-4 rounded-xl border bg-card p-4 shadow-sm sm:grid-cols-[3rem_5rem_minmax(0,1fr)] lg:grid-cols-[3rem_5rem_minmax(0,1fr)_auto] lg:items-center">
+    <li className="grid min-w-0 gap-4 rounded-xl border bg-card p-4 shadow-sm md:grid-cols-[3rem_5rem_minmax(0,1fr)] lg:grid-cols-[3rem_5rem_minmax(0,1fr)_auto] lg:items-center">
       <div className="flex items-center gap-3 sm:block">
         <span
           className="grid size-10 shrink-0 place-items-center rounded-full bg-muted text-sm font-semibold"
@@ -53,7 +53,7 @@ export function ListMovieRow({
           {item.movie.title}
         </Link>
         {item.movie.originalTitle ? (
-          <p className="mt-1 truncate text-xs text-muted-foreground">
+          <p className="mt-1 break-words text-xs text-muted-foreground">
             Original: {item.movie.originalTitle}
           </p>
         ) : null}
@@ -76,7 +76,7 @@ export function ListMovieRow({
         </div>
       </div>
 
-      <div className="col-span-full flex min-w-0 flex-col gap-2 border-t pt-3 sm:col-start-3 lg:col-span-1 lg:col-start-auto lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+      <div className="col-span-full flex min-w-0 flex-col gap-2 border-t pt-3 md:col-start-3 lg:col-span-1 lg:col-start-auto lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
         <ListOrderControls
           listMovieId={item.listMovieId}
           title={item.movie.title}

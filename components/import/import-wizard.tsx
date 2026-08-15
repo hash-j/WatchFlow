@@ -28,6 +28,7 @@ import {
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataScrollRegion, ResponsiveActions } from "@/components/ui/responsive-layout";
 import { escapeCsvCell } from "@/lib/csv/safety";
 import {
   CsvImportValidationError,
@@ -497,7 +498,7 @@ export function ImportWizard() {
                     id={`mapping-${field}`}
                     value={mapping[field] ?? ""}
                     onChange={(event) => updateMapping(field, event.target.value)}
-                    className="mt-2 min-h-10 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="mt-2 min-h-11 min-w-0 w-full max-w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="">Not imported</option>
                     {parsed.columns.map((column) => (
@@ -524,7 +525,7 @@ export function ImportWizard() {
             </p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto rounded-lg border">
+            <DataScrollRegion label="CSV preview rows">
               <table className="w-full min-w-[900px] text-left text-sm">
                 <thead className="bg-muted/60 text-xs uppercase text-muted-foreground">
                   <tr>
@@ -551,11 +552,11 @@ export function ImportWizard() {
                   })}
                 </tbody>
               </table>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3">
+            </DataScrollRegion>
+            <ResponsiveActions className="mt-6">
               <Button type="button" variant="outline" onClick={() => setStep(2)}><ArrowLeft aria-hidden="true" />Back to mapping</Button>
               <Button type="button" disabled={isPending || rows.every((row) => !canMatchImportRow(row) || skippedRows[row.id])} onClick={() => runMatching()}>Match with TMDB<ArrowRight aria-hidden="true" /></Button>
-            </div>
+            </ResponsiveActions>
           </CardContent>
         </Card>
       ) : null}
@@ -626,8 +627,8 @@ export function ImportWizard() {
             </dl>
             {result.warnings.map((warning) => <p key={warning} className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-950">{warning}</p>)}
           </CardContent></Card>
-          <div className="overflow-x-auto rounded-lg border bg-card"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-muted/60 text-xs uppercase text-muted-foreground"><tr><th className="px-4 py-3">CSV row</th><th className="px-4 py-3">Imported title</th><th className="px-4 py-3">TMDB title</th><th className="px-4 py-3">Result</th><th className="px-4 py-3">Message</th></tr></thead><tbody className="divide-y">{result.rows.map((row) => <tr key={`${row.rowId}-${row.rowNumber}`}><td className="px-4 py-3">{row.rowNumber}</td><td className="px-4 py-3 font-medium">{row.importedTitle}</td><td className="px-4 py-3">{row.matchedTitle ?? "—"}</td><td className="px-4 py-3">{row.status.replaceAll("_", " ")}</td><td className="px-4 py-3 text-muted-foreground">{row.message}</td></tr>)}</tbody></table></div>
-          <div className="flex flex-wrap gap-3"><Button asChild><Link href="/library"><Library aria-hidden="true" />Open library</Link></Button><Button type="button" variant="outline" onClick={downloadFailureReport}><Download aria-hidden="true" />Download failure report</Button><Button type="button" variant="outline" onClick={copyFailureReport}><Copy aria-hidden="true" />Copy failure report</Button>{result.summary.unmatched + result.summary.failed > 0 ? <Button type="button" variant="outline" onClick={retryUnmatched}><RotateCcw aria-hidden="true" />Retry unmatched rows</Button> : null}<Button type="button" variant="ghost" onClick={resetImport}>Start another import</Button></div>
+          <DataScrollRegion label="Import result rows" className="bg-card"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-muted/60 text-xs uppercase text-muted-foreground"><tr><th className="px-4 py-3">CSV row</th><th className="px-4 py-3">Imported title</th><th className="px-4 py-3">TMDB title</th><th className="px-4 py-3">Result</th><th className="px-4 py-3">Message</th></tr></thead><tbody className="divide-y">{result.rows.map((row) => <tr key={`${row.rowId}-${row.rowNumber}`}><td className="px-4 py-3">{row.rowNumber}</td><td className="px-4 py-3 font-medium">{row.importedTitle}</td><td className="px-4 py-3">{row.matchedTitle ?? "—"}</td><td className="px-4 py-3">{row.status.replaceAll("_", " ")}</td><td className="px-4 py-3 text-muted-foreground">{row.message}</td></tr>)}</tbody></table></DataScrollRegion>
+          <ResponsiveActions><Button asChild><Link href="/library"><Library aria-hidden="true" />Open library</Link></Button><Button type="button" variant="outline" onClick={downloadFailureReport}><Download aria-hidden="true" />Download failure report</Button><Button type="button" variant="outline" onClick={copyFailureReport}><Copy aria-hidden="true" />Copy failure report</Button>{result.summary.unmatched + result.summary.failed > 0 ? <Button type="button" variant="outline" onClick={retryUnmatched}><RotateCcw aria-hidden="true" />Retry unmatched rows</Button> : null}<Button type="button" variant="ghost" onClick={resetImport}>Start another import</Button></ResponsiveActions>
         </div>
       ) : null}
     </div>

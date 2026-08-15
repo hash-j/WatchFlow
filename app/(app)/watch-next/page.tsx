@@ -5,6 +5,7 @@ import { ListOrdered } from "lucide-react";
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { QueueControls } from "@/components/movies/queue-controls";
 import { Button } from "@/components/ui/button";
+import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
 import { getCurrentUserWatchNextMovies } from "@/lib/library/supabase-library";
 
 function QueueLoading() {
@@ -53,19 +54,19 @@ async function WatchNextQueue() {
         {queue.map((item, index) => (
           <li
             key={item.libraryId}
-            className="grid gap-4 rounded-xl border bg-card p-4 shadow-sm sm:grid-cols-[2.5rem_5rem_1fr_auto] sm:items-center"
+            className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)] gap-4 rounded-xl border bg-card p-4 shadow-sm md:grid-cols-[2.5rem_5rem_minmax(0,1fr)_auto] md:items-center"
           >
             <span className="grid size-10 place-items-center rounded-full bg-muted text-sm font-semibold">
               {index + 1}
             </span>
-            <div className="w-20">
+            <div className="col-start-2 row-start-1 w-full max-w-28 md:col-start-auto md:row-start-auto md:w-20">
               <MoviePoster
                 path={item.movie.posterPath}
                 title={item.movie.title}
                 sizes="80px"
               />
             </div>
-            <div className="min-w-0">
+            <div className="col-start-2 min-w-0 md:col-start-auto">
               <Link
                 href={`/library/${item.movie.id}`}
                 className="font-semibold hover:underline"
@@ -76,11 +77,13 @@ async function WatchNextQueue() {
                 Priority {item.priority} · Position {index + 1}
               </p>
             </div>
-            <QueueControls
-              libraryId={item.libraryId}
-              isFirst={index === 0}
-              isLast={index === queue.length - 1 && !truncated}
-            />
+            <div className="col-start-2 min-w-0 md:col-start-auto">
+              <QueueControls
+                libraryId={item.libraryId}
+                isFirst={index === 0}
+                isLast={index === queue.length - 1 && !truncated}
+              />
+            </div>
           </li>
         ))}
       </ol>
@@ -90,16 +93,16 @@ async function WatchNextQueue() {
 
 export default function WatchNextPage() {
   return (
-    <div className="mx-auto max-w-5xl">
-      <p className="text-sm font-medium text-muted-foreground">Your queue</p>
-      <h1 className="mt-1 text-3xl font-bold tracking-tight">Watch Next</h1>
-      <p className="mt-2 max-w-2xl text-muted-foreground">
-        Move movies up or down to decide what you will watch first. Changes are
-        private and positions stay sequential.
-      </p>
+    <PageContainer className="max-w-5xl">
+      <PageHeader
+        eyebrow="Your queue"
+        title="Watch Next"
+        description="Move movies up or down to decide what you will watch first. Changes are private and positions stay sequential."
+        className="mb-0"
+      />
       <Suspense fallback={<QueueLoading />}>
         <WatchNextQueue />
       </Suspense>
-    </div>
+    </PageContainer>
   );
 }

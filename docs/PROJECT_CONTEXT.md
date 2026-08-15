@@ -1,13 +1,47 @@
 # WatchFlow Project Context
 
-Last updated: 2026-08-04
+Last updated: 2026-08-12
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: guarded Part 15 TMDB rate-limit verification completed against the pinned development application/Supabase project; direct PostgreSQL catalog parity checks remain blocked
+Current phase: responsive mobile/tablet UX milestone implemented and locally audited; final Preview/device verification remains
 Current branch: `master` at `2708afd` (`fix: grant scheduling profile permissions`), tagged `schedule-permissions-fix`
-Local status: focused limiter unit/integration/Playwright coverage and testing documentation are uncommitted review work; live tests changed only disposable QA limiter counters, and exact cleanup removed those eight rows
+Local status: responsive overhaul and its tests/documentation are uncommitted review work; no database architecture or migrations changed
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-08-12 responsive UX milestone
+
+- Recovered the interrupted 57-file responsive working tree without reset,
+  checkout, clean, restore, or component duplication. No truncated files,
+  unresolved imports, database changes, or migration changes were found.
+- Added a mobile-first shared page/layout/action/empty/data-region system, a
+  viewport-constrained dialog system, and a compact labelled mobile/tablet
+  navigation drawer. The full labelled sidebar begins at `lg`.
+- Updated all public/auth routes and the Dashboard, Search, Library, movie
+  detail, Statistics, Lists, Picker, Recommendations, Import, Watch Next,
+  Schedule, and Settings route families, including responsive loading, error,
+  empty, not-found, filter, bulk-action, and confirmation states.
+- Horizontal overflow is fixed at its source; the root does not hide overflow.
+  Only labelled Import data regions have explicitly approved local horizontal
+  scrolling.
+- Added reusable Playwright overflow/boundary/form/dialog checks. The 13-case
+  public matrix passed; the final clean-server protected matrix passed 10/10
+  at 375x667, 390x844, 768x1024, 820x1180, and 1366x768. The earlier expanded
+  protected sweep passed all static routes at 320, 360, 375, 390, 412, 600,
+  768, 820, 1024, 1366, 1440, and 1920 widths.
+- Local gates: lint and direct TypeScript passed; 59 Vitest files/611 tests
+  passed; the Next 16.2.12 production build generated 35 route shells; and the
+  478-artifact client-secret scan passed.
+- Remaining evidence: the separately guarded destructive account-deletion run,
+  delivered password-reset email, real-device/assistive-technology Preview
+  checks, and a controlled TMDB search/add smoke that timed out despite direct
+  provider HTTP 200 reachability. No responsive test depends on that provider
+  smoke.
+- Current milestone: responsive implementation and local responsive gate are
+  complete in the uncommitted working tree.
+- Next milestone: controlled Preview verification, including real devices,
+  assistive technology, email links, database catalog/RLS checks, and the
+  remaining guarded product workflows.
 
 ## 2. Product Overview
 

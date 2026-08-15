@@ -21,7 +21,7 @@ import {
 import { FieldError, FormMessage } from "./form-message";
 
 const selectClassName =
-  "flex min-h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 const languageLabels = {
   en: "English",
@@ -68,7 +68,7 @@ export function PreferencesForm({ preferences }: { preferences: UserPreferences 
 
   return (
     <form action={action} className="space-y-6">
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="default-status">Default movie status</Label>
           <select
@@ -198,7 +198,7 @@ export function PreferencesForm({ preferences }: { preferences: UserPreferences 
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         <Toggle
           name="showAdultResults"
           label="Show adult movie results"
@@ -214,7 +214,7 @@ export function PreferencesForm({ preferences }: { preferences: UserPreferences 
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="submit" disabled={isPending} className="min-h-10">
+        <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
           <Save className="size-4" aria-hidden="true" />
           {isPending ? "Saving..." : "Save preferences"}
         </Button>

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { createListAction } from "@/app/(app)/actions/lists";
 import { Button } from "@/components/ui/button";
+import { DialogCloseButton, ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { initialListActionState } from "@/lib/lists/types";
 
 import { ListFormFields } from "./list-form-fields";
@@ -58,14 +59,15 @@ export function CreateListDialog({
         {triggerLabel}
       </Button>
 
-      <dialog
+      <ResponsiveDialog
         ref={dialogRef}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         onClose={handleClose}
-        className="w-[min(34rem,calc(100%-2rem))] rounded-xl border bg-background p-0 text-foreground shadow-xl backdrop:bg-black/60"
+        className="max-w-xl"
       >
-        <form action={action} className="space-y-5 p-5 sm:p-6">
+        <form action={action} className="relative space-y-5 p-4 pt-16 sm:p-6 sm:pt-16">
+          <DialogCloseButton onClick={closeDialog} />
           <div>
             <h2 id={titleId} className="text-xl font-semibold">
               Create a custom list
@@ -104,7 +106,7 @@ export function CreateListDialog({
             </Button>
           </div>
         </form>
-      </dialog>
+      </ResponsiveDialog>
     </>
   );
 }
