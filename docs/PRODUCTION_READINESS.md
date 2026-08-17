@@ -1,5 +1,56 @@
 # WatchFlow Production Readiness
 
+## Part 15.5A manual Supabase Auth gate
+
+The application-side signup OTP flow is implemented locally. The hosted
+development project could not be inspected from this workspace: there is no
+`supabase/config.toml`, linked CLI metadata, available Management API
+credential, or disposable signup inbox. Runtime environment values were not
+read or exposed. Complete these
+manual steps before treating email verification as operational:
+
+1. In Supabase Authentication > Sign In / Providers > Email, keep Email enabled
+   and keep email confirmation required. Do not enable autoconfirm.
+2. Confirm the project emits **six digits**. WatchFlow accepts exactly six.
+   Current Supabase email-OTP documentation describes six digits, but the
+   actual hosted setting is the deployment source of truth.
+3. Confirm Email OTP expiration. Supabase documents a one-hour default; record
+   the actual project value. WatchFlow pending browser context is intentionally
+   shorter at 15 minutes.
+4. In Authentication > Rate Limits, review actual signup-email, resend,
+   verification, and recovery limits. WatchFlow uses a 60-second resend
+   countdown, matching Supabase's documented default per-address signup resend
+   interval, and maps 429 responses safely. Supabase remains authoritative.
+5. Preserve the existing custom SMTP sender/configuration. Do not switch to the
+   restricted built-in mailer.
+6. In Authentication > Emails > Confirm signup, set the subject to
+   `Your WatchFlow verification code` and replace the body with the exact HTML
+   below. It contains `{{ .Token }}` and no `{{ .ConfirmationURL }}`.
+7. Preserve the Reset password template; recovery remains link-based.
+
+```html
+<!doctype html>
+<html lang="en">
+  <body style="margin:0;background:#f5f5f5;font-family:Arial,sans-serif;color:#171717;">
+    <div style="max-width:560px;margin:0 auto;padding:40px 20px;">
+      <div style="background:#ffffff;border:1px solid #e5e5e5;border-radius:16px;padding:32px;">
+        <p style="margin:0 0 24px;font-size:18px;font-weight:700;">WatchFlow</p>
+        <h1 style="margin:0 0 12px;font-size:26px;line-height:1.25;">Verify your email</h1>
+        <p style="margin:0 0 24px;color:#525252;line-height:1.6;">Use this verification code to finish creating your WatchFlow account:</p>
+        <div style="margin:0 0 24px;padding:18px;border-radius:12px;background:#f5f5f5;text-align:center;font-size:32px;font-weight:700;letter-spacing:8px;">{{ .Token }}</div>
+        <p style="margin:0 0 12px;color:#525252;line-height:1.6;">This code expires according to the configured Supabase Auth OTP expiration.</p>
+        <p style="margin:0;color:#737373;font-size:14px;line-height:1.6;">If you didn’t create a WatchFlow account, you can ignore this email.</p>
+      </div>
+    </div>
+  </body>
+</html>
+```
+
+Delivered signup OTP verification and delivered password-reset regression
+remain blocked until those settings and a disposable inbox are available.
+Part 15.5B first-time onboarding is next; verified signup currently lands on
+`/dashboard`.
+
 ## Assessment
 
 **Overall status: Needs Preview verification.**
@@ -39,12 +90,13 @@ Status meanings:
 
 ## Authentication
 
-**Needs Preview verification.** Email/password signup, confirmation state,
-login, cookie sessions, logout, forgot-password request, callback/confirm
-handlers, and reset/update routes exist. Public route regressions and invalid
-local/auth-callback behavior are covered. Valid signup/login/logout,
-unconfirmed behavior, email delivery, and delivered-link flows require
-disposable QA users and a mailbox.
+**Application implementation complete locally; Needs Preview verification.**
+Signup is server validated and uses in-app six-digit Confirm signup email OTP
+verification with short-lived pending-email state. Password login, logout,
+forgot-password, callback/confirm, and reset/update routes remain. Focused and
+full-fallback unit/source contracts pass. Valid delivered signup OTP,
+login/logout/session persistence, and delivered recovery still require the
+manual Auth configuration, disposable QA identity, and mailbox.
 
 ## Authorization
 
@@ -184,10 +236,11 @@ production requires a tested restore procedure.
 
 ## Email delivery
 
-**Blocked.** Notification delivery is intentionally unimplemented. Auth
-confirmation/password-reset email needs configured SMTP/templates, a QA inbox,
-rate-limit review, and delivered-link tests. Supabase's development mailer is
-not production evidence.
+**Blocked operationally.** The in-app Confirm signup OTP implementation and
+copyable template are ready, while notification delivery remains out of scope.
+The hosted project still needs the documented six-digit/template/expiry/rate
+review, preserved custom SMTP, a QA inbox, delivered-code verification, and a
+delivered password-reset link regression.
 
 ## Monitoring
 
@@ -304,13 +357,13 @@ Vitest/Playwright toolchain for tests.
 |---|---|
 | ESLint | Ready — completed successfully |
 | Direct TypeScript | Ready — `npx tsc --noEmit` completed successfully |
-| Unit/source/contract tests | Ready — 59 files, 596 passing |
+| Unit/source/contract tests | Part 15.5A assertions pass — focused 5 files/42 tests; full runner-loader fallback 62 files/637 tests. Required `npm test` is environment-blocked by `spawn EPERM` before config load on two sequential attempts |
 | Supabase integration | Needs Preview verification — command completed with all 5 tests skipped by the absent development/credential guard |
-| Playwright safe selected suite | Ready for public regression — 35 passing, 15 guarded/skipped (including 10 authenticated Statistics cases), automatic redacted console/network assertions; account deletion excluded |
+| Playwright Part 15.5A | Blocked by runner environment — auth spec loads/lists all 10 tests, but two sequential execution attempts failed with `spawn EPERM` before server/browser startup |
 | Playwright MCP | Ready for public smoke only — clean-restart public routes passed; authenticated workflows/screenshots blocked |
 | Dependency audits | Ready — production-only and full audits both reported 0 vulnerabilities |
-| Production build | Ready locally — Next.js 16.2.12 build passed, completed the 35-page generation step, and listed `◐ /statistics` |
-| Client secret scan | Ready locally — 478 artifacts checked, no forbidden/configured-value leak; one reviewed Supabase SDK sentinel |
+| Production build | Environment-blocked — two sequential runs compiled successfully, then Next failed to spawn its TypeScript child with `spawn EPERM`; direct `npx tsc --noEmit` passes |
+| Client secret scan | Ready locally — current incomplete-build output contained 251 browser artifacts; no forbidden/configured-value leak and one reviewed Supabase SDK sentinel |
 | Live database catalog/RLS | Needs Preview verification — SQL files are ready but were not run against a confirmed disposable target |
 
 Part 15.1 Statistics gate: **Local gate passed; authenticated QA blocked.** The

@@ -4,6 +4,10 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/auth/server", () => ({
+  redirectAuthenticatedUser: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/components/sign-up-form", async () => {
   const { createElement: element } = await import("react");
   return {
@@ -53,17 +57,17 @@ function sourceFiles(directory: string): string[] {
 }
 
 describe("critical authentication route contracts", () => {
-  it("keeps the canonical sign-up page and renders the existing form", () => {
+  it("keeps the canonical sign-up page and renders the existing form", async () => {
     const path = join(repositoryRoot, "app/auth/sign-up/page.tsx");
     expect(existsSync(path)).toBe(true);
-    expect(renderToStaticMarkup(createElement(SignUpPage))).toContain(
+    expect(renderToStaticMarkup(await SignUpPage())).toContain(
       'data-auth-form="sign-up"',
     );
     expect(source("app/auth/sign-up/page.tsx")).not.toContain("notFound(");
   });
 
-  it("keeps login and forgot-password pages renderable", () => {
-    expect(renderToStaticMarkup(createElement(LoginPage))).toContain(
+  it("keeps login and forgot-password pages renderable", async () => {
+    expect(renderToStaticMarkup(await LoginPage())).toContain(
       'data-auth-form="login"',
     );
     expect(renderToStaticMarkup(createElement(ForgotPasswordPage))).toContain(
@@ -88,6 +92,7 @@ describe("critical authentication route contracts", () => {
     for (const route of [
       "/auth/login",
       "/auth/sign-up",
+      "/auth/verify-email",
       "/auth/forgot-password",
       "/auth/reset-password",
       "/auth/callback",
@@ -118,12 +123,30 @@ describe("critical authentication route contracts", () => {
     }
   });
 
-  it("uses the existing Supabase signup callback", () => {
+  it("uses server-side signup and keeps legacy callback routes", () => {
     const form = source("components/sign-up-form.tsx");
-    expect(form).toContain("supabase.auth.signUp(");
-    expect(form).toContain("/auth/callback?next=/dashboard");
+    const actions = source("lib/auth/actions.ts");
+    expect(form).toContain("signUpAction");
+    expect(actions).toContain("supabase.auth.signUp(");
+    expect(actions).toContain('redirect("/auth/verify-email")');
+    expect(actions).toContain("supabase.auth.verifyOtp({");
+    expect(actions).toContain('type: "email"');
     expect(existsSync(join(repositoryRoot, "app/auth/callback/route.ts"))).toBe(
       true,
+    );
+  });
+
+  it("preserves password login and link-based password recovery", () => {
+    expect(source("components/login-form.tsx")).toContain(
+      "supabase.auth.signInWithPassword",
+    );
+    const forgotPassword = source("components/forgot-password-form.tsx");
+    expect(forgotPassword).toContain("supabase.auth.resetPasswordForEmail");
+    expect(forgotPassword).toContain(
+      "/auth/callback?next=/auth/update-password",
+    );
+    expect(source("components/update-password-form.tsx")).toContain(
+      "supabase.auth.updateUser",
     );
   });
 
@@ -134,7 +157,6 @@ describe("critical authentication route contracts", () => {
 
     for (const relativePath of [
       "components/login-form.tsx",
-      "components/sign-up-form.tsx",
       "components/forgot-password-form.tsx",
       "components/update-password-form.tsx",
     ]) {
@@ -144,14 +166,13 @@ describe("critical authentication route contracts", () => {
     }
 
     expect(source("components/forgot-password-form.tsx")).toContain(
-      '<Card role="status">',
+      'role="status"',
     );
   });
 
   it("maps browser authentication failures to controlled copy", () => {
     for (const relativePath of [
       "components/login-form.tsx",
-      "components/sign-up-form.tsx",
       "components/forgot-password-form.tsx",
       "components/update-password-form.tsx",
     ]) {
@@ -162,6 +183,10 @@ describe("critical authentication route contracts", () => {
         form.indexOf("createClient()"),
       );
     }
+
+    const signUpAction = source("lib/auth/actions.ts");
+    expect(signUpAction).toContain("getSignUpErrorMessage");
+    expect(signUpAction).not.toContain("error.message");
   });
 
   it("keeps callback errors and invalid recovery sessions controlled", () => {

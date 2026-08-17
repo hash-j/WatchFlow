@@ -16,11 +16,12 @@ password authentication and an authenticated product shell.
 
 ### New member
 
-1. A visitor creates an account with an email address and password.
-2. WatchFlow asks the visitor to verify their email.
-3. The verification callback exchanges the Supabase auth code or token hash for
-   a cookie-backed session.
-4. The verified member enters the protected dashboard.
+1. A visitor creates an account with full name, email, and password.
+2. WatchFlow keeps the visitor in-app and asks for the six-digit code from the
+   Confirm signup email.
+3. Supabase verifies the email OTP and creates a cookie-backed session.
+4. WatchFlow validates the confirmed Auth user and the verified member enters
+   the protected dashboard.
 
 ### Returning member
 
@@ -74,6 +75,31 @@ password authentication and an authenticated product shell.
 - Authentication callbacks create server-visible cookie sessions.
 - The dashboard renders the authenticated email and profile availability.
 - The repository passes ESLint, TypeScript checking, and a production build.
+
+## Part 15.5A: authentication experience and signup email OTP
+
+New accounts provide full name, normalized email, password, and matching
+password confirmation. WatchFlow creates the password account through
+Supabase, preserves `full_name` metadata for profile creation, and keeps the
+member inside the app at `/auth/verify-email`. The Confirm signup email uses
+`{{ .Token }}` and no signup confirmation URL.
+
+The verification screen accepts one accessible six-digit numeric value while
+presenting six distinct positions. It supports mobile numeric keyboards,
+autofill, cursor/backspace/arrow behavior, and whole-code paste. Supabase owns
+OTP generation, expiry, replay prevention, verification, confirmation state,
+and session creation; WatchFlow stores no OTP.
+
+A 15-minute HttpOnly pending-verification cookie supplies normalized email to
+server actions without placing it in the URL. It is not authorization. Success
+requires a fresh matching confirmed Supabase Auth user/session, clears pending
+state, and redirects to `/dashboard`. Resend uses Supabase signup-confirmation
+resend with a 60-second UI/server cooldown; Supabase remains authoritative.
+Changing email clears pending state without deleting an Auth user.
+
+Returning members still use email + password. Recovery remains link-based.
+`/auth/callback` and `/auth/confirm` remain supported. First-time onboarding is
+deferred to Part 15.5B.
 
 ### Authentication accessibility and browser QA
 

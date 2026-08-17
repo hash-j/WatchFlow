@@ -1,4 +1,5 @@
 import { UpdatePasswordForm } from "@/components/update-password-form";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { authErrorPath } from "@/lib/auth/errors";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -21,25 +22,21 @@ async function UpdatePasswordContent() {
     redirect(authErrorPath("recovery_session_required"));
   }
 
-  return (
-    <div className="flex min-h-svh w-full items-center justify-center p-4 sm:p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <UpdatePasswordForm />
-      </div>
-    </div>
-  );
+  return <UpdatePasswordForm />;
 }
 
 export default function Page() {
   return (
-    <Suspense
-      fallback={
-        <div className="grid min-h-svh place-items-center text-sm text-muted-foreground">
-          Validating your recovery link...
-        </div>
-      }
-    >
-      <UpdatePasswordContent />
-    </Suspense>
+    <AuthShell>
+      <Suspense
+        fallback={
+          <div role="status" className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
+            Validating your recovery link…
+          </div>
+        }
+      >
+        <UpdatePasswordContent />
+      </Suspense>
+    </AuthShell>
   );
 }

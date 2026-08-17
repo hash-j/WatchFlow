@@ -1,5 +1,22 @@
 # WatchFlow Security
 
+## Part 15.5A signup verification security
+
+- Signup fields are validated on the server; browser validation is only UX.
+- Passwords and confirmation never enter URLs, cookies, logs, action state,
+  analytics, or application storage. OTPs are neither stored nor logged.
+- Supabase owns OTP generation, validation, expiry, replay prevention, email
+  confirmation, and session issuance.
+- Pending email is a short-lived HttpOnly, `SameSite=Lax`, production-secure,
+  `/auth` cookie with no password, OTP, user ID, or token. Protected access
+  still requires verified Supabase claims.
+- Verification accepts no user ID and uses no admin client. It requires fresh
+  `getUser()` data whose confirmed email matches pending context.
+- Existing-account signup behavior is neutral. Forgot password remains neutral;
+  resend reports delivery only after Supabase succeeds.
+- Supabase Auth is the authoritative rate limiter. WatchFlow adds a 60-second
+  resend cooldown and safely maps provider 429 responses.
+
 ## Security model
 
 WatchFlow is a private multi-user application. Supabase Auth establishes

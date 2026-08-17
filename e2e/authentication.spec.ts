@@ -8,17 +8,17 @@ test.describe("authentication regressions", () => {
     const routes = [
       {
         path: "/auth/login",
-        heading: "Login",
+        heading: "Log in to WatchFlow",
         labels: ["Email", "Password"],
       },
       {
         path: "/auth/sign-up",
-        heading: "Sign up",
-        labels: ["Email", "Password", "Repeat Password"],
+        heading: "Create your account",
+        labels: ["Full name", "Email", "Password", "Confirm password"],
       },
       {
         path: "/auth/forgot-password",
-        heading: "Reset Your Password",
+        heading: "Forgot your password?",
         labels: ["Email"],
       },
     ] as const;
@@ -50,24 +50,25 @@ test.describe("authentication regressions", () => {
     expect(response?.status()).toBe(200);
     await expect(page).toHaveURL("/auth/sign-up");
     await expect(
-      page.getByRole("button", { name: "Sign up" }),
+      page.getByRole("button", { name: "Create account" }),
     ).toBeEnabled();
   });
 
-  test("sign-up success explains the email-confirmation state", async ({
+  test("legacy signup success safely enters verification recovery", async ({
     page,
   }) => {
     const response = await page.goto("/auth/sign-up-success");
 
-    expect(response?.status()).toBe(200);
+    expect(response?.status()).toBeLessThan(400);
+    await expect(page).toHaveURL("/auth/verify-email");
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Thank you for signing up!",
+        name: "Check your email",
       }),
     ).toBeVisible();
     await expect(
-      page.getByText("Check your email to confirm", { exact: true }),
+      page.getByRole("link", { name: "Return to signup" }),
     ).toBeVisible();
   });
 
@@ -75,17 +76,16 @@ test.describe("authentication regressions", () => {
     page,
   }) => {
     await page.goto("/auth/sign-up");
+    await page.getByLabel("Full name").fill("QA Local");
     await page.getByLabel("Email").fill("qa-invalid@example.invalid");
     const password = page.getByLabel("Password", { exact: true });
-    const repeated = page.getByLabel("Repeat Password");
+    const repeated = page.getByLabel("Confirm password");
     await password.fill("LocalOnly!123");
     await repeated.fill("Different!123");
 
     try {
-      await page.getByRole("button", { name: "Sign up" }).click();
-      await expect(page.locator("form").getByRole("alert")).toHaveText(
-        "Passwords do not match",
-      );
+      await page.getByRole("button", { name: "Create account" }).click();
+      await expect(page.getByText("Passwords do not match.")).toBeVisible();
       await expect(page).toHaveURL("/auth/sign-up");
     } finally {
       await password.fill("");
@@ -150,7 +150,7 @@ test.describe("authentication regressions", () => {
       await expect(
         page.getByRole("heading", {
           level: 1,
-          name: "Sorry, something went wrong.",
+          name: "We couldn’t complete that request",
         }),
       ).toBeVisible();
     }
@@ -173,16 +173,48 @@ test.describe("authentication regressions", () => {
     await page.goto("/auth/sign-up");
 
     const expected = [
+      page.getByRole("link", { name: "WatchFlow" }),
+      page.getByLabel("Full name"),
       page.getByLabel("Email"),
       page.getByLabel("Password", { exact: true }),
-      page.getByLabel("Repeat Password"),
-      page.getByRole("button", { name: "Sign up" }),
-      page.getByRole("link", { name: "Login" }),
+      page.getByRole("button", { name: "Show password" }),
+      page.getByLabel("Confirm password"),
+      page.getByRole("button", { name: "Show confirm password" }),
+      page.getByRole("button", { name: "Create account" }),
+      page.getByRole("link", { name: "Log in" }),
     ];
 
     for (const locator of expected) {
       await page.keyboard.press("Tab");
       await expect(locator).toBeFocused();
     }
+  });
+
+  test("verification code supports numeric keyboard entry, full paste, and resend countdown", async ({
+    context,
+    page,
+  }) => {
+    const now = Date.now();
+    const pending = Buffer.from(JSON.stringify({
+      email: "qa-verification@example.com",
+      expiresAt: now + 10 * 60_000,
+      resendAvailableAt: now + 60_000,
+    }), "utf8").toString("base64url");
+    await context.addCookies([{ name: "watchflow_pending_verification", value: pending, url: "http://localhost:3000/auth", httpOnly: true, sameSite: "Lax" }]);
+
+    await page.goto("/auth/verify-email");
+    await expect(page.getByRole("heading", { level: 1, name: "Check your email" })).toBeVisible();
+    await expect(page.getByTestId("otp-position")).toHaveCount(6);
+    const code = page.getByLabel("Verification code");
+    await code.pressSequentially("123456");
+    await expect(code).toHaveValue("123456");
+    await code.fill("");
+    await code.evaluate((element: HTMLInputElement) => {
+      const data = new DataTransfer();
+      data.setData("text/plain", "12 34-56");
+      element.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData: data }));
+    });
+    await expect(code).toHaveValue("123456");
+    await expect(page.getByRole("button", { name: /Resend code in \d+s/ })).toBeDisabled();
   });
 });

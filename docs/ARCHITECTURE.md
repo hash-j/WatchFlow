@@ -1,5 +1,31 @@
 # WatchFlow Architecture
 
+## Part 15.5A authentication architecture
+
+Signup now crosses a Server Action boundary in `lib/auth/actions.ts`. Pure
+validation/normalization is in `lib/auth/validation.ts`; safe provider error
+classification is in `lib/auth/action-errors.ts`. The action calls the normal
+cookie-bound SSR client `auth.signUp()` with email, password, and
+`data.full_name`. A returned session is rejected as a configuration problem
+because email confirmation must remain required.
+
+`lib/auth/pending-verification.ts` owns a 15-minute HttpOnly,
+`SameSite=Lax`, production-secure, `/auth` cookie containing only normalized
+email, expiry, and resend timing. It has no password, OTP, user ID, access
+token, or refresh token and grants no access.
+
+`/auth/verify-email` submits only `code`. The server resolves email from the
+cookie and calls `auth.verifyOtp({ email, token, type: "email" })`, then
+`auth.getUser()`. A matching confirmed email and valid session are required
+before clearing pending state and redirecting to `/dashboard`. Resend calls
+`auth.resend({ type: "signup", email })`; change-email clears only local
+pending state. No schema, custom OTP service, or admin verification client was
+added.
+
+Normal login remains `signInWithPassword()`. Recovery remains
+`resetPasswordForEmail()` -> `/auth/callback` -> `/auth/update-password` ->
+`updateUser()`. Token-hash callback/confirm handlers are retained.
+
 ## Runtime structure
 
 WatchFlow uses the Next.js App Router. The root route is public, `/auth/*`
@@ -47,7 +73,12 @@ signature. `getSession()` must not be used to protect server-rendered data.
 
 ### Sign-up and verification
 
-The browser calls `signUp()` with an email redirect to `/auth/callback`. The
+The signup form posts to the server-side `signUpAction`, which validates full
+name, normalized email, password, and confirmation before calling `signUp()`.
+The pending email is kept in the scoped HttpOnly cookie and the user enters the
+Confirm signup `{{ .Token }}` code at `/auth/verify-email`. The server calls
+`verifyOtp({ email, token, type: "email" })` and validates a fresh confirmed
+user/session before dashboard access. The
 callback supports PKCE authorization codes and token-hash links. It verifies or
 exchanges the credential on the server, writes the session cookies, and routes
 the member to an internal destination.

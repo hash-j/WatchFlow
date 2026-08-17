@@ -24,6 +24,7 @@ const publicRoutes = [
   "/",
   "/auth/login",
   "/auth/sign-up",
+  "/auth/verify-email",
   "/auth/forgot-password",
   "/auth/update-password",
   "/auth/reset-password",
@@ -46,7 +47,7 @@ test.describe("public responsive shell", () => {
 
         if (route === "/auth/sign-up") {
           await expect(
-            page.getByRole("button", { name: "Sign up" }),
+            page.getByRole("button", { name: "Create account" }),
           ).toBeVisible();
         }
       }

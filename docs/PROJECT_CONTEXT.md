@@ -1,13 +1,49 @@
 # WatchFlow Project Context
 
-Last updated: 2026-08-12
+Last updated: 2026-08-15
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: responsive mobile/tablet UX milestone implemented and locally audited; final Preview/device verification remains
+Current phase: Part 15.5A authentication experience and signup email OTP implemented locally; live Supabase/email verification remains
 Current branch: `master` at `2708afd` (`fix: grant scheduling profile permissions`), tagged `schedule-permissions-fix`
-Local status: responsive overhaul and its tests/documentation are uncommitted review work; no database architecture or migrations changed
+Local status: Part 15.5A application/tests/docs are uncommitted; no database architecture, migration, or remote Supabase setting changed
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-08-15 Part 15.5A authentication + signup email OTP
+
+- Signup is now a server-validated email/password Server Action with full name,
+  normalized email, password confirmation, safe errors, duplicate-submit
+  protection, and `full_name` Auth metadata for the existing profile trigger.
+- Successful unverified signup redirects to `/auth/verify-email`; the legacy
+  success route now redirects into the verification recovery state.
+- Supabase remains the OTP authority. Verification uses the installed SDK
+  `verifyOtp({ email, token, type: "email" })`; resend uses
+  `resend({ type: "signup", email })`. Normal login remains password-based.
+- Pending email lives for 15 minutes in an HttpOnly, `SameSite=Lax`,
+  production-secure, `/auth`-scoped cookie with only email/expiry/resend timing.
+  It is not authorization. Success also requires a fresh confirmed Auth user
+  and session before `/dashboard`.
+- `/auth/verify-email` provides one accessible numeric input rendered as six
+  positions, whole-code paste, native keyboard editing, masked email, stable
+  feedback space, resend countdown, and change-email cleanup.
+- Login, signup, verification, forgot/reset, and auth-error screens share a
+  responsive WatchFlow shell. `/auth/callback` and `/auth/confirm` remain for
+  recovery, existing emails, and other token-hash flows.
+- Focused auth Vitest passed 5 files/42 tests. Lint and direct TypeScript pass;
+  the full fallback Vitest run passed 62 files/637 tests; and the current
+  251-artifact client-secret scan passes.
+- Required `npm test`, Playwright execution, and final Next build are
+  environment-blocked by persistent Windows `spawn EPERM`. `npm test` failed
+  before loading config twice; the equivalent supported Vitest runner-loader
+  command passed all tests. Playwright listed all 10 auth tests successfully
+  but failed before server/browser startup twice. Next compiled successfully
+  twice and then failed spawning its TypeScript child; direct TypeScript passes.
+- No local Supabase Auth config, linked CLI metadata, available Management API
+  credential, or disposable mailbox exists. Runtime environment files were not
+  read because their values are secret. Hosted OTP length/expiry/rate-limit/
+  template state and delivery therefore remain blocked.
+- Current milestone: Part 15.5A. Next: Part 15.5B First-Time User Onboarding;
+  verified signup currently redirects directly to Dashboard.
 
 ## 2026-08-12 responsive UX milestone
 
@@ -129,7 +165,8 @@ The `(app)` directory is a route group and does not appear in URLs.
 | `/` | Page | Public WatchFlow landing page |
 | `/auth/login` | Page | Public password login |
 | `/auth/sign-up` | Page | Public email/password registration; critical regression route |
-| `/auth/sign-up-success` | Page | Public confirmation-email instructions |
+| `/auth/sign-up-success` | Page | Legacy public route that redirects to `/auth/verify-email` |
+| `/auth/verify-email` | Page | Public pending-signup email OTP entry and recovery state |
 | `/auth/forgot-password` | Page | Public recovery-email request |
 | `/auth/reset-password` | Page | Recovery-session-gated alias of `/auth/update-password` |
 | `/auth/update-password` | Page | Recovery-session-gated password update |
@@ -170,7 +207,12 @@ No `/api/*` route exists. Loading, error, not-found, layout, favicon, and metada
   Statistics reads, and destructive operations use fresh `auth.getUser()` checks where current
   Auth-server data is required.
 - Login calls `signInWithPassword()`, then replaces navigation with `/dashboard` and refreshes Server Components.
-- Signup calls `signUp()` with an email redirect to `/auth/callback?next=/dashboard`, then shows `/auth/sign-up-success`.
+- Signup uses a server-validated Server Action, calls `signUp()` with
+  `full_name` metadata, stores short-lived pending-email context, and redirects
+  to `/auth/verify-email` without creating a protected session.
+- Signup confirmation uses the code in `{{ .Token }}`. Verification resolves
+  pending email server-side, calls `verifyOtp()` with email/token/type `email`,
+  validates the fresh confirmed Auth user/session, then enters `/dashboard`.
 - `/auth/callback` supports PKCE `code` exchange and token-hash OTP verification;
   `/auth/confirm` supports token-hash links.
 - `lib/auth/safe-redirect.ts` accepts only internal single-slash paths and rejects missing, protocol-relative, or backslash-containing redirect values.
@@ -570,7 +612,7 @@ or mutate data.
 |---|---|---|
 | Lint | Passed | `npm run lint`, 2026-08-04; Next 16 native flat config, no rule suppressions |
 | TypeScript | Passed | `npx tsc --noEmit`, 2026-08-04 |
-| Unit/contract tests | Passed | `npm test`: 59 files, 611 tests, 2026-08-04 |
+| Unit/contract tests | Part 15.5A assertions pass; exact npm runner blocked | Focused: 5 files/42 tests. Full `npx vitest run --configLoader runner`: 62 files/637 tests. Exact `npm test` hit Windows `spawn EPERM` before config load twice, 2026-08-15 |
 | Focused Part 15 limiter tests | Passed locally and live | The guarded development limiter integration passed all 10 live tests; the final focused Playwright run passed its one live test after natural bucket expiry. Exact catalog ACL/RLS/constraint parity remains blocked |
 | Focused scheduling permission tests | Passed | 3 files, 45 tests covering the exact grant, effective profile columns, ownership RLS audit, owner/foreign scheduling, timezone persistence, queue normalization, and permission-vs-missing-RPC mapping |
 | Focused Part 15.1 tests | Passed | `npx vitest run lib/statistics`: 4 files, 62 tests covering metrics, mapping, query/isolation/error, route/UI/accessibility/revalidation contracts |

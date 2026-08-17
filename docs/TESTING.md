@@ -1,5 +1,32 @@
 # WatchFlow Testing Guide
 
+## Part 15.5A authentication coverage
+
+Focused `lib/auth/` tests cover signup validation, email normalization,
+confirmation mismatch, pending cookie/expiry, six-digit and numeric OTP rules,
+paste normalization, signup pending success, missing pending state, verify
+success/incorrect/expired/rate-limit outcomes, resend success/rate limiting,
+change-email cleanup, ignored browser `user_id`, no sensitive logging,
+password-login/recovery preservation, and `/auth/sign-up` availability.
+
+`e2e/authentication.spec.ts` covers refreshed auth pages, server validation,
+keyboard order, missing verification recovery, six OTP positions, sequential
+entry, whole-code paste, and resend countdown. `e2e/responsive.spec.ts` includes
+`/auth/verify-email` across the required mobile/tablet/desktop sizes plus the
+existing expanded width set.
+
+Real signup, delivered OTP verification, session persistence, confirmed login,
+logout, newest recovery email, and password update require a pinned disposable
+development project and inbox. When absent they are blocked, not passed.
+
+Current 2026-08-15 local evidence: focused auth passed 5 files/42 tests; lint
+and direct TypeScript passed; the full supported fallback
+`npx vitest run --configLoader runner` passed 62 files/637 tests. The required
+`npm test` command hit environment-level Windows `spawn EPERM` before config
+load on two sequential attempts. The auth Playwright file loads/lists all 10
+tests, but two sequential execution attempts hit `spawn EPERM` before starting
+the managed server/browser. These are runner blocks, not passing test runs.
+
 ## Purpose
 
 This document describes the Part 15 test architecture, the committed Part 15.1
