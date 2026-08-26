@@ -1163,11 +1163,11 @@ Final local results on 2026-07-30:
 - `docs/PRODUCTION_READINESS.md` is the status checklist. Recommendation:
   proceed only to a controlled Part 16 Preview setup, not public production.
 
-Current milestone: Part 15.5C - App Discoverability & User Friendliness. Local
+Current milestone: Part 15.5D - Final Visual/UI Polish. Local
 application, documentation, and source coverage are complete; final quality
 gate results are summarized at the top of this document.
 
-Next milestone: Part 15.5D - Final Visual/UI Polish.
+Next milestone: Part 15.5E - Final Beta Regression QA.
 
 ## 26. Part 15.1 Statistics Implementation Notes
 

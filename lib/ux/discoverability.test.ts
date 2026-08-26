@@ -190,3 +190,19 @@ describe("Part 15.5C Settings information architecture", () => {
     );
   });
 });
+
+describe("Part 15.5D visual system contracts", () => {
+  it("defines shared semantic tokens and reduced-motion support", () => {
+    const css = source("app/globals.css");
+    expect(css).toContain("--success:");
+    expect(css).toContain("--warning:");
+    expect(css).toContain("prefers-reduced-motion: reduce");
+  });
+
+  it("keeps feedback, skeleton, and shared controls reusable", () => {
+    expect(source("components/ui/feedback.tsx")).toContain("variant === \"error\" ? \"alert\" : \"status\"");
+    expect(source("components/ui/skeleton.tsx")).toContain("motion-reduce:animate-none");
+    expect(source("components/ui/button.tsx")).toContain("focus-visible:ring-4");
+    expect(source("components/ui/responsive-dialog.tsx")).toContain("DialogFooter");
+  });
+});

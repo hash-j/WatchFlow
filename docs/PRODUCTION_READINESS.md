@@ -504,3 +504,8 @@ verification, provision disposable QA identities, and finish the blocked
 browser/database checks there. Do not open production registration or claim
 production readiness until every Blocked item above has an accountable owner
 and verified result.
+## Part 15.5D status
+
+Visual polish is implemented as application/CSS changes only. No migration,
+RLS, grants, or authentication configuration changes were introduced. Final
+beta regression and release QA is deferred to Part 15.5E.

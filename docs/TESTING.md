@@ -538,3 +538,9 @@ those properties as verified.
 
 Create .env.test.local and fill in disposable QA User A and QA User B
 credentials. Never commit the file or use production accounts.
+## Part 15.5D visual contracts
+
+Source tests cover semantic visual tokens, reduced-motion support, shared
+feedback/skeleton primitives, focus treatment, and responsive dialog usage.
+Browser visual capture remains environment-dependent when Windows Playwright
+workers cannot start (`spawn EPERM`).

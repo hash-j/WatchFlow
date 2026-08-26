@@ -773,3 +773,8 @@ available.
 
 Part 15.5D - Final Visual/UI Polish. Preview/deployment gates below remain
 required before public production.
+## Part 15.5D visual polish
+
+The current milestone standardizes semantic color tokens, typography rhythm,
+surfaces, controls, dialogs, feedback, skeleton loading, and reduced-motion
+behavior across the existing product without changing feature scope.
