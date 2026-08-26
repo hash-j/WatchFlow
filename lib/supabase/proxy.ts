@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
 
 export const PROTECTED_ROUTE_PREFIXES = [
+  "/onboarding",
   "/dashboard",
   "/search",
   "/library",

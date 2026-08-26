@@ -5,7 +5,7 @@
 The deployed Supabase database already contains `profiles`, `movies`, and
 `user_movies`, with RLS enabled. The repository does not contain the original
 base-schema migration, schema dump, or generated database types. It does contain
-reviewed Phase 3, Part 10B, Part 12, Part 13, and Part 15 incremental
+reviewed Phase 3, Part 10B, Part 12, Part 13, Part 15, and Part 15.5B incremental
 migrations, so this document combines the previously verified deployed
 contract with those version-controlled changes.
 
@@ -56,6 +56,16 @@ failure because the RPC is `SECURITY INVOKER`. Patch migration
 UPDATE or access to `PUBLIC`/`anon`. RLS still decides which owned row may be
 updated. Application forms expose only full name, country, and timezone in this
 milestone.
+
+Migration `202608170001_part_15_5b_first_time_onboarding.sql` adds nullable
+`onboarding_completed_at timestamptz`. Null means a future/new profile has not
+completed onboarding; a timestamp means it finished or skipped. The migration
+backfills every profile present when it runs with `now()`, so established users
+are not unexpectedly routed into a new setup flow. It adds no
+`onboarding_version` because there is no current product need for versioned
+reruns. It grants `authenticated` UPDATE only on this new column, grants
+nothing to `anon`, and relies on the existing `auth.uid()` profile ownership
+policy with RLS still enabled.
 
 ### `user_preferences`
 
@@ -875,6 +885,48 @@ and application error-handling contracts, not target installation or live RLS
 behavior. Fresh targets still require the full ordered migration history
 through the normal reviewed deployment process; no migration should be applied
 blindly to an unknown or production project.
+
+## Part 15.5B onboarding migration
+
+The migration is intentionally not applied by the application and was not
+applied remotely during implementation. Review and run this exact SQL through
+the normal migration process against development/Preview before deploying the
+onboarding application code:
+
+```sql
+begin;
+
+alter table public.profiles
+  add column if not exists onboarding_completed_at timestamptz;
+
+comment on column public.profiles.onboarding_completed_at is
+  'When this member completed or skipped the current first-time onboarding flow.';
+
+update public.profiles
+set onboarding_completed_at = now()
+where onboarding_completed_at is null;
+
+revoke update (onboarding_completed_at)
+  on table public.profiles
+  from public, anon;
+
+grant update (onboarding_completed_at)
+  on table public.profiles
+  to authenticated;
+
+commit;
+```
+
+After applying
+`supabase/migrations/202608170001_part_15_5b_first_time_onboarding.sql`, run
+both read-only verification scripts. Confirm the column exists, `profiles` RLS
+is enabled, the effective authenticated UPDATE-column matrix contains the new
+column without a table-level UPDATE grant, `anon` has no write privilege, all
+pre-migration profiles have a non-null value, and two authenticated users can
+change only their own timestamp.
+
+**Current milestone:** Part 15.5B - First-Time User Onboarding.
+**Next milestone:** Part 15.5C - App Discoverability & User Friendliness.
 
 ## Schema-change policy
 

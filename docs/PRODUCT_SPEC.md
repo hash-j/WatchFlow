@@ -20,8 +20,9 @@ password authentication and an authenticated product shell.
 2. WatchFlow keeps the visitor in-app and asks for the six-digit code from the
    Confirm signup email.
 3. Supabase verifies the email OTP and creates a cookie-backed session.
-4. WatchFlow validates the confirmed Auth user and the verified member enters
-   the protected dashboard.
+4. WatchFlow validates the confirmed Auth user. A newly created, incomplete
+   member enters `/onboarding`; an established or completed member enters the
+   protected dashboard.
 
 ### Returning member
 
@@ -93,13 +94,15 @@ and session creation; WatchFlow stores no OTP.
 A 15-minute HttpOnly pending-verification cookie supplies normalized email to
 server actions without placing it in the URL. It is not authorization. Success
 requires a fresh matching confirmed Supabase Auth user/session, clears pending
-state, and redirects to `/dashboard`. Resend uses Supabase signup-confirmation
+state, and redirects according to the member's centralized onboarding state:
+`/onboarding` while incomplete, otherwise `/dashboard`. Resend uses Supabase signup-confirmation
 resend with a 60-second UI/server cooldown; Supabase remains authoritative.
 Changing email clears pending state without deleting an Auth user.
 
 Returning members still use email + password. Recovery remains link-based.
-`/auth/callback` and `/auth/confirm` remain supported. First-time onboarding is
-deferred to Part 15.5B.
+`/auth/callback` and `/auth/confirm` remain supported. Password recovery and
+normal password login keep their existing destinations and do not enter
+onboarding.
 
 ### Authentication accessibility and browser QA
 
@@ -109,6 +112,42 @@ deferred to Part 15.5B.
   announced as status.
 - Playwright covers the canonical sign-up route, invalid login, callback
   failures, keyboard order, logged-out redirects, and five responsive sizes.
+
+## Part 15.5B: first-time user onboarding
+
+After successful signup OTP verification, a new member with no completion
+timestamp enters a short, optional three-step flow at `/onboarding`:
+
+1. **Welcome** explains the private library, Watch Next planning, and the
+   connection between ratings, lists, schedules, and recommendations.
+2. **Personalize** saves the member's existing profile timezone plus the
+   already-supported default Library grid/list view and preferred TMDB search
+   language. No new preference vocabulary is introduced.
+3. **Build your first library** reuses the authenticated server-side TMDB
+   search, durable per-user search limiter, shared metadata ingestion, private
+   library service, duplicate protection, and canonical `want_to_watch` or
+   `watched` statuses.
+
+Movie additions persist immediately. Preferences persist when the member moves
+to step 3, so refreshes and temporary interruptions do not discard meaningful
+work. Zero movies is valid: Finish setup and Skip setup both mark routing
+completion and go to `/dashboard` without deleting any saved preferences or
+movies. Back navigation is available, progress is conveyed as text and
+semantics rather than color alone, and the flow is designed for mobile first.
+
+`profiles.onboarding_completed_at` is the sole completion marker. Deployment
+backfills profiles that already exist when the migration runs, preventing
+established members from being forced through onboarding. A missing legacy
+profile is also treated as established for compatibility. There is no global
+application gate: members may skip, normal login still reaches Dashboard, and
+completed members who manually open `/onboarding` return to Dashboard.
+
+Genre preferences are deferred. The current recommendation and Picker engines
+do not consume a stored favourite-genre preference, so collecting it here
+would create unused data and a second genre contract.
+
+**Current milestone:** Part 15.5B - First-Time User Onboarding
+**Next milestone:** Part 15.5C - App Discoverability & User Friendliness
 
 ## Phase 2: discovery and private library
 
@@ -693,4 +732,5 @@ available.
 
 ## Next milestone
 
-Part 16 - Preview Deployment.
+Part 15.5C - App Discoverability & User Friendliness. Preview/deployment gates
+below remain required before public production.

@@ -1,5 +1,35 @@
 # WatchFlow Security
 
+## Part 15.5B onboarding security
+
+- `/onboarding` is proxy protected and independently requires a fresh,
+  verified `auth.getUser()` response at its server data and mutation
+  boundaries.
+- All onboarding ownership comes from that verified Auth user. No action,
+  query parameter, FormData value, JSON value, or Client Component state may
+  provide `user_id`.
+- Profile completion/timezone, preferences, and personal movies use the normal
+  cookie-bound authenticated client and explicit owner filters under RLS. The
+  admin client is not used for onboarding-owned data.
+- The completion migration grants `authenticated` UPDATE on only
+  `profiles.onboarding_completed_at`, grants nothing to `anon`, and preserves
+  the existing profile ownership policies and enabled RLS.
+- Movie discovery reuses the server-only TMDB adapter and existing durable
+  per-user search bucket. The browser receives mapped movie data, never the
+  provider token; repeated identical in-flight requests remain deduplicated.
+- Preference, step, status, movie, and timezone inputs are server validated.
+  Raw provider/database messages are mapped to safe user-facing errors.
+- Finish and Skip update only the verified member's completion marker and
+  preserve already-saved preferences and movies. Another member cannot use
+  either operation to alter that state.
+- Existing profiles are backfilled once by the reviewed migration. Missing
+  legacy profiles and a temporarily unavailable optional column fail open to
+  normal Dashboard routing, not to another tenant's data or an onboarding
+  loop.
+
+**Current milestone:** Part 15.5B - First-Time User Onboarding.
+**Next milestone:** Part 15.5C - App Discoverability & User Friendliness.
+
 ## Part 15.5A signup verification security
 
 - Signup fields are validated on the server; browser validation is only UX.

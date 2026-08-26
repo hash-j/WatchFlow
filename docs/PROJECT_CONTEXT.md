@@ -1,13 +1,59 @@
 # WatchFlow Project Context
 
-Last updated: 2026-08-15
+Last updated: 2026-08-17
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 15.5A authentication experience and signup email OTP implemented locally; live Supabase/email verification remains
-Current branch: `master` at `2708afd` (`fix: grant scheduling profile permissions`), tagged `schedule-permissions-fix`
-Local status: Part 15.5A application/tests/docs are uncommitted; no database architecture, migration, or remote Supabase setting changed
+Current phase: Part 15.5B first-time user onboarding implemented locally; local verification recorded with environment/live-QA blocks
+Current branch: `master` at `30f1800` (`feat: add email OTP signup verification and auth UX`), tagged `part-15-5a-auth-otp`
+Local status: Part 15.5B application, migration, tests, and docs are uncommitted; no remote Supabase setting, schema, or data was changed
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-08-17 Part 15.5B first-time onboarding
+
+- Added protected `/onboarding` with three URL-backed, refresh-safe steps:
+  Welcome, Personalize, and First Movies. It uses a focused branded shell
+  without the authenticated navigation sidebar.
+- Migration `202608170001_part_15_5b_first_time_onboarding.sql` adds nullable
+  `profiles.onboarding_completed_at`. It backfills every profile present at
+  deployment so established users remain complete; profiles created afterward
+  default to null. It grants authenticated UPDATE only on the new column and
+  relies on existing own-profile RLS. It was not applied remotely.
+- OTP verification now reads the verified user's profile after `getUser()`:
+  incomplete profiles enter `/onboarding`; completed or missing legacy
+  profiles enter `/dashboard`. A schema/read failure also falls back to
+  Dashboard so a staggered manual migration cannot break email verification.
+- Personalize persists only settings already used by the product: profile
+  timezone, preferred TMDB search language, and grid/list Library view. Genre
+  preferences are deferred because the current picker/recommendation engine
+  consumes owned library metadata and activity and has no genre-preference
+  contract.
+- First Movies reuses `searchTmdbMoviesForCurrentUser`, its per-user database
+  limiter and in-flight deduplication, shared metadata ingestion, unique
+  duplicate protection, and the Part 12 status RPC. Choices are only Want to
+  Watch and Watched; status changes do not invent `watched_at`.
+- Movie additions and Step 2 preferences persist immediately. Finish and Skip
+  only stamp completion, preserve partial data, revalidate private product
+  routes, and redirect to Dashboard. The app is not globally gated.
+- Existing empty discovery/Statistics states were retained; Dashboard adds a
+  compact Import Movies quick action so zero-movie completion still exposes
+  Search, Import, and Library paths.
+- Added unit/source/migration contracts, guarded live onboarding RLS coverage,
+  and guarded Playwright flows for completion, skip, refresh, status choices,
+  two-user isolation, and the requested viewport matrix. Delivered OTP-to-
+  onboarding execution remains dependent on a disposable inbox and hosted Auth
+  configuration.
+- Verification on 2026-08-17: clean lint and direct TypeScript passed; focused
+  onboarding/auth passed 8 files/75 tests; the full runner-loader fallback
+  passed 68 files/688 tests. Required `npm test` was blocked before config load
+  by `spawn EPERM` twice. Onboarding Playwright loaded four guarded/skipped
+  cases; responsive Playwright hit `spawn EPERM` twice before a browser worker.
+  The final client-secret scan passed 260 artifacts. Next compiled twice, then hit
+  `spawn EPERM` starting its TypeScript child, so build is not claimed passed.
+  Live migration, OTP delivery, database isolation, and authenticated browser
+  evidence remain blocked and were not simulated as passes.
+- Current milestone: Part 15.5B - First-Time User Onboarding.
+- Next milestone: Part 15.5C - App Discoverability & User Friendliness.
 
 ## 2026-08-15 Part 15.5A authentication + signup email OTP
 
@@ -42,8 +88,9 @@ This document records repository evidence, not assumptions about an uninspected 
   credential, or disposable mailbox exists. Runtime environment files were not
   read because their values are secret. Hosted OTP length/expiry/rate-limit/
   template state and delivery therefore remain blocked.
-- Current milestone: Part 15.5A. Next: Part 15.5B First-Time User Onboarding;
-  verified signup currently redirects directly to Dashboard.
+- Historical Part 15.5A handoff: Part 15.5B was next and verified signup then
+  redirected directly to Dashboard; the Part 15.5B section above supersedes
+  that routing behavior.
 
 ## 2026-08-12 responsive UX milestone
 
@@ -173,6 +220,7 @@ The `(app)` directory is a route group and does not appear in URLs.
 | `/auth/error` | Page | Public callback error display |
 | `/auth/callback` | GET Route Handler | Public PKCE code or token-hash callback |
 | `/auth/confirm` | GET Route Handler | Public token-hash confirmation callback |
+| `/onboarding` | Page | Verified authenticated optional three-step first-time setup; completed users redirect to Dashboard |
 | `/dashboard` | Page | Protected dashboard and viewing summaries |
 | `/search` | Page | Protected server-side TMDB title search; query key `q` |
 | `/library` | Page | Protected server-query library; canonical URL keys `q`, `status`, `watched`, `favourite`, `genre`, `director`, `year`, `yearFrom`, `yearTo`, `ratingMin`, `ratingMax`, `sort`, `view`, `page`, `perPage`; legacy `filter` is accepted |
@@ -281,7 +329,7 @@ Important limitation: there is no original base migration, schema dump, generate
 
 | Table | Ownership and purpose | Important current contract | RLS |
 |---|---|---|---|
-| `profiles` | User-owned, one application profile per Auth identity | `id`, `full_name`, `avatar_url`, `country`, `timezone`, `subscription_plan`, `created_at`, `updated_at`; exact base FK/cascade not versioned | Documented enabled; own-row access expected |
+| `profiles` | User-owned, one application profile per Auth identity | `id`, `full_name`, `avatar_url`, `country`, `timezone`, nullable `onboarding_completed_at`, `subscription_plan`, `created_at`, `updated_at`; exact base FK/cascade not versioned | Documented enabled; own-row access expected |
 | `movies` | Shared TMDB-derived metadata | Shared ID, unique `tmdb_id`, titles, overview, poster/backdrop, release date/year, runtime, JSONB genres/cast/countries, director, language, public rating, trailer, metadata timestamp | Documented enabled; shared read policy not versioned |
 | `user_movies` | User-owned relationship between a user and shared movie | UUID `id`, `user_id`, bigint `movie_id`, status, `favourite`, rating, review, priority, queue, schedule, watched/rewatch, audit timestamps | Enabled; ownership is `auth.uid() = user_id` |
 | `user_preferences` | User-owned one-row-per-Auth-user defaults/preferences | UUID `user_id` PK/FK to `auth.users` with delete cascade, application/display/search/notification fields, audit timestamps | Enabled with explicit own-row policies |
@@ -333,6 +381,7 @@ Nuance: `202607220003_user_settings.sql` used column-level preference grants, bu
 | `202607290001_part_13_private_custom_lists.sql` | Creates private `lists`/`list_movies`, constraints/indexes/triggers, eight RLS policies, scoped grants, one summary query, five atomic membership/order RPCs, and cascade-delete compaction | Created locally only; do not execute automatically. Apply manually after all five prior migrations and reload PostgREST |
 | `202607300001_part_15_tmdb_rate_limits.sql` | Adds durable authenticated TMDB rate-limit buckets/RPC, canonical shared-cache columns, browser write revocation for `movies`, transactional management/schedule RPC replacements, and preference-default repair | Confirmed target has the scheduling RPC, its authenticated EXECUTE privilege, and queue normalization; full migration parity/history is not proven. Do not rerun it on the inspected target |
 | `202608030001_schedule_profile_permissions.sql` | Grants authenticated UPDATE only on `profiles.timezone` and `profiles.updated_at` so the SECURITY INVOKER scheduling RPC can persist its owned profile changes | Version-controlled at `2708afd`; manual target application and live owner/cross-user scheduling retest are not verified in this session |
+| `202608170001_part_15_5b_first_time_onboarding.sql` | Adds nullable profile completion time, backfills existing profiles, and grants authenticated UPDATE only on that new column | Created locally only; review/apply manually, then run both read-only verification scripts and guarded onboarding isolation tests |
 
 Original creation migrations for `profiles`, `movies`, and `user_movies` are absent. Contract tests inspect SQL text only; they do not prove remote application or multi-user isolation.
 
@@ -683,37 +732,37 @@ Migrations 1 and parts of 2 are not safely repeatable; never rerun old SQL blind
 
 ## 20. Current Project State
 
-- Committed baseline: **scheduling profile-permission patch** at `2708afd`,
-  tagged `schedule-permissions-fix`, on Part 15.1 Statistics at `0c05fc8`.
-  Guarded authenticated browser verification remains incomplete.
-- Latest work: **Part 15 TMDB limiter verification harness**, currently
-  uncommitted. It adds separately opted-in authenticated RPC and Playwright
-  coverage without changing the Part 15 migration or limiter thresholds.
+- Committed baseline: **Part 15.5A authentication + signup email OTP** at
+  `30f1800`, tagged `part-15-5a-auth-otp`. Guarded delivered-email and
+  authenticated browser verification remain incomplete.
+- Latest work: **Part 15.5B first-time user onboarding**, currently
+  uncommitted. It adds one focused migration, the protected three-step route,
+  conditional OTP routing, first-run Dashboard support, and guarded coverage.
 - Historical Part 11 statistics/dashboard upgrade: **never implemented or
   committed**. Part 15.1 rebuilds the requested feature from current architecture.
-- Next operational step: pin and verify the
-  intended Supabase project, then continue **Part 16 — Preview Deployment**.
-- Before limiter execution, provide disposable QA A/B, run both read-only SQL
-  audits, and confirm the fixed operation buckets are fresh.
-- Branch/base HEAD: `master`, `2708afd` (`fix: grant scheduling profile permissions`).
+- Next operational step: begin **Part 15.5C — App Discoverability & User
+  Friendliness** while retaining the separate Preview deployment gates.
+- Before live onboarding execution, manually apply the Part 15.5B migration in
+  the pinned development project, provide disposable QA A/B and a signup
+  inbox, then run both read-only SQL audits and guarded tests.
+- Branch/base HEAD: `master`, `30f1800` (`feat: add email OTP signup verification and auth UX`).
   Tags `settings-v1` and misleading `statistics-v1` remain historical;
   `statistics-v1` is not moved.
-- Latest migration: `202608030001_schedule_profile_permissions.sql`
-  (version-controlled; remote application unverified in this session).
+- Latest migration: `202608170001_part_15_5b_first_time_onboarding.sql`
+  (created locally; remote application intentionally not attempted).
 - Latest feature set: private custom lists plus a URL-filtered random picker,
   eight explicit moods, bounded in-session repeat avoidance, and transparent
   scored/deduplicated/diversified private-library recommendations, plus the
   committed personal Statistics page.
-- Baseline Git state at `2708afd` was clean; the current worktree contains only
-  the limiter test/error-classification review and related documentation.
+- Baseline Git state at `30f1800` was clean; the current worktree contains only
+  the Part 15.5B implementation, migration, tests, and documentation.
 - Confirmed target findings establish the Part 15 scheduling/normalization
   objects and relevant RLS/grants, but not full Part 15 migration parity. The
   old Part 15 migration must not be rerun on that target.
-- No Supabase/TMDB authentication or request was attempted and no remote schema
-  or user data was changed during this limiter task because the safety guard
-  was not satisfied.
-- Public/protection Playwright is green; authenticated Part 12-15 and live RLS
-  coverage is blocked as described above.
+- No remote schema, hosted Auth setting, or QA user data was changed during
+  Part 15.5B because the development safety guard was not satisfied.
+- Onboarding Playwright loaded four guarded cases; responsive browser execution
+  and live RLS coverage remain blocked as described at the top of this file.
 - `/statistics` is committed; its guarded authenticated/two-user browser
   evidence remains pending.
 
@@ -721,10 +770,11 @@ Migrations 1 and parts of 2 are not safely repeatable; never rerun old SQL blind
 
 This is the roadmap, not completed functionality.
 
-1. **Part 16 — Preview deployment**
-2. **Part 17 — Public beta preparation**
-3. **Part 18 — Notifications and calendar integration**
-4. **Part 19 — Paid SaaS**
+1. **Part 15.5C — App discoverability and user friendliness**
+2. **Part 16 — Preview deployment**
+3. **Part 17 — Public beta preparation**
+4. **Part 18 — Notifications and calendar integration**
+5. **Part 19 — Paid SaaS**
 
 ## 22. Part 12 Implementation Notes
 
@@ -1062,12 +1112,12 @@ Final local results on 2026-07-30:
 - `docs/PRODUCTION_READINESS.md` is the status checklist. Recommendation:
   proceed only to a controlled Part 16 Preview setup, not public production.
 
-Current milestone: guarded Part 15 TMDB limiter verification on the committed
-scheduling-permission baseline. Static and mocked coverage is available, but
-live database, concurrency, expiry, and browser results remain blocked by the
-missing development pin and disposable QA configuration.
+Current milestone: Part 15.5B - First-Time User Onboarding. Local application,
+migration, documentation, and static/mocked coverage are complete; live
+database, delivered OTP, and authenticated browser evidence remain blocked by
+the missing development authorization and disposable QA configuration.
 
-Next milestone: Part 16 Preview Deployment.
+Next milestone: Part 15.5C - App Discoverability & User Friendliness.
 
 ## 26. Part 15.1 Statistics Implementation Notes
 

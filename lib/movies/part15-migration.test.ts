@@ -63,7 +63,7 @@ describe("Part 15 database migration contract", () => {
   it("uses the one authorized Part 15 migration", () => {
     const part15Migrations = readdirSync(
       resolve(process.cwd(), "supabase/migrations"),
-    ).filter((name) => name.includes("_part_15_"));
+    ).filter((name) => name.includes("_part_15_tmdb_"));
 
     expect(part15Migrations).toEqual([migrationName]);
   });
@@ -315,6 +315,7 @@ describe("scheduling profile permission patch contract", () => {
       "avatar_url",
       "country",
       "full_name",
+      "onboarding_completed_at",
       "timezone",
       "updated_at",
     ]);
@@ -332,6 +333,7 @@ describe("scheduling profile permission patch contract", () => {
     expect(readinessAudit).toContain("has_column_privilege");
     for (const column of [
       "full_name",
+      "onboarding_completed_at",
       "avatar_url",
       "country",
       "timezone",

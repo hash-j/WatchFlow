@@ -197,3 +197,10 @@ export function getQaCredentials(kind: QaCredentialKind): QaCredentials {
 export function getTestMovieQuery() {
   return environmentValue("E2E_TEST_MOVIE_QUERY") ?? "Inception";
 }
+
+export function getOnboardingMovieQueries() {
+  return [
+    environmentValue("E2E_ONBOARDING_MOVIE_QUERY_A") ?? getTestMovieQuery(),
+    environmentValue("E2E_ONBOARDING_MOVIE_QUERY_B") ?? "Arrival",
+  ] as const;
+}

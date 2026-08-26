@@ -1,5 +1,51 @@
 # WatchFlow Testing Guide
 
+## Part 15.5B onboarding coverage
+
+Focused tests in `lib/onboarding/` cover incomplete, completed, skipped, and
+legacy compatibility states; authenticated/verified route decisions; profile
+completion ownership; validation of steps, statuses, timezone, default Library
+view, and language; preference persistence; zero/one/multiple-movie completion;
+Want to Watch and Watched additions; duplicate-safe handling; preservation on
+Skip; safe error mapping; no browser `user_id`; the existing TMDB search
+service/rate limiter boundary; and the migration's column, backfill, RLS, and
+narrow-grant contracts. Auth tests cover conditional post-OTP routing, while
+proxy tests cover anonymous `/onboarding` protection.
+
+`integration/onboarding.integration.test.ts` is separately enabled with
+`RUN_ONBOARDING_INTEGRATION_TESTS=true`. Against a pinned development project
+and disposable QA Users A/B, it verifies the installed column, established-user
+backfill assumption, owned timestamp mutation, other-user isolation, and anon
+denial, then restores both QA completion values. It does not use a service-role
+client or production target.
+
+`e2e/onboarding.spec.ts` uses the established authenticated fixture and a
+normal public Supabase client signed in as each QA user to control only that
+user's completion timestamp. It covers Welcome, preference save, refresh at
+step 3, zero-movie finish, controlled TMDB searches, Want to Watch and Watched
+adds, Library presence, logout/login persistence, completed-route redirect,
+Skip preservation, two-user independence, diagnostics, and all requested
+mobile/tablet/desktop viewports. Search cases need the controlled
+`E2E_ONBOARDING_MOVIE_QUERY_A` and `E2E_ONBOARDING_MOVIE_QUERY_B` values.
+
+The repository cannot prove the fresh-account OTP-to-onboarding flow without a
+disposable mailbox and hosted Auth settings. If those are absent, that exact
+case remains blocked even when the already-verified QA flow passes.
+
+Local evidence from 2026-08-17: focused onboarding/auth tests passed 8 files/75
+tests; direct TypeScript and lint passed; and the full runner-loader Vitest
+fallback passed 68 files/688 tests. The required `npm test` command encountered
+`spawn EPERM` before config load twice. The four onboarding integration tests
+and four onboarding Playwright cases loaded but were guarded/skipped without
+authorized disposable development configuration. Responsive Playwright hit
+`spawn EPERM` twice before a browser worker. The final post-attempt
+client-secret scan passed 260 artifacts; Next compiled successfully twice but
+its TypeScript child could not spawn, so the build remains
+environment-blocked.
+
+**Current milestone:** Part 15.5B - First-Time User Onboarding.
+**Next milestone:** Part 15.5C - App Discoverability & User Friendliness.
+
 ## Part 15.5A authentication coverage
 
 Focused `lib/auth/` tests cover signup validation, email normalization,
@@ -109,6 +155,8 @@ be exposed to browser code. The Supabase secret and TMDB token are server-only.
 - `E2E_DELETE_ACCOUNT_PASSWORD`
 - `E2E_RUN_ACCOUNT_DELETION`
 - `E2E_TEST_MOVIE_QUERY`
+- `E2E_ONBOARDING_MOVIE_QUERY_A`
+- `E2E_ONBOARDING_MOVIE_QUERY_B`
 - `RUN_TMDB_RATE_LIMIT_E2E`
 - `E2E_RATE_LIMIT_UI_BUCKETS_ARE_FRESH`
 
@@ -116,6 +164,7 @@ be exposed to browser code. The Supabase secret and TMDB token are server-only.
 
 - `RUN_SUPABASE_INTEGRATION_TESTS`
 - `RUN_TMDB_RATE_LIMIT_INTEGRATION_TESTS`
+- `RUN_ONBOARDING_INTEGRATION_TESTS`
 - `E2E_RATE_LIMIT_BUCKETS_ARE_FRESH`
 - `E2E_TARGET_ENV`
 - `E2E_EXPECTED_SUPABASE_URL`

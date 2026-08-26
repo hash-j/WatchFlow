@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   getPending: vi.fn(),
   setPending: vi.fn(),
   clearPending: vi.fn(),
+  getPostVerificationDestination: vi.fn(),
   redirect: vi.fn((path: string) => {
     throw new Error(`REDIRECT:${path}`);
   }),
@@ -15,6 +16,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/lib/onboarding/supabase-onboarding", () => ({
+  getPostVerificationDestination: mocks.getPostVerificationDestination,
+}));
 vi.mock("./pending-verification", async () => {
   const actual = await vi.importActual<typeof import("./pending-verification")>("./pending-verification");
   return {
@@ -52,6 +56,7 @@ function validSignupForm() {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.getPending.mockResolvedValue(pending);
+  mocks.getPostVerificationDestination.mockResolvedValue("/onboarding");
 });
 
 describe("signup action", () => {
@@ -93,13 +98,28 @@ describe("verification action", () => {
 
   it("verifies the OTP, validates the Auth user, clears pending state, and redirects", async () => {
     const verifyOtp = vi.fn().mockResolvedValue({ data: { session: {}, user: {} }, error: null });
-    const getUser = vi.fn().mockResolvedValue({ data: { user: { email: pending.email, email_confirmed_at: "2026-08-15T00:00:00Z" } }, error: null });
+    const getUser = vi.fn().mockResolvedValue({ data: { user: { id: "verified-user", email: pending.email, email_confirmed_at: "2026-08-15T00:00:00Z" } }, error: null });
     mocks.createClient.mockResolvedValue({ auth: { verifyOtp, getUser } });
 
-    await expect(verifyEmailAction(INITIAL_VERIFICATION_STATE, form({ code: "123456", user_id: "attacker" }))).rejects.toThrow("REDIRECT:/dashboard");
+    await expect(verifyEmailAction(INITIAL_VERIFICATION_STATE, form({ code: "123456", user_id: "attacker" }))).rejects.toThrow("REDIRECT:/onboarding");
     expect(verifyOtp).toHaveBeenCalledWith({ email: pending.email, token: "123456", type: "email" });
     expect(verifyOtp.mock.calls[0][0]).not.toHaveProperty("user_id");
+    expect(mocks.getPostVerificationDestination).toHaveBeenCalledWith(
+      expect.any(Object),
+      "verified-user",
+    );
     expect(mocks.clearPending).toHaveBeenCalledOnce();
+  });
+
+  it("sends an already-onboarded verified user to Dashboard", async () => {
+    mocks.getPostVerificationDestination.mockResolvedValue("/dashboard");
+    const verifyOtp = vi.fn().mockResolvedValue({ data: { session: {}, user: {} }, error: null });
+    const getUser = vi.fn().mockResolvedValue({ data: { user: { id: "existing-user", email: pending.email, email_confirmed_at: "2026-08-15T00:00:00Z" } }, error: null });
+    mocks.createClient.mockResolvedValue({ auth: { verifyOtp, getUser } });
+
+    await expect(
+      verifyEmailAction(INITIAL_VERIFICATION_STATE, form({ code: "123456" })),
+    ).rejects.toThrow("REDIRECT:/dashboard");
   });
 
   it.each([

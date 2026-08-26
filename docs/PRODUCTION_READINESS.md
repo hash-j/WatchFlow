@@ -1,5 +1,60 @@
 # WatchFlow Production Readiness
 
+## Part 15.5B onboarding deployment gate
+
+**Application implementation is local and the database change is not
+applied.** Before deploying the onboarding code, review and manually apply
+`supabase/migrations/202608170001_part_15_5b_first_time_onboarding.sql` to the
+intended development/Preview project. Its exact SQL is reproduced in
+`docs/DATABASE.md`; it adds the nullable completion timestamp, backfills all
+existing profiles, revokes public/anon column update, and grants only that
+column to `authenticated`. Do not apply it blindly to production.
+
+After application, run both read-only SQL verification files and the guarded
+onboarding integration test. Required evidence is: column installed, profile
+RLS still enabled, no anonymous write, exact narrow authenticated grant,
+existing-profile backfill complete, and QA A/B able to update only their own
+completion state. Then run the guarded onboarding browser flow against the
+same isolated environment with controlled movie queries.
+
+The application deliberately treats a missing legacy profile as established
+and routes a successful OTP verification to Dashboard if the optional field
+cannot be read during a staggered rollout. This prevents existing accounts
+from being trapped, but it does not replace applying and verifying the
+migration. Real fresh signup, delivered six-digit OTP, and automatic
+`/onboarding` routing still require the Part 15.5A hosted Auth configuration
+and a disposable inbox; without them that end-to-end case is blocked.
+
+**Current milestone:** Part 15.5B - First-Time User Onboarding.
+**Next milestone:** Part 15.5C - App Discoverability & User Friendliness.
+
+### Part 15.5B local verification evidence (2026-08-17)
+
+- `npm run lint` passed without warnings after the implementation cleanup.
+- `npx tsc --noEmit` passed.
+- The focused onboarding/auth suite passed 8 files and 75 tests.
+- The required `npm test` entry point failed before config load with the known
+  Windows `spawn EPERM` on two sequential attempts. The supported
+  `--configLoader runner` fallback then passed the complete unit/source suite:
+  68 files and 688 tests.
+- The onboarding integration file loaded with four tests correctly skipped by
+  the absent explicit development/credential guard. No live database or
+  two-user result is claimed.
+- The onboarding Playwright file loaded with four cases correctly skipped
+  because `E2E_TARGET_ENV=development` was not authorized. Responsive
+  Playwright then hit `spawn EPERM` before a browser worker on two sequential
+  attempts; no mobile/tablet/browser pass is claimed from this run.
+- The final `npm run scan:client-secrets` passed across 260 current browser artifacts
+  with no forbidden category or configured secret-value leak; the existing
+  reviewed Supabase SDK prefix sentinel remained non-secret.
+- `npm run build` compiled the application successfully on two sequential
+  attempts, then failed when Next tried to spawn its TypeScript child with
+  `EPERM`. Direct TypeScript passes, but the production build is correctly
+  recorded as environment-blocked rather than passed.
+- No migration, hosted Auth setting, QA data, or production/remote Supabase
+  resource was changed. Delivered OTP-to-onboarding, installed-schema checks,
+  live rate limiting, and two-user browser/database isolation remain blocked.
+
 ## Part 15.5A manual Supabase Auth gate
 
 The application-side signup OTP flow is implemented locally. The hosted
@@ -48,8 +103,8 @@ manual steps before treating email verification as operational:
 
 Delivered signup OTP verification and delivered password-reset regression
 remain blocked until those settings and a disposable inbox are available.
-Part 15.5B first-time onboarding is next; verified signup currently lands on
-`/dashboard`.
+Once the Part 15.5B migration is installed, verified incomplete signup routes
+to `/onboarding`; completed and established members route to `/dashboard`.
 
 ## Assessment
 

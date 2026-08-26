@@ -102,6 +102,7 @@ describe("critical authentication route contracts", () => {
     }
     for (const route of [
       "/dashboard",
+      "/onboarding",
       "/search",
       "/library",
       "/library/42",

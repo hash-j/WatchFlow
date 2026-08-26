@@ -281,6 +281,50 @@ where table_schema = 'public'
   and grantee in ('authenticated', 'anon', 'PUBLIC')
 order by table_name, column_name, grantee, privilege_type;
 
+-- Onboarding may update only its completion timestamp. Existing settings and
+-- scheduling columns remain intentionally writable; every other profile
+-- column must remain denied, and anon must have no profile UPDATE column.
+with profile_columns as (
+  select
+    tables.oid as table_oid,
+    attributes.attnum,
+    attributes.attname as column_name
+  from pg_catalog.pg_class as tables
+  inner join pg_catalog.pg_namespace as namespaces
+    on namespaces.oid = tables.relnamespace
+  inner join pg_catalog.pg_attribute as attributes
+    on attributes.attrelid = tables.oid
+  where namespaces.nspname = 'public'
+    and tables.relname = 'profiles'
+    and tables.relkind in ('r', 'p')
+    and attributes.attnum > 0
+    and not attributes.attisdropped
+)
+select
+  'profiles.update.' || profile_columns.column_name as object_name,
+  profile_columns.column_name in (
+    'full_name',
+    'avatar_url',
+    'country',
+    'timezone',
+    'updated_at',
+    'onboarding_completed_at'
+  ) as authenticated_should_have,
+  pg_catalog.has_column_privilege(
+    'authenticated',
+    profile_columns.table_oid,
+    profile_columns.attnum,
+    'UPDATE'
+  ) as authenticated_has,
+  pg_catalog.has_column_privilege(
+    'anon',
+    profile_columns.table_oid,
+    profile_columns.attnum,
+    'UPDATE'
+  ) as anon_has
+from profile_columns
+order by profile_columns.attnum;
+
 -- 6. Limiter RPC hardening and direct-access isolation.
 with limiter as (
   select

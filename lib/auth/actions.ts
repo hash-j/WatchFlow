@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { getPostVerificationDestination } from "@/lib/onboarding/supabase-onboarding";
 
 import {
   getResendErrorMessage,
@@ -97,6 +98,7 @@ export async function verifyEmailAction(
     };
   }
 
+  let destination = "/dashboard";
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.verifyOtp({
@@ -135,6 +137,11 @@ export async function verifyEmailAction(
         code: validation.code,
       };
     }
+
+    destination = await getPostVerificationDestination(
+      supabase,
+      verified.user.id,
+    );
   } catch (error) {
     return {
       error: getVerificationErrorMessage(error),
@@ -144,7 +151,7 @@ export async function verifyEmailAction(
   }
 
   await clearPendingVerification();
-  redirect("/dashboard");
+  redirect(destination);
 }
 
 export async function resendVerificationAction(

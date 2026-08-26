@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { CalendarDays, Library, Search } from "lucide-react";
+import { CalendarDays, FileUp, Library, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
@@ -34,6 +34,12 @@ const quickActions = [
     title: "Plan a watch",
     description: "Schedule a movie in your local timezone.",
     icon: CalendarDays,
+  },
+  {
+    href: "/import",
+    title: "Import movies",
+    description: "Bring a CSV collection into WatchFlow when search is too slow.",
+    icon: FileUp,
   },
 ] as const;
 
@@ -135,7 +141,7 @@ async function DashboardContent() {
         className="mb-0"
       />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {quickActions.map(({ href, title, description, icon: Icon }) => (
           <Link
             key={href}

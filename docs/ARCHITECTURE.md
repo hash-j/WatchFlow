@@ -1,5 +1,56 @@
 # WatchFlow Architecture
 
+## Part 15.5B onboarding architecture
+
+`/onboarding` is an authenticated App Router page outside the `(app)` shell so
+the three-step experience stays focused and does not render the desktop
+sidebar on small screens. The proxy protects the route, and the page repeats a
+fresh `auth.getUser()` check, requires a verified email, and reads completion
+through the centralized server-only helpers in `lib/onboarding/`. Browser input
+never supplies a member ID.
+
+```text
+signup OTP accepted
+  -> fresh verified Auth user
+  -> profiles.onboarding_completed_at is null -> /onboarding
+  -> timestamp, missing legacy profile, or unavailable optional field -> /dashboard
+
+/onboarding
+  -> Welcome
+  -> Personalize (profile timezone + existing user_preferences fields)
+  -> First movies (existing TMDB search/limiter + library services)
+  -> Finish or Skip stamps completion -> /dashboard
+```
+
+The route uses `?step=1|2|3` only for transient presentation. Persistent data
+is server-backed: Personalize writes before entering step 3 and every movie is
+added immediately. Reloading therefore returns to a valid requested step with
+saved preferences and owned movie state re-read from Supabase. Finish and Skip
+share the same owned profile timestamp mutation; Skip deliberately preserves
+all partial data.
+
+The migration backfills every profile present at deployment and leaves future
+profile rows incomplete. `readOnboardingProfileState()` treats a missing
+legacy profile as completed so an older account cannot be trapped. No broad
+middleware gate was introduced, and password login/recovery behavior is
+unchanged. During a staggered application/database rollout, failure to read
+the optional onboarding field falls back to Dashboard rather than breaking
+successful email verification.
+
+Personalization reuses the Settings schemas and service for timezone, default
+Library view, and preferred search language. Favourite genres are not stored
+because current Recommendations and Picker logic cannot consume such a field.
+Movie search calls `searchTmdbMoviesForCurrentUser()` and therefore retains
+the durable per-user TMDB search bucket and in-flight deduplication. Adding a
+result calls the existing library ingestion service, then the existing
+owner-scoped bulk status service to select only `want_to_watch` or `watched`.
+The authenticated SSR client performs all profile, preference, and
+`user_movies` work under RLS; the existing server-only metadata boundary is
+unchanged.
+
+**Current milestone:** Part 15.5B - First-Time User Onboarding.
+**Next milestone:** Part 15.5C - App Discoverability & User Friendliness.
+
 ## Part 15.5A authentication architecture
 
 Signup now crosses a Server Action boundary in `lib/auth/actions.ts`. Pure
@@ -17,7 +68,8 @@ token, or refresh token and grants no access.
 `/auth/verify-email` submits only `code`. The server resolves email from the
 cookie and calls `auth.verifyOtp({ email, token, type: "email" })`, then
 `auth.getUser()`. A matching confirmed email and valid session are required
-before clearing pending state and redirecting to `/dashboard`. Resend calls
+before clearing pending state and redirecting incomplete new members to
+`/onboarding` and completed/established members to `/dashboard`. Resend calls
 `auth.resend({ type: "signup", email })`; change-email clears only local
 pending state. No schema, custom OTP service, or admin verification client was
 added.
@@ -78,7 +130,8 @@ name, normalized email, password, and confirmation before calling `signUp()`.
 The pending email is kept in the scoped HttpOnly cookie and the user enters the
 Confirm signup `{{ .Token }}` code at `/auth/verify-email`. The server calls
 `verifyOtp({ email, token, type: "email" })` and validates a fresh confirmed
-user/session before dashboard access. The
+user/session before selecting onboarding or Dashboard from the centralized
+completion state. The
 callback supports PKCE authorization codes and token-hash links. It verifies or
 exchanges the credential on the server, writes the session cookies, and routes
 the member to an internal destination.

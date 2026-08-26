@@ -35,6 +35,7 @@ with expected(table_name, column_name) as (
     ('profiles', 'subscription_plan'),
     ('profiles', 'created_at'),
     ('profiles', 'updated_at'),
+    ('profiles', 'onboarding_completed_at'),
     ('movies', 'id'),
     ('movies', 'tmdb_id'),
     ('movies', 'title'),
@@ -694,7 +695,8 @@ evaluated as (
       'avatar_url',
       'country',
       'timezone',
-      'updated_at'
+      'updated_at',
+      'onboarding_completed_at'
     ) as authenticated_should_have,
     pg_catalog.has_column_privilege(
       'authenticated',

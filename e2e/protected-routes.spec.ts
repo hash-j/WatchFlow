@@ -2,6 +2,7 @@ import { expect, test } from "./fixtures/qa";
 
 test.describe("logged-out route protection", () => {
   const protectedRoutes = [
+    "/onboarding",
     "/dashboard",
     "/search",
     "/library",
