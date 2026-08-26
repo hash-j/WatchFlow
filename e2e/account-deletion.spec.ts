@@ -87,7 +87,7 @@ function declareAccountDeletionSuite() {
         await expect(
           qaUserAPage.getByRole("heading", {
             level: 1,
-            name: /^Welcome/,
+            name: "Dashboard",
           }),
         ).toBeVisible();
         await qaUserAPage.goto(

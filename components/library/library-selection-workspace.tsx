@@ -290,7 +290,7 @@ function BulkActions({
               Personal ratings, reviews, queue positions, and schedules for
               these selections will be removed.
             </p>
-            <p>Shared movie metadata will not be deleted.</p>
+            <p>The movie can still appear in Search for other WatchFlow members.</p>
           </>
         }
         confirmLabel="Remove selected movies"
@@ -380,6 +380,9 @@ function LibrarySelectionWorkspaceState({
             </Button>
           ) : (
             <>
+              <p className="w-full text-sm font-semibold sm:w-auto" role="status">
+                Selection mode
+              </p>
               <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md border bg-background px-3 text-sm font-medium focus-within:ring-2 focus-within:ring-ring">
                 <input
                   ref={selectAllRef}

@@ -101,7 +101,8 @@ describe("authenticated TMDB rate limiting", () => {
     await expect(enforceTmdbRateLimit(client, "search")).rejects.toMatchObject({
       name: "MovieProviderRateLimitError",
       retryAfterSeconds: 17,
-      message: "Too many movie requests. Try again in 17 seconds.",
+      message:
+        "You’ve searched a lot in a short time. Try again in 17 seconds.",
     });
   });
 

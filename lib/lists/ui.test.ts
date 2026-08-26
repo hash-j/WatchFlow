@@ -53,13 +53,13 @@ describe("Part 13 route and private navigation contracts", () => {
     );
   });
 
-  it("adds My Lists to authenticated navigation and proxy protection", () => {
+  it("adds canonical Lists navigation and proxy protection", () => {
     const navigation = source("components/app-navigation.tsx");
     const proxy = source("lib/supabase/proxy.ts");
     const authRoutes = source("lib/auth/routes.test.ts");
 
     expect(navigation).toContain(
-      '{ href: "/lists", label: "My Lists", icon: ListPlus }',
+      '{ href: "/lists", label: "Lists", icon: ListPlus }',
     );
     expect(proxy).toContain('"/lists"');
     expect(authRoutes).toContain('"/lists"');
@@ -73,16 +73,16 @@ describe("Part 13 route and private navigation contracts", () => {
     const detail = source("app/(app)/lists/[listId]/page.tsx");
     const card = source("components/lists/list-card.tsx");
 
-    expect(page).toContain("My Lists");
-    expect(page).toContain("Private collections");
+    expect(page).toContain('title="Lists"');
+    expect(page).toContain("custom collections");
     expect(page).toContain("lists.length");
     expect(page).toContain(
-      "You have not created any custom lists yet.",
+      "You have not created any Lists yet.",
     );
     for (const example of [
       "Weekend Movies",
       "Best Thrillers",
-      "Watch With Family",
+      "Family Favourites",
     ]) {
       expect(page).toContain(example);
     }
@@ -95,7 +95,8 @@ describe("Part 13 route and private navigation contracts", () => {
     expect(detail).toContain("data.movies.length");
     expect(detail).toContain("This list is empty");
     expect(detail).toContain("A movie can");
-    expect(detail).toContain("belong to several custom lists.");
+    expect(detail).toContain("belong to");
+    expect(detail).toContain("several Lists.");
   });
 });
 

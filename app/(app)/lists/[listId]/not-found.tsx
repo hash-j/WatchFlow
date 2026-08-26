@@ -15,7 +15,7 @@ export default function ListNotFound() {
         This private list is unavailable, or the supplied list ID is invalid.
       </p>
       <Button asChild className="mt-6 w-full sm:w-auto">
-        <Link href="/lists">Return to My Lists</Link>
+        <Link href="/lists">Return to Lists</Link>
       </Button>
     </div>
   );

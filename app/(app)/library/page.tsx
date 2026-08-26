@@ -71,10 +71,10 @@ async function LibraryContent({ searchParams }: LibraryPageProps) {
           <EmptyState
             icon={<LibraryBig className="size-9" aria-hidden="true" />}
             title="Your library is empty"
-            description="Search TMDB and add a movie to begin building your private library."
+            description="Search for a movie and save it to start building your private Library."
             actions={
               <Link href="/search" className={buttonVariants()}>
-                Search movies
+                Search Movies
               </Link>
             }
           />
@@ -91,7 +91,7 @@ async function LibraryContent({ searchParams }: LibraryPageProps) {
             </h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
               Clear the search or remove one or more filters to see other
-              personal-library records.
+              Library movies.
             </p>
             <ResponsiveActions className="mx-auto mt-5 max-w-md justify-center">
               {data.state.q ? (
@@ -151,9 +151,9 @@ export default function LibraryPage({ searchParams }: LibraryPageProps) {
   return (
     <PageContainer>
       <PageHeader
-        eyebrow="Private collection"
-        title="My Library"
-        description="Search, filter, sort, favourite, and manage only the movies saved to your account."
+        eyebrow="Your movies"
+        title="Library"
+        description="Everything you have saved, rated, watched, or plan to watch."
       />
 
       <Suspense fallback={<LibraryLoading />}>

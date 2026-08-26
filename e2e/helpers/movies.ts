@@ -74,7 +74,7 @@ export async function removeControlledMovie(
     page.getByRole("button", { name: "Yes, remove" }),
     {
       url: /\/library$/,
-      visible: page.getByRole("heading", { level: 1, name: "My Library" }),
+      visible: page.getByRole("heading", { level: 1, name: "Library" }),
     },
   );
 }

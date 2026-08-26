@@ -47,11 +47,11 @@ function errorMessage(error: unknown) {
   }
 
   if (error instanceof DiscoverySchemaError) {
-    return "The movie picker is unavailable because required library fields are missing.";
+    return "The Movie Picker can’t use part of your Library right now. Try again later.";
   }
 
   if (error instanceof DiscoveryRelationshipError) {
-    return "Movie metadata could not be linked to your library. Please try again.";
+    return "WatchFlow couldn’t connect some movie details to your Library. Try again.";
   }
 
   if (error instanceof DiscoveryAuthorizationError) {

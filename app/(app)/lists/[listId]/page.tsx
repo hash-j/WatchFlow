@@ -144,19 +144,17 @@ async function ListDetailContent({
           </div>
 
           <ResponsiveActions className="lg:w-auto">
-            <AddMoviesDialog
-              listId={data.list.id}
-              listName={data.list.name}
-              candidates={data.candidates}
-              candidateTotal={data.candidateTotal}
-              picker={data.picker}
-              open={pickerOpen}
-            />
+            {data.movies.length > 0 ? (
+              <AddMoviesDialog
+                listId={data.list.id}
+                listName={data.list.name}
+                candidates={data.candidates}
+                candidateTotal={data.candidateTotal}
+                picker={data.picker}
+                open={pickerOpen}
+              />
+            ) : null}
             <EditListDialog list={data.list} />
-            <DeleteListDialog
-              list={data.list}
-              movieCount={data.movies.length}
-            />
           </ResponsiveActions>
         </div>
 
@@ -205,9 +203,19 @@ async function ListDetailContent({
             />
             <h3 className="mt-4 text-lg font-semibold">This list is empty</h3>
             <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
-              Add one or more movies from your personal library. A movie can
-              belong to several custom lists.
+              Add one or more movies from your Library. A movie can belong to
+              several Lists.
             </p>
+            <div className="mt-5 flex justify-center">
+              <AddMoviesDialog
+                listId={data.list.id}
+                listName={data.list.name}
+                candidates={data.candidates}
+                candidateTotal={data.candidateTotal}
+                picker={data.picker}
+                open={pickerOpen}
+              />
+            </div>
           </div>
         ) : (
           <ol className="mt-4 space-y-3">
@@ -223,6 +231,24 @@ async function ListDetailContent({
           </ol>
         )}
       </section>
+
+      <section
+        aria-labelledby="delete-list-heading"
+        className="rounded-xl border border-destructive/40 p-5 sm:p-6"
+      >
+        <h2 id="delete-list-heading" className="text-lg font-semibold">
+          Delete this List
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Deleting the List does not remove its movies from your Library.
+        </p>
+        <div className="mt-4">
+          <DeleteListDialog
+            list={data.list}
+            movieCount={data.movies.length}
+          />
+        </div>
+      </section>
     </div>
   );
 }
@@ -235,7 +261,7 @@ export default function ListDetailPage(props: ListDetailPageProps) {
         className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <ArrowLeft className="size-4" aria-hidden="true" />
-        Back to My Lists
+        Back to Lists
       </Link>
       <Suspense fallback={<DetailLoading />}>
         <ListDetailContent {...props} />

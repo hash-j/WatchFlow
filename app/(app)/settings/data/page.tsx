@@ -30,10 +30,17 @@ export default async function DataSettingsPage({
           role="status"
         >
           <CheckCircle2 className="size-5 shrink-0" aria-hidden="true" />
-          Deleted {deletedCount} library {deletedCount === 1 ? "record" : "records"}.
+          Deleted {deletedCount} Library {deletedCount === 1 ? "movie" : "movies"}.
           Your account remains active.
         </div>
       ) : null}
+
+      <div>
+        <h2 className="text-2xl font-semibold tracking-tight">Data & Account</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Download a private copy of your data or review permanent account controls.
+        </p>
+      </div>
 
       <ExportControls />
 

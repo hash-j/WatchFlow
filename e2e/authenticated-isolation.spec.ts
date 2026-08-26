@@ -22,7 +22,7 @@ function declareAuthenticatedIsolationSuite() {
       try {
         await qaUserBPage.goto("/lists");
         await expect(
-          qaUserBPage.getByRole("heading", { level: 1, name: "My Lists" }),
+          qaUserBPage.getByRole("heading", { level: 1, name: "Lists" }),
         ).toBeVisible();
         await expect(
           qaUserBPage.getByText(name, { exact: true }),

@@ -15,7 +15,7 @@ export function getSafeDiscoveryLoadError(error: unknown) {
   }
 
   if (error instanceof DiscoveryRelationshipError) {
-    return "Movie metadata could not be linked to your library. Please try again.";
+    return "WatchFlow could not connect some movie details to your Library. Try again.";
   }
 
   if (error instanceof DiscoveryAuthorizationError) {

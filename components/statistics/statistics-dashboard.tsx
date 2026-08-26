@@ -24,7 +24,7 @@ function EmptyLibraryState() {
       />
       <h2 className="mt-4 text-xl font-semibold">No library statistics yet</h2>
       <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
-        Add movies to your library to begin building viewing statistics.
+        Add movies to your Library to begin building viewing statistics.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <Link href="/search" className={buttonVariants()}>
@@ -82,7 +82,7 @@ function CoverageNotice({ result }: { result: StatisticsResult }) {
       Your library contains {formatStatisticsCount(result.coverage.totalMovies)}
       {" "}movies. Except for the exact total, metrics and distributions use the newest {formatStatisticsCount(
         result.coverage.analyzedMovies,
-      )} records, so partial values are labelled as analyzed data.
+      )} movies, so partial values are clearly labelled.
     </p>
   );
 }
@@ -125,15 +125,15 @@ export function StatisticsDashboard({ result }: { result: StatisticsResult }) {
             Most common genres in your library
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Each movie counts once per normalized genre; percentages use the
-            analyzed library size.
+            Each movie counts once in each genre; percentages use the movies
+            included in this view.
           </p>
           <div className="mt-5">
             {result.genres.length > 0 ? (
               <GenreDistribution entries={result.genres} />
             ) : (
               <p className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
-                Genre metadata is unavailable for the movies in your library.
+                Genre information is unavailable for the movies in your Library.
               </p>
             )}
           </div>
@@ -152,8 +152,8 @@ export function StatisticsDashboard({ result }: { result: StatisticsResult }) {
                 Watched over time
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Movies with a stored watched date, by month for the last 12
-                months. The current period uses {result.timezone}.
+                Movies grouped by the watched dates you added during the last
+                12 months. Dates use {result.timezone}.
               </p>
             </div>
           </div>
@@ -174,8 +174,8 @@ export function StatisticsDashboard({ result }: { result: StatisticsResult }) {
               Personal rating distribution
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Valid personal ratings from 0 through 10; public ratings and
-              unrated movies are excluded.
+              Your ratings from 0 through 10. Public ratings and unrated movies
+              are not included.
             </p>
           </div>
         </div>
@@ -227,8 +227,7 @@ export function StatisticsDashboard({ result }: { result: StatisticsResult }) {
               Recently watched
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Up to five watched movies with stored watched dates. Added dates
-              are never substituted.
+              Up to five movies based on the watched dates you added.
             </p>
             <div className="mt-5">
               <StatisticsMovieList

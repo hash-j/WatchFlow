@@ -515,6 +515,30 @@ export function LibraryControls({
           ))}
         </div>
       ) : null}
+
+      <details className="rounded-xl border bg-card">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center px-4 py-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          Status guide
+        </summary>
+        <dl className="grid gap-3 border-t p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <dt className="font-semibold">Want to Watch</dt>
+            <dd className="mt-1 text-muted-foreground">Saved for sometime later.</dd>
+          </div>
+          <div>
+            <dt className="font-semibold">Watch Next</dt>
+            <dd className="mt-1 text-muted-foreground">In your ordered near-term queue.</dd>
+          </div>
+          <div>
+            <dt className="font-semibold">Scheduled</dt>
+            <dd className="mt-1 text-muted-foreground">Planned for a specific local date and time.</dd>
+          </div>
+          <div>
+            <dt className="font-semibold">Watched</dt>
+            <dd className="mt-1 text-muted-foreground">Finished and ready for a rating or review.</dd>
+          </div>
+        </dl>
+      </details>
     </div>
   );
 }

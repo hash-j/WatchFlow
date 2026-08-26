@@ -24,13 +24,13 @@ function declareAuthenticatedSmokeSuite() {
       qaUserAAudit,
     }) => {
       const routes = [
-        { path: "/dashboard", heading: /^Welcome/ },
-        { path: "/search", heading: "Search Movies" },
-        { path: "/library", heading: "My Library" },
+        { path: "/dashboard", heading: "Dashboard" },
+        { path: "/search", heading: "Search" },
+        { path: "/library", heading: "Library" },
         { path: "/watch-next", heading: "Watch Next" },
         { path: "/schedule", heading: "Schedule" },
         { path: "/import", heading: "Import Movies" },
-        { path: "/lists", heading: "My Lists" },
+        { path: "/lists", heading: "Lists" },
         { path: "/picker", heading: "Movie Picker" },
         { path: "/recommendations", heading: "Recommendations" },
         { path: "/statistics", heading: "Statistics" },

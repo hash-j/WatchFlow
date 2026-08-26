@@ -23,9 +23,9 @@ export default async function StatisticsPage() {
   return (
     <PageContainer className="space-y-8">
       <PageHeader
-        eyebrow="Personal viewing insights"
+        eyebrow="Insights"
         title="Statistics"
-        description="A private, server-calculated view of the movies, ratings, and watched dates stored in your own WatchFlow library."
+        description="See patterns in your Library, personal ratings, and watched history."
         className="mb-0"
       />
 

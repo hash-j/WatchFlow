@@ -146,8 +146,47 @@ Genre preferences are deferred. The current recommendation and Picker engines
 do not consume a stored favourite-genre preference, so collecting it here
 would create unused data and a second genre contract.
 
-**Current milestone:** Part 15.5B - First-Time User Onboarding
-**Next milestone:** Part 15.5C - App Discoverability & User Friendliness
+## Part 15.5C: app discoverability and user friendliness
+
+The authenticated product uses one information architecture on desktop and
+mobile: Home (Dashboard), Your movies (Library, Watch Next, Schedule, Lists),
+Discover (Search, Movie Picker, Recommendations), Insights (Statistics), and
+Account (Import Movies, Settings). Group labels are visible and semantic;
+icons support text labels, and current-route state remains explicit.
+
+Canonical feature names are Dashboard, Search, Library, Watch Next, Schedule,
+Lists, Movie Picker, Recommendations, Statistics, Import Movies, and Settings.
+Page titles and navigation use those terms without My Library/My Lists/Search
+Movies variants. Verb-led CTA labels remain contextual, such as Search Movies,
+Browse Library, Pick a Movie, and Schedule a Movie.
+
+Every major protected route states its purpose and key next action. Dashboard
+prioritizes current Watch Next/Search state, Picker filters and Import guidance
+use progressive disclosure, and Library retains visible search plus collapsed
+advanced filters, active filter chips, a status guide, explicit selection mode,
+and conditional bulk actions. Watch Next is defined as an ordered near-term
+queue distinct from Want to Watch; Lists are custom collections; Picker and
+Recommendations explicitly use the member's own Library.
+
+Empty states name the empty concept, explain what populates it, and point to a
+relevant destination without guilt. Destructive movie/list/account controls
+are visually and spatially separated from ordinary actions. Movie detail
+separates Movie information from Your WatchFlow details and keeps Remove from
+Library at the end. Settings uses Profile, Preferences, Notifications, and
+Data & Account, with exports above a distinct Danger Zone.
+
+User-facing copy omits implementation terminology such as database timestamps,
+RLS, Server Actions, and repository/storage-policy details. Existing safe
+success/error feedback remains, and recoverable errors include a retry or
+stable navigation path. No tutorial framework, feature, database migration,
+dependency, environment variable, or visual-system redesign is introduced.
+
+The detailed before/after audit, canonical terminology, route decisions,
+responsive matrix, accessibility findings, and remaining concerns are recorded
+in `docs/DISCOVERABILITY_UX_AUDIT.md`.
+
+**Current milestone:** Part 15.5C - App Discoverability & User Friendliness
+**Next milestone:** Part 15.5D - Final Visual/UI Polish
 
 ## Phase 2: discovery and private library
 
@@ -732,5 +771,5 @@ available.
 
 ## Next milestone
 
-Part 15.5C - App Discoverability & User Friendliness. Preview/deployment gates
-below remain required before public production.
+Part 15.5D - Final Visual/UI Polish. Preview/deployment gates below remain
+required before public production.

@@ -9,10 +9,10 @@ export default async function PreferencesSettingsPage() {
 
   return (
     <section className="rounded-xl border bg-card p-5 shadow-sm sm:p-6">
-      <h2 className="text-xl font-semibold">Application preferences</h2>
+      <h2 className="text-xl font-semibold">Preferences</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        These defaults apply when a URL or form does not explicitly choose a
-        different value.
+        Choose your default Library view, movie status, display formats, and
+        Search options. You can still change them while using each feature.
       </p>
       <div className="mt-6 border-t pt-6">
         <PreferencesForm preferences={data.preferences} />

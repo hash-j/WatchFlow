@@ -17,7 +17,7 @@ export default async function SettingsLayout({
       <PageHeader
         eyebrow="Your account"
         title="Settings"
-        description="Manage your private profile, WatchFlow defaults, and account data."
+        description="Manage your profile, preferences, future notifications, and private data."
       />
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start">

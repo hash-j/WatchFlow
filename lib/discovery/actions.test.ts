@@ -177,11 +177,11 @@ describe("Part 14 picker Server Action", () => {
     [new DiscoveryAuthenticationError(), "Please sign in again."],
     [
       new DiscoverySchemaError(),
-      "The movie picker is unavailable because required library fields are missing.",
+      "The Movie Picker can’t use part of your Library right now. Try again later.",
     ],
     [
       new DiscoveryRelationshipError(),
-      "Movie metadata could not be linked to your library. Please try again.",
+      "WatchFlow couldn’t connect some movie details to your Library. Try again.",
     ],
     [
       new DiscoveryAuthorizationError(),

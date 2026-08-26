@@ -1,5 +1,40 @@
 # WatchFlow Architecture
 
+## Part 15.5C discoverability architecture
+
+`components/app-navigation.tsx` is the single authenticated navigation source
+for desktop and mobile. It exports ordered Home, Your movies, Discover,
+Insights, and Account groups plus the flattened route list used to derive the
+mobile current-page title. `AppNavigation` renders visible semantic groups and
+`aria-current="page"`; `MobileAppNavigation` reuses that component inside its
+existing keyboard-safe drawer, so route names and order cannot drift.
+
+The milestone remains presentation-only. Shared `PageHeader`, `EmptyState`,
+`ResponsiveActions`, `MobileToolbar`, and native responsive dialog/disclosure
+primitives continue to own page structure. Major routes refine titles,
+descriptions, empty-state actions, and user-language helper copy without adding
+data fetching or mutation paths.
+
+Library keeps URL-backed server querying and places advanced filters/status
+definitions behind native `details`; selection state and bulk mutations are
+unchanged. Movie Picker keeps the same validated URL state and Server Action,
+but its optional filters move into a native disclosure while the primary Pick
+a Movie submit stays visible. Recommendations keep the same deterministic
+rule engine and place scoring details behind the existing disclosure.
+
+Movie and List deletion reuse their existing validated actions/dialogs. Only
+their placement changes: Remove from Library appears after ordinary personal
+movie controls, and Delete List appears in a separated List-detail section
+instead of every summary card. Settings exports remain ordinary actions above
+the unchanged destructive Data & Account controls.
+
+No database migration, schema change, RPC, dependency, environment variable,
+new Client Component boundary, analytics event, or persistent help state is
+introduced.
+
+**Current milestone:** Part 15.5C - App Discoverability & User Friendliness.
+**Next milestone:** Part 15.5D - Final Visual/UI Polish.
+
 ## Part 15.5B onboarding architecture
 
 `/onboarding` is an authenticated App Router page outside the `(app)` shell so

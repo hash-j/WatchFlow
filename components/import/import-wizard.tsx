@@ -444,15 +444,28 @@ export function ImportWizard() {
       ) : null}
 
       {step === 1 ? (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Upload CSV</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Export the Google Sheet as comma-separated values. The file stays temporary and is never uploaded to public storage.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <form action={uploadCsv} className="space-y-4">
+        <div className="mt-6 space-y-4">
+          <details className="rounded-xl border bg-card">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center px-4 py-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              What happens during import?
+            </summary>
+            <ol className="list-decimal space-y-2 border-t px-9 py-4 text-sm text-muted-foreground">
+              <li>Upload a comma-separated <strong className="text-foreground">.csv</strong> file.</li>
+              <li>Choose which columns contain titles and personal details.</li>
+              <li>Review WatchFlow’s movie matches and correct any uncertain rows.</li>
+              <li>Confirm once to add the matched movies to your private Library.</li>
+            </ol>
+          </details>
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload CSV</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Use this when you already keep movies in a spreadsheet. Your
+                file remains temporary while you review it.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form action={uploadCsv} className="space-y-4">
               <div>
                 <label htmlFor="csv-file" className="text-sm font-medium">CSV file</label>
                 <input
@@ -471,9 +484,10 @@ export function ImportWizard() {
                 <FileUp aria-hidden="true" />
                 {isPending ? "Reading..." : "Upload and inspect"}
               </Button>
-            </form>
-          </CardContent>
-        </Card>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       ) : null}
 
       {step === 2 && parsed ? (
@@ -610,7 +624,7 @@ export function ImportWizard() {
 
       {step === 6 ? (
         <Card className="mt-6">
-          <CardHeader><CardTitle>Confirm import</CardTitle><p className="text-sm text-muted-foreground">This is the first step that writes to your library. Every selected TMDB movie will be fetched again for complete metadata.</p></CardHeader>
+          <CardHeader><CardTitle>Confirm import</CardTitle><p className="text-sm text-muted-foreground">Nothing has been added yet. Confirm to check each selected match one last time and add it to your private Library.</p></CardHeader>
           <CardContent>
             <dl className="grid gap-3 sm:grid-cols-3"><div className="rounded-lg bg-muted p-4"><dt className="text-xs text-muted-foreground">CSV rows</dt><dd className="mt-1 text-2xl font-bold">{rows.length}</dd></div><div className="rounded-lg bg-muted p-4"><dt className="text-xs text-muted-foreground">Selected to import</dt><dd className="mt-1 text-2xl font-bold">{importableCount}</dd></div><div className="rounded-lg bg-muted p-4"><dt className="text-xs text-muted-foreground">Skipped, invalid, or unmatched</dt><dd className="mt-1 text-2xl font-bold">{rows.length - importableCount}</dd></div></dl>
             <p className="mt-4 text-sm text-muted-foreground">Existing library movies will be reported without creating duplicates. Watch Next entries are appended in CSV order.</p>

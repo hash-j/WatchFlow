@@ -84,11 +84,11 @@ async function ListsContent({ searchParams }: ListsPageProps) {
             aria-hidden="true"
           />
           <h2 className="mt-4 text-xl font-semibold">
-            You have not created any custom lists yet.
+            You have not created any Lists yet.
           </h2>
           <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
-            Group personal-library movies into private collections such as
-            Weekend Movies, Best Thrillers, or Watch With Family.
+            Lists are custom collections, unlike the ordered Watch Next queue.
+            Try Weekend Movies, Family Favourites, or Best Thrillers.
           </p>
           <div className="mt-6 flex justify-center">
             <CreateListDialog
@@ -112,9 +112,9 @@ export default function ListsPage({ searchParams }: ListsPageProps) {
   return (
     <PageContainer>
       <PageHeader
-        eyebrow="Private collections"
-        title="My Lists"
-        description="Create private collections and arrange personal-library movies in the order that makes sense to you."
+        eyebrow="Your movies"
+        title="Lists"
+        description="Group Library movies into private custom collections. Use Watch Next for your immediate ordered queue."
       />
 
       <Suspense fallback={<ListsLoading />}>

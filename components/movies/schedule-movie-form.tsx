@@ -56,7 +56,7 @@ export function ScheduleMovieForm({
       <div>
         <h2 className="text-lg font-semibold">Schedule a movie</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Times are converted to a timezone-aware database timestamp.
+          WatchFlow keeps the same moment even when you view it from another timezone.
         </p>
       </div>
 

@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { CustomListSummary } from "@/lib/lists/types";
 
-import { DeleteListDialog } from "./delete-list-dialog";
 import { EditListDialog } from "./edit-list-dialog";
 import { ListPosterCollage } from "./list-poster-collage";
 
@@ -67,11 +66,6 @@ export function ListCard({ list }: { list: CustomListSummary }) {
           <Link href={`/lists/${list.id}`}>Open List</Link>
         </Button>
         <EditListDialog list={list} compact />
-        <DeleteListDialog
-          list={list}
-          movieCount={list.movieCount}
-          compact
-        />
       </div>
     </article>
   );

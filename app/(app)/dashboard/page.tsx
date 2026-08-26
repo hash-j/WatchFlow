@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { CalendarDays, FileUp, Library, Search } from "lucide-react";
+import { CalendarDays, Dices, ListOrdered, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
@@ -15,33 +15,6 @@ import { getAuthContext } from "@/lib/supabase/auth";
 import { formatUserDateTime } from "@/lib/settings/formatting";
 import { getCurrentUserPreferences } from "@/lib/settings/supabase-settings";
 import { DEFAULT_USER_PREFERENCES } from "@/lib/settings/types";
-
-const quickActions = [
-  {
-    href: "/search",
-    title: "Find a movie",
-    description: "Search TMDB and add a title to your private library.",
-    icon: Search,
-  },
-  {
-    href: "/library",
-    title: "Open your library",
-    description: "Update statuses, ratings, reviews, and priorities.",
-    icon: Library,
-  },
-  {
-    href: "/schedule",
-    title: "Plan a watch",
-    description: "Schedule a movie in your local timezone.",
-    icon: CalendarDays,
-  },
-  {
-    href: "/import",
-    title: "Import movies",
-    description: "Bring a CSV collection into WatchFlow when search is too slow.",
-    icon: FileUp,
-  },
-] as const;
 
 function DashboardLoading() {
   return (
@@ -135,36 +108,70 @@ async function DashboardContent() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Dashboard"
-        title={<>Welcome{profileName ? `, ${profileName}` : " to WatchFlow"}</>}
-        description="Your private workspace for organizing what you want to watch."
+        eyebrow={<>Welcome{profileName ? `, ${profileName}` : " to WatchFlow"}</>}
+        title="Dashboard"
+        description="See what is coming up and choose your next movie task."
         className="mb-0"
       />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {quickActions.map(({ href, title, description, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className="group min-w-0 rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-foreground/20 sm:p-5"
-          >
-            <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
-            <h2 className="mt-4 font-semibold group-hover:underline">{title}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-          </Link>
-        ))}
+      <section
+        aria-labelledby="dashboard-next-actions-heading"
+        className="rounded-xl border bg-card p-5 shadow-sm sm:p-6"
+      >
+        <div>
+          <h2 id="dashboard-next-actions-heading" className="text-xl font-semibold">
+            Next actions
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Start with the action that best matches what you want to do now.
+          </p>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <Button asChild className="min-h-12 justify-start">
+            <Link href={queue.length > 0 ? "/watch-next" : "/search"}>
+              {queue.length > 0 ? (
+                <ListOrdered className="size-4" aria-hidden="true" />
+              ) : (
+                <Search className="size-4" aria-hidden="true" />
+              )}
+              {queue.length > 0 ? "Open Watch Next" : "Search for a Movie"}
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="min-h-12 justify-start">
+            <Link href="/picker">
+              <Dices className="size-4" aria-hidden="true" />
+              Pick a Movie
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="min-h-12 justify-start">
+            <Link href="/schedule">
+              <CalendarDays className="size-4" aria-hidden="true" />
+              Schedule a Movie
+            </Link>
+          </Button>
+        </div>
       </section>
 
       <section aria-labelledby="dashboard-overview-heading">
-        <h2 id="dashboard-overview-heading" className="text-xl font-semibold">
-          Your viewing overview
-        </h2>
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 id="dashboard-overview-heading" className="text-xl font-semibold">
+              Your viewing overview
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {movies.length} {movies.length === 1 ? "movie" : "movies"} in your Library
+            </p>
+          </div>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/library">Open Library</Link>
+          </Button>
+        </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <article className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
             <h3 className="font-semibold">Next movie</h3>
             <MovieList
               items={queue.slice(0, 1)}
-              emptyMessage="Nothing is queued yet."
+              emptyMessage="Nothing is in Watch Next. Add a Library movie when you plan to watch it soon."
               detail={() => "First in Watch Next"}
             />
           </article>
@@ -172,7 +179,7 @@ async function DashboardContent() {
             <h3 className="font-semibold">Scheduled today</h3>
             <MovieList
               items={scheduledToday}
-              emptyMessage="No movies scheduled today."
+              emptyMessage="Nothing is planned for today."
               detail={(item) =>
                 item.scheduledFor
                   ? formatUserDateTime(
@@ -189,14 +196,14 @@ async function DashboardContent() {
             <h3 className="font-semibold">Recently added</h3>
             <MovieList
               items={recentlyAdded}
-              emptyMessage="Your library is empty."
+              emptyMessage="Your Library is empty. Search for a movie to get started."
             />
           </article>
           <article className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
             <h3 className="font-semibold">Recently watched</h3>
             <MovieList
               items={recentlyWatched}
-              emptyMessage="No watched movies yet."
+              emptyMessage="No watched movies yet. Mark a movie as Watched to build recent activity."
               detail={(item) =>
                 item.personalRating !== null
                   ? `Your rating: ${item.personalRating}/10`
@@ -207,38 +214,17 @@ async function DashboardContent() {
         </div>
       </section>
 
-      <section className="rounded-xl border bg-card p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-          <div>
-            <h2 className="text-lg font-semibold">Account</h2>
-            <p className="text-sm text-muted-foreground">
-              Authentication and profile data are loaded securely on the server.
-            </p>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/settings">Settings</Link>
+      {profileLoadFailed || !profile || !user.email ? (
+        <section className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+          <p>
+            Some account details are temporarily unavailable. Your movie tools
+            are still available; open Settings to review your profile later.
+          </p>
+          <Button asChild variant="outline" size="sm" className="mt-3">
+            <Link href="/settings">Open Settings</Link>
           </Button>
-        </div>
-
-        <dl className="mt-6 grid gap-4 text-sm sm:grid-cols-2">
-          <div className="rounded-lg bg-muted/60 p-4">
-            <dt className="text-muted-foreground">Signed-in email</dt>
-            <dd className="mt-1 break-all font-medium">
-              {user.email ?? "Email unavailable"}
-            </dd>
-          </div>
-          <div className="rounded-lg bg-muted/60 p-4">
-            <dt className="text-muted-foreground">Profile record</dt>
-            <dd className="mt-1 font-medium">
-              {profileLoadFailed
-                ? "Temporarily unavailable"
-                : profile
-                  ? "Connected"
-                  : "Not created yet"}
-            </dd>
-          </div>
-        </dl>
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -138,9 +138,9 @@ export default function SearchPage({ searchParams }: SearchPageProps) {
     <PageContainer className="max-w-6xl">
       <div>
         <PageHeader
-          eyebrow="WatchFlow"
-          title="Search Movies"
-          description="Search TMDB securely from the server, then save complete movie details to your personal library."
+          eyebrow="Discover"
+          title="Search"
+          description="Find movies by title and save them to your private Library."
           className="mb-0"
         />
         <Suspense fallback={<div className="mt-6 h-10 max-w-2xl animate-pulse rounded bg-muted" />}>

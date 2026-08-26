@@ -22,7 +22,7 @@ export async function login(page: Page, credentials: QaCredentials) {
       page.getByRole("button", { name: "Sign in" }).click(),
     ]);
     await expect(
-      page.getByRole("heading", { level: 1, name: /^Welcome/ }),
+      page.getByRole("heading", { level: 1, name: "Dashboard" }),
     ).toBeVisible();
   } catch (error) {
     await clearPasswordIfVisible(page);

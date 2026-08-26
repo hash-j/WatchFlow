@@ -42,12 +42,14 @@ function ScheduleLoading() {
 
 function ScheduleSection({
   title,
+  emptyMessage,
   items,
   timezone,
   dateFormat,
   timeFormat,
 }: {
   title: string;
+  emptyMessage: string;
   items: LibraryMovie[];
   timezone: string;
   dateFormat: DateFormat;
@@ -58,7 +60,7 @@ function ScheduleSection({
       <h2 className="text-lg font-semibold">{title}</h2>
       {items.length === 0 ? (
         <p className="mt-2 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-          No movies in this section.
+          {emptyMessage}
         </p>
       ) : (
         <ul className="mt-3 space-y-3">
@@ -141,6 +143,7 @@ async function ScheduleWorkspace() {
           <>
             <ScheduleSection
               title="Today"
+              emptyMessage="Nothing is planned for today."
               items={today}
               timezone={timezone}
               dateFormat={preferences.dateFormat}
@@ -148,6 +151,7 @@ async function ScheduleWorkspace() {
             />
             <ScheduleSection
               title="Upcoming"
+              emptyMessage="No upcoming plans yet."
               items={upcoming}
               timezone={timezone}
               dateFormat={preferences.dateFormat}
@@ -155,6 +159,7 @@ async function ScheduleWorkspace() {
             />
             <ScheduleSection
               title="Past"
+              emptyMessage="Past plans will appear here."
               items={past}
               timezone={timezone}
               dateFormat={preferences.dateFormat}
@@ -185,9 +190,9 @@ export default function SchedulePage() {
   return (
     <PageContainer className="max-w-6xl">
       <PageHeader
-        eyebrow="Plan ahead"
+        eyebrow="Your movies"
         title="Schedule"
-        description="Choose a local date, time, and timezone. WatchFlow stores the exact timezone-aware instant for your private schedule."
+        description="Plan a Library movie for a local date and time. Today, Upcoming, and Past follow the timezone you choose."
         className="mb-0"
       />
       <Suspense fallback={<ScheduleLoading />}>

@@ -1,5 +1,47 @@
 # WatchFlow Testing Guide
 
+## Part 15.5C discoverability coverage
+
+`lib/ux/discoverability.test.ts` protects the grouped desktop/mobile
+information architecture, group semantics, canonical route names, current
+route semantics, page titles/purpose statements, Watch Next/List distinction,
+Picker Library scope, Library status guide, progressive disclosures, key
+empty-state destinations, destructive hierarchy, contextual back links,
+accessible reorder/favourite controls, Settings categories, and the absence of
+known implementation phrases in product copy. Existing list, discovery,
+Statistics, auth, and Library source contracts were updated only where the
+canonical user-facing terminology changed.
+
+`e2e/discoverability.spec.ts` is a guarded, read-only authenticated suite. It
+checks the same navigation group order on desktop and mobile, active-route
+semantics, major page purposes, the configured lighter account's available
+empty states, canonical terminology, and developer-term exclusion. It uses the
+existing in-memory QA fixtures, strict redacted browser diagnostics, and no
+data mutation or stored auth state.
+
+`e2e/responsive-authenticated.spec.ts` retains the protected route matrix at
+320×568, 360×640, 375×667, 390×844, 412×915, 600×960, 768×1024, 820×1180,
+1024×768, 1366×768, 1440×900, and 1920×1080. Its drawer assertions now use the
+canonical Library label. The milestone's required subset is documented in
+`docs/DISCOVERABILITY_UX_AUDIT.md`.
+
+Pre-edit authenticated HTTP rendering against the running app and pinned
+development backend returned 200 for every protected static route with both QA
+accounts, plus accessible owned movie/list detail where data existed. Final
+local evidence: the focused suite passed 4 files/53 tests and the complete
+runner-loader suite passed 69 files/707 tests. The required `npm test` entry
+point hit Windows `spawn EPERM` before config load on two attempts.
+
+The guarded discoverability suite loaded four cases and the responsive suite
+loaded 17, but both hit `spawn EPERM` before a worker on two attempts; direct
+Chrome startup also returned access denied. These are environment blocks, not
+passing browser evidence. Lint, direct TypeScript, the final 260-artifact
+secret scan, and `/auth/sign-up` HTTP 200 verification passed. Next's production code
+compilation succeeded twice, then its TypeScript child hit `spawn EPERM`.
+
+**Current milestone:** Part 15.5C - App Discoverability & User Friendliness.
+**Next milestone:** Part 15.5D - Final Visual/UI Polish.
+
 ## Part 15.5B onboarding coverage
 
 Focused tests in `lib/onboarding/` cover incomplete, completed, skipped, and

@@ -112,18 +112,6 @@ function RecommendationEmptyState({
         >
           Open Library
         </Link>
-        <Link
-          href="/watch-next"
-          className={buttonVariants({ variant: "outline" })}
-        >
-          Open Watch Next
-        </Link>
-        <Link
-          href="/import"
-          className={buttonVariants({ variant: "outline" })}
-        >
-          Import Movies
-        </Link>
       </div>
     </div>
   );
@@ -181,7 +169,7 @@ async function RecommendationsContent({
           <div>
             <Badge variant="outline">Rule-based recommendations</Badge>
             <p className="mt-3 max-w-3xl text-sm text-muted-foreground">
-              Suggestions use only stored metadata and activity from your
+              Suggestions use only movie details and activity from your
               private library. They are transparent rules—not AI, predictions,
               or certainty.
             </p>
@@ -282,9 +270,9 @@ export default function RecommendationsPage(props: RecommendationsPageProps) {
   return (
     <PageContainer>
       <PageHeader
-        eyebrow="Private library discovery"
+        eyebrow="Discover"
         title="Recommendations"
-        description="Rediscover unwatched movies already in your WatchFlow library through explicit ratings, genres, directors, runtime, release period, and queue rules."
+        description="Suggestions from your own Library, based on your personal ratings and clear movie-matching rules."
       />
 
       <Suspense fallback={<RecommendationsLoading />}>

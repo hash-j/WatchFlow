@@ -91,9 +91,9 @@ describe("Statistics route, navigation, and protection contracts", () => {
 
     for (const existingLabel of [
       "Dashboard",
-      "Search Movies",
-      "My Library",
-      "My Lists",
+      "Search",
+      "Library",
+      "Lists",
       "Movie Picker",
       "Recommendations",
       "Import Movies",
@@ -174,7 +174,7 @@ describe("Statistics rendered states", () => {
 
     expect(html).toContain("No library statistics yet");
     expect(html).toContain(
-      "Add movies to your library to begin building viewing statistics.",
+      "Add movies to your Library to begin building viewing statistics.",
     );
     expect(html).toContain('href="/search"');
     expect(html).toContain("Search Movies");

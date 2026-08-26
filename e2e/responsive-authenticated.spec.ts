@@ -82,7 +82,7 @@ function declareResponsiveAuthenticatedSuite() {
         });
         await expectDialogFitsViewport(qaUserAPage, drawer);
         await expect(
-          drawer.getByRole("link", { name: "My Library" }),
+          drawer.getByRole("link", { name: "Library", exact: true }),
         ).toBeVisible();
 
         await qaUserAPage.keyboard.press("Escape");
@@ -90,7 +90,7 @@ function declareResponsiveAuthenticatedSuite() {
         await expect(trigger).toBeFocused();
 
         await trigger.click();
-        await drawer.getByRole("link", { name: "My Library" }).click();
+        await drawer.getByRole("link", { name: "Library", exact: true }).click();
         await expect(qaUserAPage).toHaveURL(/\/library(?:\?|$)/);
         await expect(drawer).not.toBeVisible();
         expectNoUnexpectedBrowserFailures(qaUserAAudit);

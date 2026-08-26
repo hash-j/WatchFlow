@@ -163,16 +163,12 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
           sizes="256px"
           sourceSize="w500"
         />
-        <div className="mt-4">
-          <RemoveFromLibraryForm
-            userMovieId={item.libraryId}
-            movieId={movie.id}
-            redirectAfterRemoval
-          />
-        </div>
       </div>
 
       <div className="min-w-0">
+        <p className="text-sm font-medium text-muted-foreground">
+          Movie information
+        </p>
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           <span>{year ?? "Release date unavailable"}</span>
           {movie.runtimeMinutes ? (
@@ -267,9 +263,9 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
 
         <section className="mt-10 rounded-xl border bg-card p-5 shadow-sm sm:p-6">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold">Your movie details</h2>
+            <h2 className="text-xl font-semibold">Your WatchFlow details</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Status, ratings, notes, and dates are private to your account.
+              Your status, rating, review, watched date, and schedule are private.
             </p>
           </div>
           <MovieManagementForm
@@ -287,6 +283,26 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
             movieTitle={movie.title}
           />
         </Suspense>
+
+        <section
+          aria-labelledby="remove-from-library-heading"
+          className="mt-10 rounded-xl border border-destructive/40 p-5 sm:p-6"
+        >
+          <h2 id="remove-from-library-heading" className="text-lg font-semibold">
+            Remove from Library
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            This removes your personal status, rating, review, queue position,
+            schedule, and List memberships for this movie.
+          </p>
+          <div className="mt-4">
+            <RemoveFromLibraryForm
+              userMovieId={item.libraryId}
+              movieId={movie.id}
+              redirectAfterRemoval
+            />
+          </div>
+        </section>
       </div>
     </article>
   );
@@ -300,7 +316,7 @@ export default function MovieDetailPage({ params }: MovieDetailPageProps) {
         className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" aria-hidden="true" />
-        Back to library
+        Back to Library
       </Link>
       <Suspense fallback={<DetailLoading />}>
         <MovieDetail params={params} />

@@ -57,7 +57,7 @@ export function RemoveFromLibraryForm({
         onClick={() => setIsConfirming(true)}
       >
         <Trash2 className="mr-2 size-4" aria-hidden="true" />
-        Remove
+        Remove from Library
       </Button>
     );
   }

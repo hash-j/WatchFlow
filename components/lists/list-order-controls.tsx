@@ -39,10 +39,10 @@ export function ListOrderControls({
             ? `${title} is already first in this list`
             : `Move ${title} up in this list`
         }
-        title={isFirst ? "This movie is already first." : undefined}
+        title={isFirst ? "This movie is already first." : "Move earlier in this List"}
       >
         <ArrowUp className="size-4" aria-hidden="true" />
-        Up
+        Move earlier
       </Button>
       <Button
         type="submit"
@@ -57,10 +57,10 @@ export function ListOrderControls({
             ? `${title} is already last in this list`
             : `Move ${title} down in this list`
         }
-        title={isLast ? "This movie is already last." : undefined}
+        title={isLast ? "This movie is already last." : "Move later in this List"}
       >
         <ArrowDown className="size-4" aria-hidden="true" />
-        Down
+        Move later
       </Button>
       {state.message ? (
         <p

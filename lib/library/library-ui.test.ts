@@ -222,7 +222,9 @@ describe("Part 12 library UI contracts", () => {
     expect(selection).toContain("aria-labelledby");
     expect(selection).toContain("aria-describedby");
     expect(selection).toContain("triggerRef.current?.focus()");
-    expect(selection).toContain("Shared movie metadata will not be deleted");
+    expect(selection).toContain(
+      "The movie can still appear in Search for other WatchFlow members.",
+    );
   });
 
   it("uses actual disabled pagination buttons at page boundaries", () => {

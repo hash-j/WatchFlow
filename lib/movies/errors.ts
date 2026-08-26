@@ -53,8 +53,8 @@ export class MovieProviderRateLimitError extends MovieProviderError {
   constructor(retryAfterSeconds: number | null = null) {
     super(
       retryAfterSeconds && retryAfterSeconds > 0
-        ? `Too many movie requests. Try again in ${retryAfterSeconds} seconds.`
-        : "Too many movie requests. Wait a moment, then try again.",
+        ? `You’ve searched a lot in a short time. Try again in ${retryAfterSeconds} seconds.`
+        : "You’ve searched a lot in a short time. Wait a moment, then try again.",
     );
     this.name = "MovieProviderRateLimitError";
     this.retryAfterSeconds = retryAfterSeconds;
@@ -64,7 +64,7 @@ export class MovieProviderRateLimitError extends MovieProviderError {
 export class MovieRateLimitConfigurationError extends MovieProviderError {
   constructor() {
     super(
-      "Movie requests are temporarily unavailable because request protection is not configured.",
+      "Movie search isn’t available right now. Try again later.",
     );
     this.name = "MovieRateLimitConfigurationError";
   }

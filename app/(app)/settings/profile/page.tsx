@@ -32,6 +32,9 @@ export default async function ProfileSettingsPage() {
           </div>
           <div className="min-w-0">
             <h2 className="text-xl font-semibold">Profile</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Manage the personal details and timezone WatchFlow uses for you.
+            </p>
             <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2 sm:gap-x-8">
               <div>
                 <dt className="text-muted-foreground">Account email</dt>
@@ -61,9 +64,8 @@ export default async function ProfileSettingsPage() {
       </section>
 
       <aside className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-        Avatar uploads are not enabled yet because this repository has no
-        versioned private avatar bucket or storage policies. WatchFlow uses your
-        initials until that storage boundary is reviewed and deployed.
+        Profile photos are not available yet. WatchFlow uses your initials in
+        the meantime.
       </aside>
     </div>
   );

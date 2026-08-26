@@ -45,7 +45,7 @@ function getActionErrorMessage(error: unknown) {
       });
     }
 
-    return "The library service is not configured. Please contact support.";
+    return "Your Library is temporarily unavailable. Try again later.";
   }
 
   if (
@@ -136,7 +136,7 @@ export async function removeMovieAction(
     if (error instanceof LibraryValidationError) {
       return {
         status: "error",
-        message: "The selected library record was invalid.",
+        message: "The selected movie was invalid. Refresh the page and try again.",
       };
     }
 

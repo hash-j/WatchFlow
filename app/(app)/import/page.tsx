@@ -8,9 +8,9 @@ export default async function ImportPage() {
   return (
     <PageContainer className="max-w-6xl">
       <PageHeader
-        eyebrow="WatchFlow"
+        eyebrow="Account tool"
         title="Import Movies"
-        description="Bring up to 500 movies from a Google Sheets CSV into your private library. Nothing is saved until you review the matches and confirm."
+        description="Move an existing collection into your private Library from a CSV file. WatchFlow helps match each row before anything is saved."
         className="mb-0"
       />
       <ImportWizard />

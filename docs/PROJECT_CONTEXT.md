@@ -1,13 +1,62 @@
 # WatchFlow Project Context
 
-Last updated: 2026-08-17
+Last updated: 2026-08-26
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 15.5B first-time user onboarding implemented locally; local verification recorded with environment/live-QA blocks
-Current branch: `master` at `30f1800` (`feat: add email OTP signup verification and auth UX`), tagged `part-15-5a-auth-otp`
-Local status: Part 15.5B application, migration, tests, and docs are uncommitted; no remote Supabase setting, schema, or data was changed
+Current phase: Part 15.5C app discoverability and user friendliness implemented locally; non-browser verification complete and browser execution environment-blocked
+Current branch: `master` at `41cb4b4` (`feat: add first-time user onboarding`), tagged `part-15-5b-onboarding` and `pre-15-5c-discoverability`
+Local status: Part 15.5C application, tests, and docs are uncommitted; no database migration or remote data/configuration change was created
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-08-26 Part 15.5C app discoverability and user friendliness
+
+- Confirmed Part 15.5B is committed at `41cb4b4`; the milestone began from a
+  clean worktree. The older Part 15.5B status below is retained as historical
+  handoff evidence and is superseded by this section.
+- Replaced the flat authenticated destination list with one shared, ordered,
+  semantic group model used by desktop and mobile: Home; Your movies;
+  Discover; Insights; Account. Current-route semantics, text labels, icons,
+  focus behavior, Settings, sign out, and the existing drawer are preserved.
+- Canonical route names are Dashboard, Search, Library, Watch Next, Schedule,
+  Lists, Movie Picker, Recommendations, Statistics, Import Movies, and
+  Settings. Contextual CTAs remain verb-led.
+- Refined every major protected page's purpose copy and key actions. Dashboard
+  now prioritizes a small state-aware Next actions area and Library overview;
+  Library adds a status guide and explicit selection mode; Movie detail
+  separates Movie information, Your WatchFlow details, and its destructive
+  removal section.
+- Watch Next explicitly contrasts Want to Watch; Lists explicitly contrasts
+  the immediate queue and moves deletion to a separated detail section; Picker
+  collapses optional filters; Recommendations reduces competing cold-start
+  actions while preserving transparent reasons; Schedule/Statistics/Profile
+  remove implementation language; Import progressively explains CSV matching;
+  Settings uses Data & Account with exports above Danger Zone.
+- Added `lib/ux/discoverability.test.ts`, guarded read-only
+  `e2e/discoverability.spec.ts`, and updated existing canonical-label/browser
+  contracts. Created `docs/DISCOVERABILITY_UX_AUDIT.md` and updated Product,
+  Architecture, Testing, and Production Readiness documentation.
+- Pre-edit real-app authenticated HTTP rendering used both guarded QA accounts:
+  all 15 static protected routes returned 200 for each account, both owned
+  movie details returned 200, and the populated account's owned list detail
+  returned 200. The lighter account exposed empty Watch Next, Schedule, Lists,
+  and limited Statistics states. No user data was mutated.
+- Final local verification: lint and direct TypeScript passed; the focused
+  discoverability suite passed 4 files/53 tests; and the complete runner-loader
+  fallback passed 69 files/707 tests. The required `npm test` entry point hit
+  Windows `spawn EPERM` twice before config load.
+- Guarded discoverability Playwright loaded four cases and responsive
+  Playwright loaded 17 cases, but both hit `spawn EPERM` before a worker on two
+  attempts. Direct Chrome startup also failed with access denied, so no fresh
+  interactive viewport, console/network, focus, or keyboard pass is claimed.
+- The final client-secret scan passed 260 current browser artifacts (an earlier
+  pre-build scan passed 325). Next compiled the
+  production bundle successfully twice, then hit `spawn EPERM` while launching
+  its TypeScript worker; direct TypeScript passed. `/auth/sign-up` returned 200.
+- Database: no migration, table, column, function, policy, grant, index,
+  trigger, dependency, or environment variable was added or changed.
+- Current milestone: Part 15.5C - App Discoverability & User Friendliness.
+- Next milestone: Part 15.5D - Final Visual/UI Polish.
 
 ## 2026-08-17 Part 15.5B first-time onboarding
 
@@ -732,37 +781,39 @@ Migrations 1 and parts of 2 are not safely repeatable; never rerun old SQL blind
 
 ## 20. Current Project State
 
-- Committed baseline: **Part 15.5A authentication + signup email OTP** at
-  `30f1800`, tagged `part-15-5a-auth-otp`. Guarded delivered-email and
-  authenticated browser verification remain incomplete.
-- Latest work: **Part 15.5B first-time user onboarding**, currently
-  uncommitted. It adds one focused migration, the protected three-step route,
-  conditional OTP routing, first-run Dashboard support, and guarded coverage.
+- Committed baseline: **Part 15.5B first-time user onboarding** at `41cb4b4`,
+  tagged `part-15-5b-onboarding` and `pre-15-5c-discoverability`.
+- Latest work: **Part 15.5C app discoverability and user friendliness**,
+  currently uncommitted. It reorganizes authenticated navigation, establishes
+  canonical product terminology and page-purpose copy, improves action and
+  empty-state hierarchy, and adds focused source and guarded browser coverage.
 - Historical Part 11 statistics/dashboard upgrade: **never implemented or
   committed**. Part 15.1 rebuilds the requested feature from current architecture.
-- Next operational step: begin **Part 15.5C — App Discoverability & User
-  Friendliness** while retaining the separate Preview deployment gates.
+- Next operational step: complete the Part 15.5C verification gate, then begin
+  **Part 15.5D - Final Visual/UI Polish** while retaining the separate Preview
+  deployment gates.
 - Before live onboarding execution, manually apply the Part 15.5B migration in
   the pinned development project, provide disposable QA A/B and a signup
   inbox, then run both read-only SQL audits and guarded tests.
-- Branch/base HEAD: `master`, `30f1800` (`feat: add email OTP signup verification and auth UX`).
+- Branch/base HEAD: `master`, `41cb4b4` (`feat: add first-time user onboarding`).
   Tags `settings-v1` and misleading `statistics-v1` remain historical;
   `statistics-v1` is not moved.
-- Latest migration: `202608170001_part_15_5b_first_time_onboarding.sql`
-  (created locally; remote application intentionally not attempted).
+- Latest migration: `202608170001_part_15_5b_first_time_onboarding.sql`.
+  Part 15.5C creates no migration or database change.
 - Latest feature set: private custom lists plus a URL-filtered random picker,
   eight explicit moods, bounded in-session repeat avoidance, and transparent
   scored/deduplicated/diversified private-library recommendations, plus the
   committed personal Statistics page.
-- Baseline Git state at `30f1800` was clean; the current worktree contains only
-  the Part 15.5B implementation, migration, tests, and documentation.
+- Baseline Git state at `41cb4b4` was clean; the current worktree contains the
+  Part 15.5C application, test, and documentation changes only.
 - Confirmed target findings establish the Part 15 scheduling/normalization
   objects and relevant RLS/grants, but not full Part 15 migration parity. The
   old Part 15 migration must not be rerun on that target.
 - No remote schema, hosted Auth setting, or QA user data was changed during
-  Part 15.5B because the development safety guard was not satisfied.
-- Onboarding Playwright loaded four guarded cases; responsive browser execution
-  and live RLS coverage remain blocked as described at the top of this file.
+  Part 15.5C. Authenticated real-account route reads were non-mutating.
+- Interactive Playwright execution remains environment-blocked by Windows
+  process-spawn denial; authenticated SSR route audits are recorded at the top
+  of this file and in `docs/DISCOVERABILITY_UX_AUDIT.md`.
 - `/statistics` is committed; its guarded authenticated/two-user browser
   evidence remains pending.
 
@@ -770,11 +821,11 @@ Migrations 1 and parts of 2 are not safely repeatable; never rerun old SQL blind
 
 This is the roadmap, not completed functionality.
 
-1. **Part 15.5C — App discoverability and user friendliness**
-2. **Part 16 — Preview deployment**
-3. **Part 17 — Public beta preparation**
-4. **Part 18 — Notifications and calendar integration**
-5. **Part 19 — Paid SaaS**
+1. **Part 15.5D - Final Visual/UI Polish**
+2. **Part 16 - Preview deployment**
+3. **Part 17 - Public beta preparation**
+4. **Part 18 - Notifications and calendar integration**
+5. **Part 19 - Paid SaaS**
 
 ## 22. Part 12 Implementation Notes
 
@@ -1112,12 +1163,11 @@ Final local results on 2026-07-30:
 - `docs/PRODUCTION_READINESS.md` is the status checklist. Recommendation:
   proceed only to a controlled Part 16 Preview setup, not public production.
 
-Current milestone: Part 15.5B - First-Time User Onboarding. Local application,
-migration, documentation, and static/mocked coverage are complete; live
-database, delivered OTP, and authenticated browser evidence remain blocked by
-the missing development authorization and disposable QA configuration.
+Current milestone: Part 15.5C - App Discoverability & User Friendliness. Local
+application, documentation, and source coverage are complete; final quality
+gate results are summarized at the top of this document.
 
-Next milestone: Part 15.5C - App Discoverability & User Friendliness.
+Next milestone: Part 15.5D - Final Visual/UI Polish.
 
 ## 26. Part 15.1 Statistics Implementation Notes
 

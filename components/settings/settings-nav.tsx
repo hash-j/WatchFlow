@@ -14,7 +14,7 @@ const links = [
     icon: SlidersHorizontal,
   },
   { href: "/settings/notifications", label: "Notifications", icon: Bell },
-  { href: "/settings/data", label: "Data and Privacy", icon: Database },
+  { href: "/settings/data", label: "Data & Account", icon: Database },
 ] as const;
 
 export function SettingsNav() {

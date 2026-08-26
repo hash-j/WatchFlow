@@ -124,6 +124,16 @@ export function MoviePicker({
   ];
   const effectiveTruncation = libraryTruncated || state.libraryTruncated;
   const showActionOutput = state.requestId > hiddenThroughRequest;
+  const activeFilterCount = [
+    filters.genre !== null,
+    filters.maxRuntime !== null,
+    filters.minPublicRating !== null,
+    filters.mood !== "any",
+    filters.releasePeriod !== "any",
+    filters.watchedState !== "unwatched",
+    filters.watchNextOnly,
+    filters.favouriteOnly,
+  ].filter(Boolean).length;
 
   return (
     <div className="space-y-6">
@@ -144,9 +154,9 @@ export function MoviePicker({
 
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
           <div>
-            <h2 className="text-xl font-semibold">Choose your filters</h2>
+            <h2 className="text-xl font-semibold">Pick from your Library</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Defaults to unwatched movies. Picking never changes library data.
+              The default includes unwatched movies. Picking does not change them.
             </p>
           </div>
           <p className="text-sm text-muted-foreground" aria-live="polite">
@@ -155,7 +165,17 @@ export function MoviePicker({
           </p>
         </div>
 
-        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <details
+          open={activeFilterCount > 0 || warnings.length > 0}
+          className="mt-6 rounded-xl border bg-muted/20"
+        >
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <span>Refine the choice (optional)</span>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+              {activeFilterCount} active
+            </span>
+          </summary>
+          <div className="grid gap-5 border-t p-4 sm:grid-cols-2 lg:grid-cols-3">
           <label className="grid gap-2 text-sm font-medium">
             Genre
             <select
@@ -292,11 +312,11 @@ export function MoviePicker({
               />
             ) : null}
           </label>
-        </div>
+          </div>
 
-        <div
+          <div
           id="mood-explanation"
-          className="mt-5 rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground"
+          className="mx-4 mt-1 rounded-lg border bg-background p-3 text-sm text-muted-foreground"
         >
           {selectedMood ? (
             <>
@@ -311,9 +331,9 @@ export function MoviePicker({
               analysis or AI.
             </p>
           )}
-        </div>
+          </div>
 
-        <fieldset className="mt-5 grid gap-3 sm:grid-cols-2">
+          <fieldset className="m-4 grid gap-3 sm:grid-cols-2">
           <legend className="sr-only">Additional picker filters</legend>
           <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm font-medium focus-within:ring-2 focus-within:ring-ring">
             <input
@@ -341,14 +361,15 @@ export function MoviePicker({
             />
             Favourite only
           </label>
-        </fieldset>
+          </fieldset>
 
         {filters.watchNextOnly ? (
-          <p className="mt-3 text-sm text-muted-foreground" role="status">
+          <p className="mx-4 mb-4 text-sm text-muted-foreground" role="status">
             Watch Next only requires status “Watch Next” and overrides the
             watched-state selection. Picking does not change queue order.
           </p>
-        ) : null}
+          ) : null}
+        </details>
 
         {warnings.length > 0 ? (
           <ul
@@ -381,15 +402,17 @@ export function MoviePicker({
                 ? "Pick Another"
                 : "Pick a Movie"}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-11"
-            onClick={clearFilters}
-          >
-            <FilterX aria-hidden="true" />
-            Clear filters
-          </Button>
+          {activeFilterCount > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              onClick={clearFilters}
+            >
+              <FilterX aria-hidden="true" />
+              Clear filters
+            </Button>
+          ) : null}
         </ResponsiveActions>
       </form>
 

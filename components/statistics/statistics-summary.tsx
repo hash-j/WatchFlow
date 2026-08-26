@@ -65,7 +65,7 @@ export function StatisticsSummary({ result }: { result: StatisticsResult }) {
       value: formatStatisticsRuntime(summary.totalWatchedRuntimeMinutes),
       description:
         summary.totalWatchedRuntimeMinutes === null
-          ? "Runtime is unavailable because no watched movie has valid runtime metadata."
+          ? "Runtime is unavailable for your watched movies."
           : `Known positive runtimes from ${formatStatisticsCount(summary.watchedRuntimeMovies)} watched ${summary.watchedRuntimeMovies === 1 ? "movie" : "movies"}.`,
       testId: "stat-watched-runtime",
     },

@@ -1,5 +1,55 @@
 # WatchFlow Production Readiness
 
+## Part 15.5C discoverability readiness
+
+**Application implementation is local and uncommitted.** Authenticated desktop
+and mobile navigation now share grouped Home, Your movies, Discover, Insights,
+and Account information architecture. Major routes use canonical terminology,
+short page-purpose descriptions, clearer empty states, more deliberate primary
+actions, user-language error/helper copy, contextual back links, progressive
+disclosure, and separated destructive actions. Settings uses Data & Account
+with exports above the existing Danger Zone.
+
+The milestone creates no migration, schema/RLS/privilege change, dependency,
+environment variable, external integration, analytics, or major feature. The
+existing security and tenant-isolation boundaries are unchanged.
+
+The pre-edit real-app rendering audit used both configured guarded QA accounts
+and received HTTP 200 from every protected static route plus available owned
+detail routes. Interactive browser evidence remains environment-blocked by the
+known Windows process restriction: Playwright workers fail with `spawn EPERM`
+and direct Chrome startup fails with access denied. Source/unit contracts do
+not replace the pending keyboard, console/network, focus, and viewport run.
+
+See `docs/DISCOVERABILITY_UX_AUDIT.md` for the before/after IA, canonical terms,
+route decisions, empty-state strategy, accessibility findings, required
+viewport matrix, and remaining usability concerns.
+
+### Part 15.5C local verification evidence (2026-08-26)
+
+- `npm run lint` and `npx tsc --noEmit` passed.
+- Focused discoverability/source coverage passed 4 files and 53 tests.
+- The required `npm test` command hit Windows `spawn EPERM` before config load
+  on two attempts. The runner-loader fallback passed the complete suite: 69
+  files and 707 tests.
+- Guarded discoverability Playwright loaded four cases and responsive
+  Playwright loaded 17 cases. Each command hit `spawn EPERM` before worker
+  startup on both attempts; direct Chrome launch was also access denied. No
+  fresh interactive viewport, keyboard, focus, console, or network pass is
+  claimed.
+- The final `npm run scan:client-secrets` passed 260 current browser artifacts
+  with no forbidden category or configured secret-value leak; an earlier
+  pre-build run passed 325 artifacts.
+- `npm run build` compiled the optimized production bundle successfully on two
+  attempts, then hit `spawn EPERM` when Next launched its TypeScript worker.
+  The direct TypeScript command passed; the full build remains
+  environment-blocked rather than passed.
+- `/auth/sign-up` returned HTTP 200. No migration, remote configuration, or QA
+  data mutation was created or performed.
+
+**Current milestone:** Part 15.5C - App Discoverability & User Friendliness.
+**Next milestone:** Part 15.5D - Final Visual/UI Polish.
+
 ## Part 15.5B onboarding deployment gate
 
 **Application implementation is local and the database change is not

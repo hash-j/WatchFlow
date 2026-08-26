@@ -31,7 +31,7 @@ export function ExportControls() {
         <div className="rounded-lg border p-4">
           <h3 className="font-semibold">Movie library CSV</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Spreadsheet-ready movie metadata and your personal library fields.
+            Movie information and your personal Library details for a spreadsheet.
           </p>
           <Button asChild variant="outline" className="mt-4 min-h-11 w-full">
             <a href="/settings/data/export/csv">
@@ -73,7 +73,7 @@ export function DeleteLibraryControl({ count }: { count: number }) {
         <div>
           <h3 className="font-semibold">Delete all movies from my library</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            This will remove {count} {count === 1 ? "record" : "records"}. This
+            This will remove {count} {count === 1 ? "movie" : "movies"}. This
             removes your statuses, ratings, reviews, queue positions, and
             schedules. Your account will remain active.
           </p>
@@ -132,8 +132,8 @@ export function DeleteAccountControl() {
           <h3 className="font-semibold">Delete my WatchFlow account</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             This permanently removes your profile, preferences, personal movie
-            library, ratings, reviews, queue, schedules, import-related user
-            data, and authentication account. Shared movie metadata remains.
+            Library, ratings, reviews, Watch Next queue, schedules, Lists, and
+            sign-in account. Movie information shared by the catalogue remains.
           </p>
           <p className="mt-2 text-sm font-medium">
             You must have signed in within the last 30 minutes.

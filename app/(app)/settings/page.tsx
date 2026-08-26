@@ -22,8 +22,8 @@ const sections = [
   },
   {
     href: "/settings/data",
-    title: "Data and Privacy",
-    description: "Export your data or use protected account controls.",
+    title: "Data & Account",
+    description: "Download your data or review clearly separated deletion controls.",
     icon: Database,
   },
 ] as const;
@@ -31,10 +31,10 @@ const sections = [
 export default function SettingsPage() {
   return (
     <div>
-      <h2 className="text-2xl font-semibold tracking-tight">Settings overview</h2>
+      <h2 className="text-2xl font-semibold tracking-tight">Choose a settings category</h2>
       <p className="mt-2 max-w-2xl text-muted-foreground">
-        Your profile, preferences, and private data controls stay scoped to your
-        authenticated WatchFlow account.
+        Update your profile and defaults, review future notification choices,
+        or manage your private data.
       </p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">

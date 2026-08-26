@@ -90,9 +90,9 @@ export default function PickerPage(props: PickerPageProps) {
   return (
     <PageContainer className="max-w-6xl">
       <PageHeader
-        eyebrow={<span className="inline-flex items-center gap-2"><Dices className="size-4" aria-hidden="true" />Private library discovery</span>}
+        eyebrow={<span className="inline-flex items-center gap-2"><Dices className="size-4" aria-hidden="true" />Discover</span>}
         title="Movie Picker"
-        description="Choose transparent filters, then let WatchFlow randomly select one eligible movie from your own library. No movie is changed by being picked."
+        description="Can’t decide? Let WatchFlow pick from your own Library, with optional filters you control."
       />
 
       <Suspense fallback={<PickerContentLoading />}>

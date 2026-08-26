@@ -38,11 +38,11 @@ export function QueueControls({
             ? "Move movie earlier in the queue (already first)"
             : "Move movie earlier in the queue"
         }
-        title={isFirst ? "This movie is already first in the queue." : undefined}
+        title={isFirst ? "This movie is already first in the queue." : "Move earlier in Watch Next"}
         className="w-full sm:w-auto"
       >
         <ArrowUp className="size-4" aria-hidden="true" />
-        Up
+        Move earlier
       </Button>
       <Button
         type="submit"
@@ -56,11 +56,11 @@ export function QueueControls({
             ? "Move movie later in the queue (already last)"
             : "Move movie later in the queue"
         }
-        title={isLast ? "This movie is already last in the queue." : undefined}
+        title={isLast ? "This movie is already last in the queue." : "Move later in Watch Next"}
         className="w-full sm:w-auto"
       >
         <ArrowDown className="size-4" aria-hidden="true" />
-        Down
+        Move later
       </Button>
       {state.message ? (
         <span

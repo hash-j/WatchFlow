@@ -142,7 +142,7 @@ describe("Part 12 library Server Actions", () => {
       removeMovieAction(initialLibraryActionState, formData),
     ).resolves.toEqual({
       status: "error",
-      message: "The selected library record was invalid.",
+      message: "The selected movie was invalid. Refresh the page and try again.",
     });
   });
 

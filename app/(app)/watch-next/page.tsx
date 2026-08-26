@@ -5,7 +5,7 @@ import { ListOrdered } from "lucide-react";
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { QueueControls } from "@/components/movies/queue-controls";
 import { Button } from "@/components/ui/button";
-import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
+import { EmptyState, PageContainer, PageHeader } from "@/components/ui/responsive-layout";
 import { getCurrentUserWatchNextMovies } from "@/lib/library/supabase-library";
 
 function QueueLoading() {
@@ -25,17 +25,17 @@ async function WatchNextQueue() {
 
   if (queue.length === 0) {
     return (
-      <div className="mt-8 rounded-xl border bg-card p-10 text-center shadow-sm">
-        <ListOrdered className="mx-auto size-9 text-muted-foreground" aria-hidden="true" />
-        <h2 className="mt-4 text-lg font-semibold">Your queue is empty</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          Open a saved movie and change its status to Watch Next to build your
-          ordered queue.
-        </p>
-        <Button asChild className="mt-6">
-          <Link href="/library">Open your library</Link>
-        </Button>
-      </div>
+      <EmptyState
+        className="mt-8"
+        icon={<ListOrdered className="size-9" aria-hidden="true" />}
+        title="Your Watch Next queue is empty"
+        description="Want to Watch can hold anything you may watch later. Add a Library movie to Watch Next when you want to watch it soon."
+        actions={
+          <Button asChild>
+            <Link href="/library">Browse Library</Link>
+          </Button>
+        }
+      />
     );
   }
 
@@ -95,9 +95,9 @@ export default function WatchNextPage() {
   return (
     <PageContainer className="max-w-5xl">
       <PageHeader
-        eyebrow="Your queue"
+        eyebrow="Your movies"
         title="Watch Next"
-        description="Move movies up or down to decide what you will watch first. Changes are private and positions stay sequential."
+        description="An ordered queue for movies you plan to watch soon—separate from your broader Want to Watch collection."
         className="mb-0"
       />
       <Suspense fallback={<QueueLoading />}>
