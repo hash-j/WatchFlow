@@ -1,5 +1,17 @@
 # WatchFlow Production Readiness
 
+## Part 15.5E release decision
+
+**NO-GO for Preview deployment.** Static analysis, direct TypeScript, source
+tests, repository hygiene, public route smoke, and browser secret scanning
+pass. The release gate fails or is blocked on the missing base-schema
+migration, exact development target mismatch, unresolved high-severity
+transitive production audit findings, unavailable live authenticated/email/RLS
+evidence, Playwright worker startup, and full Next build completion.
+
+No production or development database mutation was performed during this
+audit. Resolve every required action in `docs/FINAL_BETA_QA.md` before Part 16.
+
 ## Part 15.5C discoverability readiness
 
 **Application implementation is local and uncommitted.** Authenticated desktop

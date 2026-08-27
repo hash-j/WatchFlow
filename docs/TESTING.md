@@ -1,5 +1,18 @@
 # WatchFlow Testing Guide
 
+## Part 15.5E final beta gate
+
+The final beta matrix and exact PASS/FAIL/BLOCKED results are recorded in
+`docs/FINAL_BETA_QA.md`. The new migration-order contract verifies unique
+chronological versions, dependent patch ordering, and the explicitly
+documented absence of the original base schema.
+
+The live development guard currently fails because the configured Supabase URL
+does not exactly match the independently pinned expected URL. Guarded
+integration and authenticated browser tests must skip; do not override or
+weaken this check. Public HTTP route smoke passes, but Playwright worker startup
+is environment-blocked by `spawn EPERM`.
+
 ## Part 15.5C discoverability coverage
 
 `lib/ux/discoverability.test.ts` protects the grouped desktop/mobile

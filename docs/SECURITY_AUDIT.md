@@ -1,5 +1,14 @@
 # WatchFlow Part 15 Security Audit
 
+## Part 15.5E release-gate addendum
+
+Source review and the built-client secret scan continue to pass. Live database
+attestation is BLOCKED because the configured Supabase URL does not exactly
+match the independently pinned development URL; no remote operation was run.
+The production dependency audit is FAIL: npm reports three high-severity
+transitive Next/PostCSS/Nanoid findings with no available fix. See
+`docs/FINAL_BETA_QA.md` for the complete release decision and evidence.
+
 ## Executive result
 
 Part 15 implemented a repository-level audit and focused security fixes. The

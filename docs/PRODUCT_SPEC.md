@@ -1,5 +1,15 @@
 # WatchFlow Product Specification
 
+## Part 15.5E: final beta regression QA
+
+Part 15.5E adds no product feature or database change. It is the release gate
+for the existing private beta: repository integrity, migration provenance,
+RLS/admin boundaries, authentication, onboarding, every major product route,
+imports/exports/deletion, responsive accessibility, dependencies, secret
+scanning, and build readiness must be classified as PASS, FAIL, BLOCKED, or
+DEFERRED. Preview deployment is allowed only after release-blocking FAIL and
+BLOCKED results in `docs/FINAL_BETA_QA.md` are resolved.
+
 ## Product summary
 
 WatchFlow is a multi-user SaaS for maintaining a personal movie library,

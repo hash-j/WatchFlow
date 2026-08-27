@@ -1,13 +1,39 @@
 # WatchFlow Project Context
 
-Last updated: 2026-08-26
+Last updated: 2026-08-27
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 15.5C app discoverability and user friendliness implemented locally; non-browser verification complete and browser execution environment-blocked
-Current branch: `master` at `41cb4b4` (`feat: add first-time user onboarding`), tagged `part-15-5b-onboarding` and `pre-15-5c-discoverability`
-Local status: Part 15.5C application, tests, and docs are uncommitted; no database migration or remote data/configuration change was created
+Current phase: Part 15.5E final beta regression QA; release gate is NO-GO pending documented blockers
+Current branch: `master` at `480303f` (`feat: polish WatchFlow visual design system`), tagged `part-15-5d-visual-polish` and `pre-15-5e-beta-qa`
+Local status: Part 15.5E QA documentation and migration-order coverage are uncommitted; no database migration or remote data/configuration change was created
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-08-27 Part 15.5E final beta regression QA
+
+- Part 15.5D is committed at `480303f`; QA began from a clean tree. Repository
+  hygiene, conflict checks, ignored environment/QA artifacts, direct
+  TypeScript, lint, public HTTP route smoke, and client-secret scanning pass.
+- The version-controlled migration sequence has nine unique timestamps and
+  compatible incremental dependencies. It cannot recreate the complete schema
+  from zero because the original `profiles`, `movies`, and `user_movies` base
+  migration remains absent. A source contract now preserves that explicit gap.
+- The live safety gate failed closed: `E2E_TARGET_ENV` is development and both
+  QA accounts are configured, but the configured and independently expected
+  Supabase URLs do not exactly match. No live read, mutation, email, RLS,
+  provider, or destructive workflow was attempted after that result.
+- Full source/unit coverage passes through the supported runner loader. The
+  required `npm test`, Playwright worker startup, integration fork pool, and
+  Next TypeScript child remain blocked by Windows `spawn EPERM`; Next bundle
+  compilation and direct TypeScript succeed.
+- Production dependency audit fails on three high-severity transitive
+  Next/PostCSS/Nanoid findings for which npm reports no available fix. Full
+  audit also reports development-tool findings.
+- Overall result: **FAIL / NO-GO for Part 16 Preview deployment** until the
+  base-schema provenance, exact development target pin, dependency findings,
+  live guarded regression matrix, and executable browser/build environment are
+  resolved. See `docs/FINAL_BETA_QA.md` for the complete PASS/FAIL/BLOCKED
+  matrix.
 
 ## 2026-08-26 Part 15.5C app discoverability and user friendliness
 
