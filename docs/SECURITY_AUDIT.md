@@ -1,5 +1,37 @@
 # WatchFlow Part 15 Security Audit
 
+## Part 15.5G hosted profiles privilege-drift addendum
+
+The hosted development audit is real evidence that authenticated has
+`DELETE`, `INSERT`, `REFERENCES`, `SELECT`, `TRIGGER`, and `TRUNCATE` on
+`public.profiles`. Table-level UPDATE is false because
+`202607220003_user_settings.sql` revoked that one privilege and restored only
+profile column UPDATE. PostgreSQL table `ALL` consists of those six privileges
+plus UPDATE, so the result is an exact ALL-minus-UPDATE fingerprint.
+
+Git history contains neither the original profile-creation DDL nor a broad
+authenticated profile grant/default-privilege statement. The reconstructed
+baseline was added later and explicitly revokes all browser-role table access
+before granting SELECT/narrow UPDATE. Therefore the broad grant predates the
+repository baseline; the unavailable legacy DDL prevents distinguishing an
+explicit historical `GRANT ALL` from a historical ALL default ACL without
+guessing. The versioned settings migration is the exact operation that removed
+only UPDATE while leaving the six reported privileges intact.
+
+New unapplied migration `202608290001_profiles_privilege_hardening.sql` revokes
+all seven profile privileges from `PUBLIC`/`anon`, revokes authenticated INSERT,
+table UPDATE, DELETE, TRUNCATE, REFERENCES, and TRIGGER, then restores
+authenticated SELECT and the six intended UPDATE columns. Existing own-row RLS,
+the Auth profile-creation trigger, Auth-delete cascade, service-role access, and
+all application authentication behavior remain unchanged.
+
+Readiness and production audit SQL now cover the seven table privileges for
+both API roles, table-level UPDATE, and the exact column UPDATE matrix. A local
+PostgreSQL 18 FROM-ZERO run applied all 11 migrations with no readiness or
+security failure marker. A separate exact hosted-drift simulation produced the
+reported six privileges before the new migration and only SELECT plus the six
+required UPDATE columns afterward. No hosted database was changed.
+
 ## Part 15.5F blocker-remediation addendum
 
 The exact development target pin now passes through a deterministic loader;

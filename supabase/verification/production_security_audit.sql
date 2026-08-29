@@ -147,6 +147,9 @@ with expected_privileges(
     ('profiles', 'INSERT', false),
     ('profiles', 'UPDATE', true),
     ('profiles', 'DELETE', false),
+    ('profiles', 'TRUNCATE', false),
+    ('profiles', 'REFERENCES', false),
+    ('profiles', 'TRIGGER', false),
     ('movies', 'SELECT', true),
     ('movies', 'INSERT', false),
     ('movies', 'UPDATE', false),
@@ -420,6 +423,9 @@ expected_privileges(
     ('profiles', 'INSERT', false),
     ('profiles', 'UPDATE', true),
     ('profiles', 'DELETE', false),
+    ('profiles', 'TRUNCATE', false),
+    ('profiles', 'REFERENCES', false),
+    ('profiles', 'TRIGGER', false),
     ('movies', 'SELECT', true),
     ('movies', 'INSERT', false),
     ('movies', 'UPDATE', false),
@@ -499,6 +505,26 @@ effective_privileges as (
     end as anon_has
   from expected_privileges as expected
   left join tables on tables.relname = expected.table_name
+),
+profile_columns as (
+  select
+    tables.oid as table_oid,
+    attributes.attnum,
+    attributes.attname as column_name,
+    attributes.attname in (
+      'full_name',
+      'avatar_url',
+      'country',
+      'timezone',
+      'updated_at',
+      'onboarding_completed_at'
+    ) as authenticated_should_have_update
+  from tables
+  inner join pg_catalog.pg_attribute as attributes
+    on attributes.attrelid = tables.oid
+  where tables.relname = 'profiles'
+    and attributes.attnum > 0
+    and not attributes.attisdropped
 ),
 findings as (
   select
@@ -615,12 +641,58 @@ findings as (
   union all
 
   select
+    'profiles.UPDATE',
+    'AUTHENTICATED_PRIVILEGE',
+    'Authenticated role has unintended table-level UPDATE privilege'
+  from tables
+  where tables.relname = 'profiles'
+    and pg_catalog.has_table_privilege(
+      'authenticated',
+      tables.oid,
+      'UPDATE'
+    )
+
+  union all
+
+  select
+    'profiles.UPDATE.' || profile_columns.column_name,
+    'AUTHENTICATED_PRIVILEGE',
+    case
+      when profile_columns.authenticated_should_have_update
+        then 'Authenticated role is missing a required profile column privilege'
+      else 'Authenticated role has an unintended profile column privilege'
+    end
+  from profile_columns
+  where pg_catalog.has_column_privilege(
+    'authenticated',
+    profile_columns.table_oid,
+    profile_columns.attnum,
+    'UPDATE'
+  ) is distinct from profile_columns.authenticated_should_have_update
+
+  union all
+
+  select
     effective.table_name || '.' || effective.privilege_type,
     'ANON_PRIVILEGE',
     'Anonymous role has an unintended effective table or column privilege'
   from effective_privileges as effective
   where effective.oid is not null
     and effective.anon_has
+
+  union all
+
+  select
+    'profiles.UPDATE.' || profile_columns.column_name,
+    'ANON_PRIVILEGE',
+    'Anonymous role has an unintended profile column privilege'
+  from profile_columns
+  where pg_catalog.has_column_privilege(
+    'anon',
+    profile_columns.table_oid,
+    profile_columns.attnum,
+    'UPDATE'
+  )
 
   union all
 

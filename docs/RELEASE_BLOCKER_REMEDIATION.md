@@ -3,6 +3,28 @@
 Date: 2026-08-28  
 Target: rerun Part 15.5E before Part 16 Preview deployment
 
+## 2026-08-29 hosted profiles privilege follow-up
+
+The previously blocked hosted catalog review found a real development-database
+ACL drift: authenticated retained profile INSERT, DELETE, REFERENCES, TRIGGER,
+and TRUNCATE alongside required SELECT. The six-privilege set is the exact
+remainder of a legacy table ALL grant after the versioned settings migration
+revoked only table UPDATE. The original grant is older unversioned hosted
+history; the reconstructed baseline is narrow and did not introduce it.
+
+`202608290001_profiles_privilege_hardening.sql` is the reviewable forward fix.
+It restores authenticated SELECT and only the six established profile UPDATE
+columns, denies every profile privilege to `PUBLIC`/`anon`, and preserves own-
+row RLS, Auth-triggered profile creation, Auth-cascade account deletion, and
+service-role behavior. Verification SQL now fails on all seven profile table
+privileges, broad UPDATE, or an incorrect column UPDATE matrix.
+
+Local PostgreSQL 18 proof applied the complete 11-migration sequence from zero
+with no readiness/security failure. An additional exact ALL-minus-UPDATE setup
+reproduced the hosted finding and the new migration corrected it. This evidence
+does not modify the hosted project: manual reviewed application and a rerun of
+both hosted SQL audits are still required.
+
 ## Executive result
 
 The development target guard, missing repository baseline, and production

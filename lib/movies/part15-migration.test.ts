@@ -327,8 +327,9 @@ describe("scheduling profile permission patch contract", () => {
     expect(tablePrivileges).not.toContain("update");
     expect(tablePrivileges).not.toContain("all");
     expect(tablePrivileges).not.toContain("all privileges");
+    expect(readinessAudit).toContain("('authenticated', 'update', false)");
     expect(readinessAudit).toContain(
-      "'profiles.authenticated_table_update'",
+      "'profiles.' || expected.role_name || '_table_'",
     );
     expect(readinessAudit).toContain("has_column_privilege");
     for (const column of [

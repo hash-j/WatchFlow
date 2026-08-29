@@ -1,5 +1,25 @@
 # WatchFlow Security
 
+## Part 15.5G hosted profile privilege hardening
+
+- Hosted development evidence confirms an older authenticated `profiles` table
+  `ALL` grant survived as INSERT, DELETE, TRUNCATE, REFERENCES, TRIGGER, and
+  required SELECT after the settings migration revoked only table UPDATE.
+- `202608290001_profiles_privilege_hardening.sql` is forward-only and restores
+  least privilege: authenticated table SELECT plus UPDATE only on `full_name`,
+  `avatar_url`, `country`, `timezone`, `updated_at`, and
+  `onboarding_completed_at`; `PUBLIC`/`anon` have no profile privilege.
+- The migration does not weaken or replace own-row SELECT/UPDATE RLS. It does
+  not add INSERT/DELETE policies, alter the Auth profile trigger/cascade, change
+  default privileges, or broaden the service-role boundary.
+- Profile creation continues through the Auth-user trigger. Controlled account
+  deletion continues through fresh server verification, the same-user Auth
+  admin delete, and the Auth FK cascade; neither path needs direct
+  authenticated INSERT or DELETE on `profiles`.
+- Both SQL audits now treat all seven profile table privileges, broad table
+  UPDATE, exact UPDATE columns, and all anonymous profile access as enforced
+  contracts. The migration remains unapplied to hosted Supabase pending review.
+
 ## Part 15.5B onboarding security
 
 - `/onboarding` is proxy protected and independently requires a fresh,

@@ -3,11 +3,48 @@
 Last updated: 2026-08-29
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 15.5G production-build regression remediation; the auth Cache Components fix is uncommitted and awaits the authoritative Ubuntu build
-Current branch: `master` at `f5a91d2` (`ci: run release quality checks on master`)
-Local status: focused auth Suspense/test changes are uncommitted; no workflow, database, hosted configuration, or production data changed
+Current phase: Part 15.5G hosted `profiles` privilege-drift remediation
+Current branch: `master` at `6d898da` (`fix: isolate public auth runtime checks behind suspense`)
+Local status: focused privilege migration/audit/test/documentation changes are uncommitted; no hosted database, workflow, application code, or production data changed
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-08-29 Part 15.5G hosted profiles privilege drift
+
+- Hosted development catalog evidence found authenticated table privileges
+  `DELETE`, `INSERT`, `REFERENCES`, `SELECT`, `TRIGGER`, and `TRUNCATE` on
+  `public.profiles`; table-level `UPDATE` was correctly absent and narrow
+  column UPDATE grants remained present.
+- Reachable and reflog Git history contains no broad profiles grant to
+  `authenticated` and no profile default-privilege statement. The reconstructed
+  baseline explicitly revokes browser-role table privileges before restoring
+  SELECT/narrow UPDATE, so it did not cause the hosted drift. The hosted set is
+  exactly PostgreSQL table `ALL` minus `UPDATE`: the original broad grant is in
+  the older unversioned hosted baseline/default ACL, while
+  `202607220003_user_settings.sql` removed only table UPDATE and therefore left
+  the other six privileges behind. The absent original DDL means repository
+  evidence cannot distinguish an explicit legacy `GRANT ALL` from an old ALL
+  default ACL without inventing provenance.
+- New forward-only migration
+  `202608290001_profiles_privilege_hardening.sql` revokes every profile table
+  privilege from `PUBLIC`/`anon`, removes authenticated INSERT/table UPDATE/
+  DELETE/TRUNCATE/REFERENCES/TRIGGER, and restores only authenticated SELECT and
+  UPDATE on `full_name`, `avatar_url`, `country`, `timezone`, `updated_at`, and
+  `onboarding_completed_at`. It does not change RLS, policies, Auth trigger/
+  cascade behavior, default privileges, functions, or service-role access.
+- Readiness/security SQL now audits all seven profile table privileges for both
+  API roles, exact profile UPDATE columns, and table-level UPDATE. Focused source
+  contracts pass 5 files/39 tests. A disposable PostgreSQL 18 FROM-ZERO rebuild
+  applied all 11 migrations with zero readiness/security failures; a separate
+  exact ALL-minus-UPDATE simulation reproduced the hosted six-privilege set and
+  the new migration reduced it to SELECT plus the six intended UPDATE columns.
+- Final repository gates: `git diff --check`, lint, and direct TypeScript pass.
+  Exact `npm test` remains blocked before config load by Windows `spawn EPERM`;
+  the supported native-loader fallback passes 73 files/727 tests. The final
+  FROM-ZERO readiness run has zero `MISSING` results and the production security
+  audit has zero findings.
+- The migration was not applied to Supabase. Review and deliberate development
+  application remain required before rerunning the hosted audit.
 
 ## 2026-08-29 Part 15.5G auth production-build regression
 
@@ -495,7 +532,7 @@ Personal data placement is mandatory:
 
 | Object | Current version-controlled or documented rule |
 |---|---|
-| `profiles` | Own-row RLS remains authoritative; versioned grants allow `full_name`, `avatar_url`, `country`, and `timezone`; the committed scheduling patch narrowly adds/reaffirms `timezone` and adds `updated_at` without table-level UPDATE |
+| `profiles` | Own-row SELECT/UPDATE RLS remains authoritative. Authenticated has table SELECT plus UPDATE only on `full_name`, `avatar_url`, `country`, `timezone`, `updated_at`, and `onboarding_completed_at`; no INSERT, table UPDATE, DELETE, TRUNCATE, REFERENCES, or TRIGGER. `PUBLIC`/`anon` have no profile table or column privilege |
 | `movies` | Shared reads follow deployed policy; only the protected secret client performs metadata upserts |
 | `user_movies` | Existing own SELECT/UPDATE policies remain; Part 12 narrowly grants authenticated SELECT/UPDATE on `favourite`; existing INSERT/DELETE policies and base grants remain unversioned |
 | `user_preferences` | Own SELECT, INSERT, UPDATE policies; no normal DELETE policy |
@@ -521,6 +558,7 @@ Nuance: `202607220003_user_settings.sql` used column-level preference grants, bu
 | `202607300001_part_15_tmdb_rate_limits.sql` | Adds durable authenticated TMDB rate-limit buckets/RPC, canonical shared-cache columns, browser write revocation for `movies`, transactional management/schedule RPC replacements, and preference-default repair | Confirmed target has the scheduling RPC, its authenticated EXECUTE privilege, and queue normalization; full migration parity/history is not proven. Do not rerun it on the inspected target |
 | `202608030001_schedule_profile_permissions.sql` | Grants authenticated UPDATE only on `profiles.timezone` and `profiles.updated_at` so the SECURITY INVOKER scheduling RPC can persist its owned profile changes | Version-controlled at `2708afd`; manual target application and live owner/cross-user scheduling retest are not verified in this session |
 | `202608170001_part_15_5b_first_time_onboarding.sql` | Adds nullable profile completion time, backfills existing profiles, and grants authenticated UPDATE only on that new column | Created locally only; review/apply manually, then run both read-only verification scripts and guarded onboarding isolation tests |
+| `202608290001_profiles_privilege_hardening.sql` | Removes hosted legacy broad profile privileges and restores the exact authenticated SELECT/narrow UPDATE contract | Created locally only; do not apply remotely until reviewed, then rerun both SQL verification scripts |
 
 Original creation migrations for `profiles`, `movies`, and `user_movies` are absent. Contract tests inspect SQL text only; they do not prove remote application or multi-user isolation.
 

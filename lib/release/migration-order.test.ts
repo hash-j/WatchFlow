@@ -28,6 +28,11 @@ describe("Part 15.5F migration provenance and order", () => {
     expect(
       index("202608170001_part_15_5b_first_time_onboarding.sql"),
     ).toBeGreaterThan(index("202608030001_schedule_profile_permissions.sql"));
+    expect(
+      index("202608290001_profiles_privilege_hardening.sql"),
+    ).toBeGreaterThan(
+      index("202608170001_part_15_5b_first_time_onboarding.sql"),
+    );
   });
 
   it("creates the required base objects before incremental migrations", () => {

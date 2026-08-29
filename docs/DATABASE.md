@@ -89,6 +89,26 @@ reruns. It grants `authenticated` UPDATE only on this new column, grants
 nothing to `anon`, and relies on the existing `auth.uid()` profile ownership
 policy with RLS still enabled.
 
+The hosted development catalog later exposed a legacy profile table ACL:
+authenticated retained `DELETE`, `INSERT`, `REFERENCES`, `SELECT`, `TRIGGER`,
+and `TRUNCATE`, while table-level `UPDATE` was absent. This is exactly a table
+`ALL` grant after `202607220003_user_settings.sql` revoked only UPDATE. No
+reachable/reflog Git revision grants profile `ALL` to authenticated, and the
+reconstructed baseline explicitly revokes it, so the original broad grant
+belongs to the older unversioned hosted baseline/default ACL. The absent
+original DDL does not support claiming whether that ACL came from an explicit
+legacy statement or a then-active default-privilege rule.
+
+Forward-only migration `202608290001_profiles_privilege_hardening.sql`
+normalizes the final contract without rewriting applied history. `PUBLIC` and
+`anon` receive no profile privilege. Authenticated receives table SELECT and
+column UPDATE only on `full_name`, `avatar_url`, `country`, `timezone`,
+`updated_at`, and `onboarding_completed_at`; it has no INSERT, table UPDATE,
+DELETE, TRUNCATE, REFERENCES, or TRIGGER. The table UPDATE revoke deliberately
+clears any stale UPDATE column ACL before those exact six columns are restored.
+Profile creation remains the `auth.users` security-definer trigger, and account
+deletion remains Auth-admin deletion followed by the profile FK cascade.
+
 ### `user_preferences`
 
 Purpose: one private settings row per Auth user. `user_id` is the primary key

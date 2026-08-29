@@ -755,25 +755,49 @@ select
 from evaluated
 order by evaluated.attnum;
 
+-- Profile creation and deletion are controlled by the Auth trigger/cascade.
+-- Authenticated keeps table SELECT plus the column UPDATE matrix above; neither
+-- Data API role needs structural or broad write privileges.
+with expected(role_name, privilege_type, should_have) as (
+  values
+    ('authenticated', 'SELECT', true),
+    ('authenticated', 'INSERT', false),
+    ('authenticated', 'UPDATE', false),
+    ('authenticated', 'DELETE', false),
+    ('authenticated', 'TRUNCATE', false),
+    ('authenticated', 'REFERENCES', false),
+    ('authenticated', 'TRIGGER', false),
+    ('anon', 'SELECT', false),
+    ('anon', 'INSERT', false),
+    ('anon', 'UPDATE', false),
+    ('anon', 'DELETE', false),
+    ('anon', 'TRUNCATE', false),
+    ('anon', 'REFERENCES', false),
+    ('anon', 'TRIGGER', false)
+)
 select
-  'profiles.authenticated_table_update' as object_name,
+  'profiles.' || expected.role_name || '_table_'
+    || lower(expected.privilege_type) as object_name,
   case
     when pg_catalog.to_regclass('public.profiles') is null then 'MISSING'
     when pg_catalog.has_table_privilege(
-      'authenticated',
+      expected.role_name,
       'public.profiles',
-      'UPDATE'
-    ) then 'MISSING'
+      expected.privilege_type
+    ) is distinct from expected.should_have then 'MISSING'
     else 'INSTALLED'
   end as status,
+  expected.should_have,
   case
     when pg_catalog.to_regclass('public.profiles') is null then false
     else pg_catalog.has_table_privilege(
-      'authenticated',
+      expected.role_name,
       'public.profiles',
-      'UPDATE'
+      expected.privilege_type
     )
-  end as authenticated_table_update;
+  end as actual
+from expected
+order by expected.role_name, expected.privilege_type;
 
 -- 10. Existing-user backfills. query_to_xml keeps relation lookup dynamic so
 -- a missing prerequisite is reported instead of aborting the whole script.
