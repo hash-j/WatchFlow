@@ -1,130 +1,78 @@
 # Part 15.5E Final Beta QA and Release Readiness
 
-## Part 15.5F remediation addendum (2026-08-28)
-
-The original NO-GO remains the historical Part 15.5E result. Part 15.5F has
-since fixed the environment-loader mismatch, added and actually executed the
-missing FROM-ZERO baseline through all migrations, passed both local SQL
-audits, and eliminated all production and development npm audit findings.
-Guarded development RLS, onboarding, limiter, OpenAPI, and authenticated route
-read evidence also passes.
-
-The release is still NO-GO pending hosted development catalog SQL,
-browser-driven live regression, disposable inbox OTP/recovery, separately
-authorized deletion where required, and a successful clean-environment
-workflow/build. Full evidence and safe reconciliation guidance are in
-`docs/RELEASE_BLOCKER_REMEDIATION.md`.
-
-Date: 2026-08-27  
+Date: 2026-08-30
 Target: Part 16 Preview Deployment
+Code baseline: `master` at `2bb576a`
 
-## Executive result
+## Final rerun result
 
-**Overall: FAIL — NO-GO for Preview deployment at this time.**
+**PASS - READY TO BEGIN PART 16 PREVIEW DEPLOYMENT.**
 
-The committed application passes static analysis, direct TypeScript, the full
-unit/source fallback, repository hygiene, public HTTP route smoke, and browser
-artifact secret scanning. It is not yet proven release-ready because the exact
-development Supabase URL guard does not match, the repository cannot build the
-database from zero without its missing base migration, live tenant isolation
-and critical workflows could not run, Playwright workers are blocked by
-Windows `spawn EPERM`, and the production dependency audit reports unresolved
-high-severity transitive findings.
+This supersedes the historical 2026-08-27 NO-GO result. The missing baseline,
+development target-pin mismatch, dependency advisories, hosted catalog gaps,
+profile privilege drift, auth prerender failure, live Auth/deletion gaps, and
+clean Linux build/browser gaps have all been remediated or verified.
 
-No production project, remote schema, Auth configuration, or user data was
-modified. No live mutation was attempted after the target guard failed.
+This is not public-production approval. Preview must use a new production
+Supabase project, not `watchflow-dev`, and must complete the online deployment
+checks listed in `docs/RELEASE_EVIDENCE.md`.
 
 ## Gate matrix
 
-| Area | Result | Evidence / blocker |
+| Area | Result | Evidence |
 |---|---|---|
-| Repository health | PASS | Clean Part 15.5D commit, no conflicts, `git diff --check`, ignored local env and QA output paths, no tracked secrets/artifacts |
-| Incremental migration order | PASS | Nine unique chronological versions; dependent privilege/onboarding patches follow their prerequisites |
-| From-zero schema rebuild | FAIL | Original `profiles`, `movies`, and `user_movies` creation migrations are absent |
-| Migration source security | PASS | Reviewed RLS, ownership, scoped grants, and RPC execution contracts for version-controlled objects |
-| Live database/RLS/ACL audit | BLOCKED | Configured and expected Supabase URLs do not exactly match; catalog verification was not run |
-| Admin-client boundary | PASS | `server-only`; restricted to shared movie metadata and final same-user Auth deletion; browser scan passes |
-| Authentication and signup OTP | BLOCKED | No authorized live target/inbox; Playwright worker startup fails |
-| Password recovery | BLOCKED | Delivered recovery email/link and used/expired-link behavior require authorized live target/inbox |
-| Onboarding | BLOCKED | Guard prevents live profile/preferences/library mutations |
-| Dashboard | BLOCKED | Source/unit coverage passes; authenticated data accuracy and isolation were not executed |
-| Search and TMDB | BLOCKED | Source/unit coverage passes; live provider/add/duplicate/rate-limit behavior was not authorized |
-| Library and movie details | BLOCKED | Source/unit coverage passes; authenticated filter/bulk/persistence/privacy matrix was not executed |
-| Watch Next and Schedule | BLOCKED | Source/unit/migration contracts pass; live ordering, timezone, and two-user behavior were not executed |
-| Custom Lists | BLOCKED | Source/unit/migration contracts pass; live CRUD/order/isolation was not executed |
-| Picker and Recommendations | BLOCKED | Pure rule tests pass; authenticated dataset/filter/isolation behavior was not executed |
-| Statistics | BLOCKED | Pure calculation/query contracts pass; live per-user accuracy/revalidation was not executed |
-| CSV Import | BLOCKED | Parser/mapping/matching/service tests pass; live matching/import/rate-limit workflow was not authorized |
-| Settings and exports | BLOCKED | Validation/export/security contracts pass; live persistence/download/privacy workflow was not executed |
-| Account/library deletion | BLOCKED | Exact target guard fails and one-shot deletion authorization is disabled |
-| Public route HTTP smoke | PASS | Landing/auth routes return 200; Dashboard/Library/Settings return 307 to login |
-| Responsive/browser/accessibility | BLOCKED | Existing source contracts pass; Playwright fails before its worker with `spawn EPERM` |
-| Unit/source suite | PASS | Runner-loader fallback: 70 files, 712 tests after the Part 15.5E migration-order contract |
-| Required `npm test` entry point | BLOCKED | Two isolated attempts fail before config load with Windows `spawn EPERM` |
-| Client secret scan | PASS | 260 browser artifacts; no forbidden category or configured secret-value leak |
-| Production build | BLOCKED | Bundle compilation succeeds; Next TypeScript child fails twice with `spawn EPERM`; direct TypeScript passes |
-| Production dependency audit | FAIL | Three high-severity transitive Next/PostCSS/Nanoid findings; npm reports no fix available |
+| Repository/code provenance | AUTOMATED PASS | `HEAD`/`origin/master` are `2bb576a`; the latest green Release Quality run used that exact SHA; later changes are documentation only |
+| Migration order/from zero | AUTOMATED PASS | All 11 chronological migrations apply to disposable PostgreSQL 18; readiness and security SQL pass |
+| Hosted development readiness | AUTOMATED PASS | Required objects/backfills installed; zero missing profile/preference rows |
+| Hosted security | AUTOMATED PASS | Profile hardening installed and hosted Section 7 reports zero findings |
+| RLS/two-user isolation | AUTOMATED PASS | QA A/B live RLS 5/5; broader two-way authenticated reads/mutations/routes/exports pass |
+| Signup/six-digit OTP | MANUAL PASS | Fresh delivered signup and six-digit verification completed |
+| Onboarding | MANUAL PASS | Fresh onboarding completed; integration ownership/restoration also passes |
+| Login/logout/session | MANUAL PASS | Established account/session behavior completed successfully |
+| Password recovery | MANUAL PASS | Delivered link-based recovery completed successfully |
+| Account deletion | MANUAL PASS | Dedicated disposable account completed the controlled application flow |
+| Authenticated product workflows | MANUAL PASS | Dashboard, Search/TMDB, Library/detail/personal fields, Watch Next, Schedule, Lists, Picker, Recommendations, Statistics, and Settings exercised successfully |
+| CSV/JSON data isolation | AUTOMATED PASS | Authenticated attachment routes contained current-user controlled data and excluded the other QA user's markers/email |
+| Public responsive browser | AUTOMATED PASS | Current-HEAD Ubuntu Chrome Playwright passed in Release Quality |
+| Authenticated responsive rerun | DEFERRED TO PREVIEW | Current Windows automated browser worker is environment-blocked; fresh deployed mobile/tablet run remains explicit Preview QA |
+| Lint/TypeScript/tests/build/scan | AUTOMATED PASS | Current-HEAD Linux workflow passed all; current local lint/TypeScript and focused tests also pass |
+| Windows Playwright/npm worker startup | BLOCKED - LOCAL WINDOWS ENVIRONMENT ONLY | `spawn EPERM` occurs before worker/browser/config startup; it is not an assertion or application failure |
 
-## Recorded command results
+## Items checked for missing evidence
 
+- **Actual CSV/JSON data:** PASS through authenticated attachment responses and
+  two-user content assertions. A browser-managed save/open replay is deferred
+  to Preview because it is not explicitly present in the latest manual record.
+- **Logout/login persistence:** MANUAL PASS through the completed account and
+  session release smoke.
+- **Authenticated mobile/tablet:** DEFERRED TO PREVIEW. Historical responsive
+  coverage and current source contracts exist, but no fresh post-hardening
+  Windows Playwright execution is claimed.
+- **Fresh OTP/recovery/deletion:** MANUAL PASS using the proper fresh/disposable
+  accounts and email flows.
+- **TMDB live behavior:** MANUAL PASS for real authenticated search; live
+  durable limiter coverage passes 10/10.
+- **Hosted security and QA A/B isolation:** AUTOMATED PASS.
+
+There is no unresolved FAIL item and no material pre-Preview workflow without
+either passing evidence or an explicit Preview owner.
+
+## Local consolidation checks
+
+- `git diff --check`: PASS.
 - `npm run lint`: PASS.
 - `npx tsc --noEmit`: PASS.
-- Migration-order contract: PASS, 1 file / 3 tests.
-- Full unit/source fallback: PASS, 70 files / 712 tests.
-- Required `npm test`: BLOCKED on repeated `spawn EPERM` before config load.
-- Guarded integration selection: 3 files / 19 tests loaded and skipped because
-  the exact target pin failed; no live call was made.
-- Guarded authenticated/discoverability/Statistics selection: 18 tests loaded
-  and skipped. Onboarding: 4 loaded/skipped. Account deletion and TMDB limiter:
-  2 loaded/skipped.
-- Public authentication/protected Playwright: BLOCKED before the first worker
-  on two attempts with `spawn EPERM`.
-- Responsive Playwright: 17 guarded cases skipped, then the public worker was
-  BLOCKED by `spawn EPERM`.
-- `npm run scan:client-secrets`: PASS, 260 artifacts.
-- `npm run build`: BLOCKED after successful optimized bundle compilation when
-  Next attempted to spawn its TypeScript child; repeated attempts behaved the
-  same. Direct TypeScript passes.
-- `npm audit --omit=dev`: FAIL, 3 high-severity transitive findings with no
-  available fix. Full audit: FAIL, 31 findings (21 high, 10 moderate).
+- Guarded hosted RLS: 1 file/5 tests PASS.
+- Focused ownership contracts: 7 files/77 tests PASS.
+- Full Windows native-loader fallback: 73 files/727 tests PASS.
+- Exact local `npm test`: BLOCKED before config load by Windows `spawn EPERM`;
+  the exact command passes on current-HEAD Ubuntu CI.
+- Local authenticated Playwright: BLOCKED before worker launch by Windows
+  `spawn EPERM`; no local browser PASS is claimed.
 
-## Migration and database findings
+## Final recommendation
 
-The migration timestamps are unique and ordered. Later function replacements
-retain compatible signatures for personal movie updates and scheduling.
-Version-controlled migrations enable RLS and owner checks for preferences,
-lists, memberships, and the internal rate limiter; functions derive identity
-from `auth.uid()` and revoke unintended public/anonymous execution.
-
-The repository is nevertheless not a complete schema source. It begins with
-Phase 3 functions that already depend on deployed `profiles`, `movies`, and
-`user_movies` objects. Part 16 must either add a reviewed baseline migration or
-explicitly adopt and verify an existing development database before Preview.
-The two read-only catalog scripts must then report no missing required object,
-policy, privilege, function, constraint, or index.
-
-## Security findings
-
-No normal user-owned operation uses the admin client to bypass RLS. The admin
-factory imports `server-only`, requires a previously verified user, and reads
-only the server secret variable. Approved call sites are shared `movies`
-metadata and deletion of that same freshly verified Auth user. The application
-source does not use Nanoid custom generators; the reported Nanoid advisory is
-transitive through build tooling, but remains a failing release audit until an
-upstream resolution or documented risk acceptance exists.
-
-## Required actions before Preview
-
-1. Correct the independently pinned development Supabase URL so it exactly
-   matches the application target without exposing either value.
-2. Resolve the missing base-schema migration/provenance decision and run both
-   read-only catalog verification scripts against the confirmed development
-   project.
-3. Resolve or formally assess the production dependency audit findings.
-4. Run the complete guarded integration and authenticated Playwright matrices,
-   including disposable signup/recovery inboxes and the separately authorized
-   deletion account.
-5. Re-run Playwright and the complete Next build in an environment that permits
-   child-process startup.
-
-No section marked BLOCKED is represented as passing.
+Proceed to **Part 16 - Preview Deployment** using a new production Supabase
+project and isolated Vercel Preview configuration. Do not connect the public
+Preview deployment to `watchflow-dev`, and do not treat this decision as public
+production launch approval.

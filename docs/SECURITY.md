@@ -1,5 +1,22 @@
 # WatchFlow Security
 
+## Final Part 15.5E security status
+
+- Current code at `2bb576a` passes the clean Ubuntu from-zero database,
+  readiness/security SQL, lint, TypeScript, unit/source, production-build,
+  client-secret-scan, and public-browser gates.
+- Hosted development readiness passes, profile/preference backfill gaps are
+  zero, profile privilege hardening is applied, and the hosted production
+  security audit reports zero findings.
+- QA A/B isolation passes in both directions across user-owned data, routes,
+  representative mutations/RPCs, and CSV/JSON exports through ordinary
+  authenticated clients. No admin/service-role bypass was used.
+- Fresh signup, delivered six-digit OTP, onboarding, link-based recovery, and
+  dedicated disposable account deletion have completed release-smoke evidence.
+- WatchFlow is ready to begin an isolated Part 16 Preview, not a public
+  production launch. Preview must use a new production Supabase project and
+  must not connect to `watchflow-dev`.
+
 ## Part 15.5G hosted profile privilege hardening
 
 - Hosted development evidence confirms an older authenticated `profiles` table
@@ -16,9 +33,10 @@
   deletion continues through fresh server verification, the same-user Auth
   admin delete, and the Auth FK cascade; neither path needs direct
   authenticated INSERT or DELETE on `profiles`.
-- Both SQL audits now treat all seven profile table privileges, broad table
-  UPDATE, exact UPDATE columns, and all anonymous profile access as enforced
-  contracts. The migration remains unapplied to hosted Supabase pending review.
+- Both SQL audits treat all seven profile table privileges, broad table UPDATE,
+  exact UPDATE columns, and all anonymous profile access as enforced contracts.
+  The migration is applied to hosted development and the resulting exact
+  privilege matrix plus profile/settings/schedule smoke pass.
 
 ## Part 15.5B onboarding security
 
@@ -47,8 +65,9 @@
   normal Dashboard routing, not to another tenant's data or an onboarding
   loop.
 
-**Current milestone:** Part 15.5B - First-Time User Onboarding.
-**Next milestone:** Part 15.5C - App Discoverability & User Friendliness.
+The onboarding security contract is installed and has hosted/manual release
+evidence. Current milestone status is maintained in
+`docs/RELEASE_EVIDENCE.md`.
 
 ## Part 15.5A signup verification security
 

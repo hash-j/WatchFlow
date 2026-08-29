@@ -1,13 +1,118 @@
 # WatchFlow Project Context
 
-Last updated: 2026-08-29
+Last updated: 2026-08-30
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 15.5G hosted `profiles` privilege-drift remediation
-Current branch: `master` at `6d898da` (`fix: isolate public auth runtime checks behind suspense`)
-Local status: focused privilege migration/audit/test/documentation changes are uncommitted; no hosted database, workflow, application code, or production data changed
+Current phase: Part 15.5E final rerun complete; ready to begin Part 16 Preview Deployment
+Current branch: `master` at `2bb576a` (`fix: harden authenticated profile privileges`)
+Local status: final release-evidence documentation changes are uncommitted; no application, test, workflow, dependency, migration, policy, schema, hosted configuration, or QA data changed
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+`docs/RELEASE_EVIDENCE.md` is the current readiness authority. Older dated
+milestone sections below are retained as historical evidence and do not
+override the 2026-08-30 final rerun.
+
+## 2026-08-30 final Part 15.5E beta-readiness rerun
+
+- Final result: **READY TO BEGIN PART 16 PREVIEW DEPLOYMENT**. This permits an
+  isolated Preview and its online QA, not a public production launch.
+- `HEAD` and `origin/master` are `2bb576a`. GitHub Release Quality run
+  `33268937218` passed every job step for that exact SHA: locked install,
+  PostgreSQL 18 FROM-ZERO rebuild, both SQL audits, lint, TypeScript, exact
+  unit/source tests, full production build, client-secret scan, Chrome install,
+  and public responsive Playwright.
+- Hosted development readiness passes with zero profile/preference backfill
+  gaps. Profile hardening is applied: authenticated has table SELECT, no
+  INSERT/table UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER, and UPDATE only on the
+  six intended profile columns. Hosted production-security findings are zero.
+- Fresh signup, delivered six-digit OTP, onboarding, established login/session,
+  link-based recovery, and dedicated disposable account deletion have passing
+  release-smoke evidence. The user-reported real authenticated browser journey
+  covers the major protected product workflows and is recorded as MANUAL PASS.
+- QA A/B RLS and comprehensive two-way isolation pass for user-owned data,
+  representative mutations/RPCs, private identifiers, and CSV/JSON exports
+  without a service-role/admin bypass.
+- Windows automated authenticated Playwright remains BLOCKED before worker
+  startup by `spawn EPERM`; no local browser PASS is claimed. A fresh
+  authenticated mobile/tablet and browser-managed export save/open sweep is
+  deferred to Preview. Current manual browser, authenticated route/RLS, and
+  Linux public browser evidence is not invalidated by this host limitation.
+- Preview must use a new production Supabase project, apply all migrations from
+  zero, use separate Vercel/environment/Auth configuration, and never connect
+  to `watchflow-dev`.
+- This consolidation changes documentation only and remains uncommitted.
+
+## 2026-08-30 Part 15.5G final two-user isolation verification
+
+- A guarded, one-run development audit signed in both designated QA users with
+  the public publishable key and ordinary cookie-based authenticated Supabase
+  clients. It used no service-role/admin client, did not bypass RLS, verified
+  the exact development-project pin, and emitted no credential, identity,
+  private value, export content, cookie, or token.
+- The audit created uniquely marked temporary data for each QA user and proved
+  both `QA A -> QA B` and `QA B -> QA A` isolation for profiles, preferences,
+  library relationships and all personal movie fields, favourites, ratings,
+  reviews, watched dates, Watch Next membership/order, schedule notes/timezones,
+  custom lists, memberships, and list ordering. Shared `movies` metadata was
+  treated as intentionally common.
+- Representative foreign SELECT, UPDATE, DELETE, and ownership-derived RPC
+  attempts returned no accessible/changed rows or the expected safe rejection.
+  Cross-parent list membership insertion was also rejected. Follow-up reads by
+  the owning user proved that the targeted rows survived unchanged.
+- Authenticated HTTP route checks returned each user's private routes, excluded
+  the other user's unique markers, rendered nonrevealing not-found content for
+  foreign movie/list identifiers, and preserved owned-detail access. Picker,
+  Recommendations, and Statistics route output contained no foreign private
+  markers; focused ownership-source contracts cover their authenticated
+  `user_id` scoping and RLS-backed reads.
+- Each user's CSV and JSON exports contained that user's controlled marker and
+  excluded the other user's marker and email. Export generation used the normal
+  authenticated application routes; no database/admin substitute was used.
+- Audit cleanup removed only the uniquely identified temporary lists and
+  library rows, restored any guarded profile/preference state, and verified the
+  original Watch Next queue IDs and positions exactly. A subsequent guarded
+  preflight found no stale audit markers. No account, policy, schema, hosted
+  configuration, or non-QA data was changed.
+- The existing hosted RLS integration suite passes 1 file/5 tests. Focused
+  discovery/statistics/export/settings/list/library ownership contracts pass 7
+  files/77 tests. `git diff --check`, lint, and direct TypeScript pass. Exact
+  `npm test` is blocked before config load by Windows `spawn EPERM`; the full
+  native-loader, single-thread fallback passes 73 files/727 tests.
+- The dedicated Playwright two-user isolation case was enabled and selected,
+  but Windows denied the worker child process with `spawn EPERM` before the test
+  body or a browser launched. No browser mutation occurred. Browser isolation
+  evidence is therefore **BLOCKED**, not PASS; database/RLS, authenticated
+  route, export, and source-contract isolation evidence passes.
+- This milestone changes documentation only. The one-run ignored audit harness
+  was removed after execution, and all changes remain uncommitted.
+
+## 2026-08-30 Part 15.5G authenticated browser QA attempt
+
+- The guarded Playwright configuration discovered all three authenticated smoke
+  cases without a guarded/skip prefix, establishing that the loopback,
+  development-target, exact Supabase URL pin, and dedicated QA configuration
+  gates are satisfied without printing their values.
+- The already-running loopback application returned HTTP 200, and a read-only
+  runtime check confirmed its CSP contains both the exact pinned Supabase HTTPS
+  origin and corresponding WebSocket origin. Reuse was enabled only for the
+  subsequent guarded command after those checks passed.
+- No repository Playwright browser test executed. The guarded one-worker run
+  failed before the first worker when Windows denied Playwright's Node child
+  process with `spawn EPERM`. A separate direct headless Chrome launch also
+  failed before browser creation with `spawn EPERM`.
+- The available direct Playwright browser connector could not be used because
+  this session's tool policy requires approval while approval is disabled. No
+  page was opened through that connector. Server-render fetches or source tests
+  were not substituted for the requested real browser evidence.
+- Result: every authenticated journey, persistence, export, responsive, and
+  browser-health item remains **BLOCKED**, and authenticated browser QA is not
+  passing. No QA user was mutated, QA User B was untouched, account deletion was
+  not run, and no credential, cookie, token, screenshot, trace, video, or private
+  export was printed or retained.
+- This verification changes documentation only. It does not change application
+  code, tests, workflows, dependencies, migrations, hosted databases, Auth
+  configuration, or production data.
 
 ## 2026-08-29 Part 15.5G hosted profiles privilege drift
 
@@ -369,7 +474,7 @@ versions to audited compatible releases. Final production-only and full
 | `lib/statistics/` | Part 15.1 private query adapter, normalization, pure metric/distribution/timeline calculations, formatting, errors, types, and tests |
 | `lib/supabase/` | Browser, server, proxy, auth-context, admin, and safe-error modules |
 | `docs/` | Architecture, database, product, testing/security/readiness reports, implementation plan, and this canonical context |
-| `supabase/migrations/` | Eight incremental SQL migrations; the original base schema is absent |
+| `supabase/migrations/` | Complete 11-migration sequence from the reconstructed base schema through final profile privilege hardening |
 | `supabase/verification/` | Read-only database readiness and production security audit scripts |
 | `integration/`, `vitest.integration.config.ts` | Guarded two-user real-Supabase RLS verification plus a separately opted-in limiter contract/concurrency harness with read-only privileged diagnostics |
 | `scripts/` | Post-build client-secret-pattern scanner |
@@ -501,7 +606,12 @@ remain fixed module constants.
 
 ## 8. Database Schema
 
-Important limitation: there is no original base migration, schema dump, generated database types, Supabase CLI config, or remote migration history. `docs/DATABASE.md` combines a prior read-only live inspection with incremental SQL; recheck unversioned base FKs, policies, grants, and indexes against the target project.
+The original historical baseline was absent from early repository history, so
+`202607200001_base_schema.sql` was reconstructed from converging repository and
+hosted evidence. The reviewed 11-migration sequence now rebuilds from zero and
+passes both SQL audits. Hosted development catalog/readiness evidence verifies
+the final objects and security contract; generated database types and a linked
+Supabase CLI history are still not repository dependencies.
 
 | Table | Ownership and purpose | Important current contract | RLS |
 |---|---|---|---|
@@ -512,7 +622,10 @@ Important limitation: there is no original base migration, schema dump, generate
 | `lists` | User-owned private custom-list metadata | UUID `id`, Auth `user_id`, normalized unique name per user, optional 500-character description, private-only visibility, audit timestamps | Enabled; own SELECT/INSERT/UPDATE/DELETE |
 | `list_movies` | Ordered membership from a list to a personal-library relationship | UUID `id`, cascading `list_id`, cascading UUID `user_movie_id`, positive unique-per-list position, audit timestamps | Enabled; every policy requires both owned parent list and owned `user_movies` row |
 
-`movies.tmdb_id` and `user_movies (user_id, movie_id)` are confirmed unique guards. Exact base FK DDL for `profiles`/`user_movies` is absent; confirm account-deletion cascades before production use.
+`movies.tmdb_id` and `user_movies (user_id, movie_id)` are confirmed unique
+guards. The reconstructed baseline versions Auth foreign-key cascades, and the
+dedicated disposable account-deletion flow has passed against hosted
+development.
 
 `user_movies` statuses are `want_to_watch`, `watch_next`, `scheduled`, `currently_watching`, `watched`, `on_hold`, and `dropped`. Important fields include `favourite boolean not null default false`, `personal_rating`, `review`, `priority`, `queue_position`, `scheduled_for`/`watched_at` (`timestamptz`), `schedule_timezone`, `schedule_note`, and `would_watch_again`.
 
@@ -547,22 +660,26 @@ Nuance: `202607220003_user_settings.sql` used column-level preference grants, bu
 
 ## 10. Supabase Migrations
 
-| Filename | Purpose | Development-project status |
-|---|---|---|
-| `202607210001_phase_3_movie_management.sql` | Adds `schedule_note`, queue index, normalization/update/move/schedule/remove security-invoker functions and authenticated execute grants | Unknown; file is non-idempotent and must not be rerun blindly |
-| `202607220002_schedule_queue_fixes.sql` | Adds `schedule_timezone`, checks, unique queue/schedule indexes, own SELECT/UPDATE policies, and atomic `move_watch_queue_item` RPC | Unknown; repository has no remote history |
-| `202607220003_user_settings.sql` | Ensures profile settings columns; creates preferences, checks, RLS, triggers/backfill, grants, and preference-aware add RPC | Unknown; deployment checklist still calls for manual application |
-| `202607230001_user_preferences_privileges.sql` | Grants authenticated SELECT/INSERT/UPDATE and backfills preference rows; no DELETE | Unknown; repository has no remote history |
-| `202607280001_part_12_library_improvements.sql` | Adds private `favourite`, five owner/query indexes, private row/facet query functions, and transactional bulk-status/bulk-delete functions | Deployed API exposes the bulk-removal function and the user reports Part 12 working; full migration parity/grants still need authenticated inspection |
-| `202607290001_part_13_private_custom_lists.sql` | Creates private `lists`/`list_movies`, constraints/indexes/triggers, eight RLS policies, scoped grants, one summary query, five atomic membership/order RPCs, and cascade-delete compaction | Created locally only; do not execute automatically. Apply manually after all five prior migrations and reload PostgREST |
-| `202607300001_part_15_tmdb_rate_limits.sql` | Adds durable authenticated TMDB rate-limit buckets/RPC, canonical shared-cache columns, browser write revocation for `movies`, transactional management/schedule RPC replacements, and preference-default repair | Confirmed target has the scheduling RPC, its authenticated EXECUTE privilege, and queue normalization; full migration parity/history is not proven. Do not rerun it on the inspected target |
-| `202608030001_schedule_profile_permissions.sql` | Grants authenticated UPDATE only on `profiles.timezone` and `profiles.updated_at` so the SECURITY INVOKER scheduling RPC can persist its owned profile changes | Version-controlled at `2708afd`; manual target application and live owner/cross-user scheduling retest are not verified in this session |
-| `202608170001_part_15_5b_first_time_onboarding.sql` | Adds nullable profile completion time, backfills existing profiles, and grants authenticated UPDATE only on that new column | Created locally only; review/apply manually, then run both read-only verification scripts and guarded onboarding isolation tests |
-| `202608290001_profiles_privilege_hardening.sql` | Removes hosted legacy broad profile privileges and restores the exact authenticated SELECT/narrow UPDATE contract | Created locally only; do not apply remotely until reviewed, then rerun both SQL verification scripts |
+| Filename | Purpose |
+|---|---|
+| `202607200001_base_schema.sql` | Reconstructed evidenced base for profiles, shared movies, private user movies, ownership RLS, grants, trigger, and cascades |
+| `202607210001_phase_3_movie_management.sql` | Movie management, queue, schedule note, and security-invoker operations |
+| `202607220002_schedule_queue_fixes.sql` | Schedule timezone, queue/schedule constraints/indexes, ownership policies, atomic movement |
+| `202607220003_user_settings.sql` | Profile settings, private preferences, backfill, policies, grants, and preference-aware add |
+| `202607230001_user_preferences_privileges.sql` | Correct authenticated preference SELECT/INSERT/UPDATE privileges and backfill |
+| `202607280001_part_12_library_improvements.sql` | Private favourite, filtered/paged library functions, indexes, atomic bulk operations |
+| `202607290001_part_13_private_custom_lists.sql` | Private lists/memberships, RLS, scoped grants, ordering/membership RPCs and compaction |
+| `202607300001_part_15_tmdb_rate_limits.sql` | Durable provider limits, shared-cache hardening, transactional management/scheduling replacements |
+| `202608030001_schedule_profile_permissions.sql` | Narrow profile timezone/updated-at UPDATE needed by scheduling |
+| `202608170001_part_15_5b_first_time_onboarding.sql` | Onboarding completion column, established-user backfill, narrow grant |
+| `202608290001_profiles_privilege_hardening.sql` | Remove legacy broad profile privileges and restore exact SELECT/narrow UPDATE contract |
 
-Original creation migrations for `profiles`, `movies`, and `user_movies` are absent. Contract tests inspect SQL text only; they do not prove remote application or multi-user isolation.
-
-Database-dependent application code is not target-complete until its migration is applied and verified there.
+The complete sequence applies from zero in current-HEAD Linux CI and produces
+no readiness/security finding. Hosted development is also at the intended
+final object and privilege contract. Do not rerun old non-idempotent migrations
+or apply the reconstructed baseline over the existing development base. A new
+Preview project should apply the entire sequence from zero and rerun both SQL
+verification files.
 
 ## 11. TMDB Integration
 
@@ -579,7 +696,8 @@ TMDB tokens must remain server-only. No TMDB attribution UI was found. A paid/co
 
 ## 12. Feature Status
 
-Status describes repository implementation, not unverified remote migrations.
+Status describes current repository implementation plus final hosted/manual
+release evidence where recorded.
 
 | Feature | Status | Main routes/files | Notes |
 |---|---|---|---|
@@ -587,15 +705,15 @@ Status describes repository implementation, not unverified remote migrations.
 | Profiles | Complete | `/settings/profile` | Existing profile row required |
 | Movie search | Complete | `/search`, `lib/movies/*` | Title search only |
 | Add to library | Complete | `actions/library.ts`, `lib/library/service.ts` | Defaults read from preferences |
-| Remove from library | Complete locally | `/library`, `/library/[movieId]` | Single and bulk removal share the authenticated Part 12 relationship-delete RPC; live authenticated retest still needs a QA session |
+| Remove from library | Complete and verified | `/library`, `/library/[movieId]` | Single/bulk owner-derived removal plus two-user mutation isolation pass |
 | Movie status | Complete | Movie detail form | Seven statuses |
 | Personal rating | Complete | Movie detail form | Decimal 0–10 |
 | Review | Complete | Movie detail form | Private, max 5,000 characters |
 | Watched date | Complete | Movie detail/import | Stored as UTC-midnight timestamp |
-| Favourite field | Complete | `/library`, `/library/[movieId]`, Part 12 migration/actions | Private `user_movies.favourite`; migration-dependent |
+| Favourite field | Complete and verified | `/library`, `/library/[movieId]`, Part 12 migration/actions | Private `user_movies.favourite`; hosted migration and two-user evidence pass |
 | Watch Next queue | Complete | `/watch-next` | One-based private queue |
-| Queue reordering | Complete | `move_watch_queue_item` | Migration-dependent up/down controls |
-| Scheduling | Permission patch committed; live retest pending | `/schedule`, movie detail, transactional management RPCs | Confirmed RPC failed because its SECURITY INVOKER role lacked `profiles.updated_at` UPDATE; the focused two-column grant is version-controlled, while remote application remains unverified here |
+| Queue reordering | Complete and verified | `move_watch_queue_item` | Hosted owner-scoped ordering/persistence and two-user evidence pass |
+| Scheduling | Complete and verified | `/schedule`, movie detail, transactional management RPCs | Narrow profile permission patch is hosted; schedule/settings smoke, manual workflow, and isolation pass |
 | Watched/unwatched UI | Complete | `/library?watched=` | Unwatched means every non-watched status; legacy `filter` remains accepted |
 | CSV import | Complete | `/import`, `lib/import/*` | In-memory, review before write |
 | CSV export | Complete | `/settings/data/export/csv` | Private no-store attachment |
@@ -604,18 +722,18 @@ Status describes repository implementation, not unverified remote migrations.
 | Application preferences | Complete | `/settings/preferences` | Applied to search/add/library/display |
 | Notification preferences | Complete | `/settings/notifications` | Storage only; no delivery |
 | Delete library data | Complete | `/settings/data` | Deletes current user's relationships only |
-| Delete account | Partial | `/settings/data` | Code complete; deployed FK cascades/two-user exercise unverified |
+| Delete account | Complete and verified | `/settings/data` | Dedicated disposable real application flow passed; QA A/B preserved |
 | Dashboard statistics | Partial | `/dashboard` | Summary lists only; no KPIs/charts/ranges |
-| Statistics page | Complete; authenticated QA blocked | `/statistics`, `lib/statistics/*`, `components/statistics/*` | Private server calculation, ten summary metrics, distributions/timeline, watched lists, bounded coverage, loading/error/empty states; committed at `0c05fc8` |
+| Statistics page | Complete and verified | `/statistics`, `lib/statistics/*`, `components/statistics/*` | Manual authenticated workflow plus private-query/two-user source and live isolation evidence pass |
 | Advanced library search | Complete | `/library`, `watchflow_library_rows` | Literal substring title/original/director/cast/genre search, max 100 characters |
 | Advanced filters | Complete | `/library` | Status, watched, favourite, genre, director, exact/range year, personal-rating range |
 | Sorting controls | Complete | `/library`, `lib/library/query.ts` | Twelve stable database sorts; nullable rating/year/watched values last |
 | Pagination | Complete | `/library`, `lib/library/supabase-query.ts` | Exact filtered count and server range; preferences/URL sizes 12/24/48/96 |
 | Multi-select | Complete | `components/library/library-selection-workspace.tsx` | Current visible page only; resets on URL scope change |
 | Bulk actions | Complete | Part 12 actions/RPCs | Status (scheduled excluded) and relationship deletion; atomic queue normalization |
-| Private custom lists | Complete locally | `/lists`, `/lists/[listId]`, movie detail, `lib/lists/*` | Create/edit/delete, one-query summaries, library-only multi-add, confirmed membership removal, atomic up/down ordering, and multi-list movie membership; manual migration/live QA pending |
-| Random movie picker | Complete locally | `/picker`, `lib/discovery/*` | URL filters, eight moods, secure server selection, capped session-memory repeat avoidance; authenticated browser QA pending |
-| Rule-based recommendations | Complete locally | `/recommendations`, `lib/discovery/*` | Transparent seeds, scoring, concrete reasons, diversity, refresh, and cold starts; authenticated two-user QA pending |
+| Private custom lists | Complete and verified | `/lists`, `/lists/[listId]`, movie detail, `lib/lists/*` | Manual workflow and two-way list/membership/order isolation pass |
+| Random movie picker | Complete and verified | `/picker`, `lib/discovery/*` | Manual authenticated workflow and owner-scoped dataset contracts/isolation pass |
+| Rule-based recommendations | Complete and verified | `/recommendations`, `lib/discovery/*` | Manual authenticated workflow and private personal-input scope pass |
 | Notifications | Deferred | Preferences only | Delivery planned for Part 18 |
 | Calendar integration | Deferred | None | Part 18 roadmap |
 | Payments | Deferred | None | Part 19 only after separate design/licensing |
@@ -836,67 +954,66 @@ or mutate data.
 
 | Check | Status | Latest evidence |
 |---|---|---|
-| Lint | Passed | `npm run lint`, 2026-08-04; Next 16 native flat config, no rule suppressions |
-| TypeScript | Passed | `npx tsc --noEmit`, 2026-08-04 |
-| Unit/contract tests | Part 15.5A assertions pass; exact npm runner blocked | Focused: 5 files/42 tests. Full `npx vitest run --configLoader runner`: 62 files/637 tests. Exact `npm test` hit Windows `spawn EPERM` before config load twice, 2026-08-15 |
-| Focused Part 15 limiter tests | Passed locally and live | The guarded development limiter integration passed all 10 live tests; the final focused Playwright run passed its one live test after natural bucket expiry. Exact catalog ACL/RLS/constraint parity remains blocked |
-| Focused scheduling permission tests | Passed | 3 files, 45 tests covering the exact grant, effective profile columns, ownership RLS audit, owner/foreign scheduling, timezone persistence, queue normalization, and permission-vs-missing-RPC mapping |
-| Focused Part 15.1 tests | Passed | `npx vitest run lib/statistics`: 4 files, 62 tests covering metrics, mapping, query/isolation/error, route/UI/accessibility/revalidation contracts |
-| Focused Part 14 tests | Passed | `npx vitest run lib/discovery`: 7 files, 113 tests covering moods, picker parsing/matching/randomness, recommendation rules, mapping, authenticated adapter, action, and UI/security contracts |
-| Focused Part 13 tests | Passed | `npx vitest run lib/lists`: 6 files, 75 tests, 2026-07-29 |
-| Focused Part 13/Part 12 regressions | Passed | 13 files, 184 tests covering lists plus removal/query/bulk contracts, 2026-07-29 |
-| Live database integration | Limiter passed; unrelated suite skipped | `npm run test:integration` passed all 10 development limiter tests in 132.27 seconds; the five separately guarded baseline RLS tests remained skipped |
-| Production route smoke | Passed, public only | Clean Playwright MCP: canonical signup, auth failure/not-found, protected redirects, mobile overflow/touch size, clean storage, safe console/network/HTML |
-| Playwright safe selected E2E | Passed, public only | 35 passed, 15 guarded/skipped on 2026-08-02; `/statistics` protection and `/auth/sign-up` passed, all 10 authenticated Statistics cases skipped, account deletion excluded |
-| Authenticated Part 12-15 E2E/live RLS | Part 15 limiter verified only | Disposable QA A/B authenticated against the pinned development project; limiter RPC/database behavior and real search UX passed. Broader Part 12-15 live RLS coverage remains separate |
-| Client secret scan | Passed | 478 freshly built artifacts, no forbidden/configured-value leak; one reviewed Supabase SDK sentinel, 2026-08-04 |
-| Dependency audits | Passed | Production-only and full `npm audit`: zero vulnerabilities |
-| Production build | Passed | `npm run build` on Next.js `16.2.12`; TypeScript and 35 static shell generations completed and route output listed `/auth/sign-up`, `/schedule`, and `/statistics`, 2026-08-04 |
-| Scheduling permission patch application | Unverified remotely | `202608030001_schedule_profile_permissions.sql` is committed at `2708afd`; this session did not connect to or mutate a Supabase project |
-| Scheduling live retest | Not run | Owner/cross-user scheduling, timezone persistence, and live queue normalization remain pending after manual patch application |
-| Part 15.1 Statistics verification | Committed; authenticated QA blocked | Committed at `0c05fc8`; its earlier local gate passed, while guarded authenticated browser cases remain unexecuted |
+| GitHub Release Quality | Passed | Run `33268937218` passed every step for exact current code SHA `2bb576a` |
+| From-zero migrations/SQL audits | Passed | Current-HEAD Ubuntu PostgreSQL 18 applied all 11 migrations and both verification files |
+| Hosted readiness/security | Passed | Backfill gaps zero, hardened profile ACL exact, hosted security findings zero |
+| Lint | Passed | Current local command and exact current-HEAD Ubuntu workflow |
+| TypeScript | Passed | Current local direct command and exact current-HEAD Ubuntu workflow |
+| Unit/source tests | Passed | Exact `npm test` in Ubuntu; Windows fallback 73 files/727 tests |
+| Focused ownership tests | Passed | 7 files/77 tests plus hosted RLS 1 file/5 tests |
+| Live limiter | Passed | 10/10 including user/operation isolation, limits, expiry, and concurrency |
+| Authentication/deletion | Manual pass | Fresh signup, six-digit OTP, onboarding, login/session, link recovery, and disposable account deletion |
+| Authenticated core workflow | Manual pass | Major protected product routes/workflows exercised in development |
+| Two-user isolation | Passed | QA A to B and B to A private reads/mutations/routes/exports |
+| Production build | Passed | Exact current-HEAD Ubuntu build, including fixed public-auth prerendering |
+| Client secret scan | Passed | Exact current-HEAD post-build scan |
+| Public responsive Playwright | Passed | Exact current-HEAD Ubuntu Chrome run |
+| Local authenticated Playwright | Windows environment blocked | `spawn EPERM` before worker/browser; no local browser PASS claimed |
 
 Mark Passed only after that exact command succeeds.
 
-## 19. Known Issues and Historical Regressions
+## 19. Historical Regression Ledger and Current Limitations
+
+Resolved milestone evidence below is historical. Current release status is the
+2026-08-30 section and `docs/RELEASE_EVIDENCE.md`.
 
 | State | Issue or lesson |
 |---|---|
 | Resolved/guarded | `/auth/sign-up` was accidentally removed and returned 404; it now exists with a route-contract test |
 | Resolved/guarded | `CardTitle` rendered a `div` and auth errors rendered plain paragraphs; page titles are now `h1` and auth errors use `role="alert"` |
-| Operational unknown | Repository migration files do not prove remote application; all eight incremental migration states, including the committed scheduling patch, must be checked against the intended target |
+| Resolved/verified | The repository now has 11 migrations, rebuilds from zero, and hosted readiness/security verifies the intended final development state |
 | Resolved locally | `user_preferences` had RLS but insufficient INSERT/UPDATE privileges; the latest patch grants SELECT/INSERT/UPDATE, no DELETE |
-| Operational unknown | Preference backfill exists in SQL; existing profile/preference rows and onboarding triggers still require target-project verification |
+| Resolved/verified | Hosted profile/preference backfills report zero missing rows and onboarding release smoke passes |
 | Preserved boundary | Shared movie writes require the authenticated-first, server-only admin path; never weaken this to solve RLS errors |
 | Resolved/guarded | Empty FormData values previously caused numeric/date update errors; current validators map optional rating/date/text values safely |
 | Resolved locally | Individual removal called the undeployed legacy `watchflow_remove_library_movie(p_library_id)` RPC and failed with `PGRST202`; it now submits one validated `user_movies.id` UUID through the working Part 12 removal RPC shared with bulk deletion |
 | Migration-dependent | Queue reordering requires `move_watch_queue_item`; missing RPC errors are mapped to a migration message |
-| Resolved in committed patch; remote verification pending | Scheduling RPC and fields exist, but its SECURITY INVOKER profile update lacked authenticated UPDATE on `profiles.updated_at`; `202608030001_schedule_profile_permissions.sql` adds only the required `timezone`/`updated_at` column grant |
-| Partially verified live | The Part 15 table/RPC were reachable, authenticated RPC execution worked, anonymous RPC and authenticated/anonymous direct table reads were denied, and all limiter contracts passed. Exact catalog ACL representation, RLS flag, primary/check constraints, function security attributes/body, and full migration parity remain blocked without a direct PostgreSQL catalog connection or manual SQL-editor report |
-| Reviewed/preserved | Duplicate ownership-equivalent `user_movies` SELECT/UPDATE policies remain because the original base policy migration is absent and no regression coverage proves removal safe |
+| Resolved/verified | The narrow scheduling profile permission is hosted; schedule/settings smoke, manual workflow, and two-user verification pass |
+| Resolved/verified | Hosted catalog/readiness and security SQL now attest the final RLS/ACL/constraint/function contract; limiter behavior passes 10/10 |
+| Reviewed/preserved | Duplicate ownership-equivalent `user_movies` SELECT/UPDATE policies remain deliberately; the reconstructed baseline and hosted audits preserve the verified behavior |
 | Resolved/guarded | Detail-form schedule editing now defaults to its saved schedule zone and persists/clears zone and note through the dedicated contract |
 | Resolved/documented | The preference privilege patch is table-level; architecture/database/security verification now use that source-of-truth contract |
-| Active | Base profile/user-movie Auth-delete cascades are not versioned or verified; account deletion needs two-user testing |
+| Resolved/verified | Auth-delete cascades are versioned in the reconstructed baseline and the dedicated disposable application deletion flow passes |
 | Resolved locally | `.env.example` lists server/test variable names without real secret values |
 | Resolved locally | `README.md` is WatchFlow-specific and documents guarded setup/migration/testing steps |
 | Resolved locally | `/protected` redirects to the dashboard and no longer renders claims JSON |
 | Historical mismatch preserved | `statistics-v1` points to `8f92cbe`, the same settings commit/tree as `settings-v1`; investigation found no Part 11 implementation in normal history, reflog, or alternate route. The tag is not moved; Part 15.1 is a new implementation |
-| Resolved locally; authenticated QA blocked | `/statistics` now has page/loading/error files, focused server query/calculation/UI modules, authenticated navigation, and tests. Final local commands passed; credentialed QA remains blocked |
+| Resolved/verified | `/statistics` has complete source coverage, manual authenticated workflow evidence, and two-user private-scope evidence |
 | Resolved/guarded | Shared CSV escaping neutralizes formula-leading values, including after whitespace or line breaks, in exports and import failure reports |
 | Resolved locally | `/library` previously fetched every row before filtering/slicing; Part 12 now filters, counts, sorts, and ranges through a private database function |
 | Migration-dependent | Part 12 requires `202607280001_part_12_library_improvements.sql`; without it `/library` and favourite/bulk actions show a safe migration-required error |
 | Migration-dependent | Part 13 requires `202607290001_part_13_private_custom_lists.sql`; missing table, column/schema-cache, RPC, permission, validation, constraint, and generic database failures have distinct safe handling |
 | Active limitation | Part 12 literal substring search scans the authenticated member's joined library; it targets several hundred to about 1,000 movies and has no trigram/full-text index |
 | Active limitation | Selection is intentionally current-page only and clears on search/filter/sort/view/page changes; bulk `scheduled` is excluded because no date may be invented |
-| Operational unknown | Part 12 SQL/source and mocked adapters pass, but no approved QA identity or applied-migration evidence exists; authenticated search/filter/sort/pagination, favourites, selection, bulk actions, two-user RLS, native-dialog focus, and index plans remain browser-unverified |
-| Operational unknown | Part 13 SQL/source and mocked adapters pass, but the migration has not been applied here and no two confirmed QA identities/storage states exist; live RLS, grants, cascades, concurrency, authenticated CRUD/reorder/membership flows, and requested screenshots remain unverified |
+| Resolved/verified | Part 12 is installed; manual core-library evidence and QA A/B ownership/mutation verification pass. Fresh online responsive/dialog QA remains Preview work |
+| Resolved/verified | Part 13 is installed; manual list workflow plus live two-way list/membership/order isolation passes |
 | Active limitation | The Add Movies picker returns at most 50 owner-scoped results per search and movie-detail membership reconciliation accepts at most 500 desired list UUIDs; list summaries are not paginated |
 | Active limitation | Part 13 membership writes share the Part 12 per-user advisory lock and row order, but the legacy full-library settings DELETE does not take that advisory lock; concurrent full-library deletion versus a list batch remains a live stress-test item |
 | Active limitation | Part 14 processes at most the 1,000 most recently added `user_movies` relationships per request, keeps at most 50 recent picker IDs in component memory, and renders at most 16 recommendations |
-| Operational unknown | Part 14 pure rules, mocked authenticated adapter, route contracts, and logged-out browser protection pass, but no two confirmed QA sessions exist; authenticated discovery screens, mutations, screenshots, responsive layouts, and live cross-user isolation remain browser-unverified |
+| Resolved/verified | Part 14 manual authenticated workflow and private ownership-scope evidence pass; fresh online responsive screenshots remain Preview work |
 | Browser tooling note | Playwright MCP reports repeated development HMR WebSocket handshake failures for its `127.0.0.1` origin; the repository Playwright run completed without application request failures |
 | Resolved locally | Next `16.2.12`, aligned ESLint config, and compatible internal PostCSS/sharp overrides produce zero-vulnerability production-only and full audits |
-| Launch blocker | No TMDB attribution UI or resolved commercial movie-data licensing |
+| Later public-production gate | No TMDB attribution UI or resolved commercial movie-data licensing; this does not block an access-limited Preview |
 | Resolved/guarded | Browser auth configuration/network failures map to controlled messages; source contracts guard the mapping, while the real invalid-provider Playwright case remains development-gated and was skipped in the final run |
 | Resolved/guarded | Credentialed QA previously trusted a loopback app URL without pinning its Supabase backend; authenticated/integration suites now require an exact expected-project URL match and credentialed Playwright never reuses an unknown listener |
 | Resolved/guarded | ASCII-only CSV title normalization collapsed distinct Urdu titles in matching and duplicate detection; shared Unicode normalization and regressions preserve letters/numbers |
@@ -909,51 +1026,32 @@ Migrations 1 and parts of 2 are not safely repeatable; never rerun old SQL blind
 
 ## 20. Current Project State
 
-- Committed baseline: **Part 15.5B first-time user onboarding** at `41cb4b4`,
-  tagged `part-15-5b-onboarding` and `pre-15-5c-discoverability`.
-- Latest work: **Part 15.5C app discoverability and user friendliness**,
-  currently uncommitted. It reorganizes authenticated navigation, establishes
-  canonical product terminology and page-purpose copy, improves action and
-  empty-state hierarchy, and adds focused source and guarded browser coverage.
-- Historical Part 11 statistics/dashboard upgrade: **never implemented or
-  committed**. Part 15.1 rebuilds the requested feature from current architecture.
-- Next operational step: complete the Part 15.5C verification gate, then begin
-  **Part 15.5D - Final Visual/UI Polish** while retaining the separate Preview
-  deployment gates.
-- Before live onboarding execution, manually apply the Part 15.5B migration in
-  the pinned development project, provide disposable QA A/B and a signup
-  inbox, then run both read-only SQL audits and guarded tests.
-- Branch/base HEAD: `master`, `41cb4b4` (`feat: add first-time user onboarding`).
-  Tags `settings-v1` and misleading `statistics-v1` remain historical;
-  `statistics-v1` is not moved.
-- Latest migration: `202608170001_part_15_5b_first_time_onboarding.sql`.
-  Part 15.5C creates no migration or database change.
-- Latest feature set: private custom lists plus a URL-filtered random picker,
-  eight explicit moods, bounded in-session repeat avoidance, and transparent
-  scored/deduplicated/diversified private-library recommendations, plus the
-  committed personal Statistics page.
-- Baseline Git state at `41cb4b4` was clean; the current worktree contains the
-  Part 15.5C application, test, and documentation changes only.
-- Confirmed target findings establish the Part 15 scheduling/normalization
-  objects and relevant RLS/grants, but not full Part 15 migration parity. The
-  old Part 15 migration must not be rerun on that target.
-- No remote schema, hosted Auth setting, or QA user data was changed during
-  Part 15.5C. Authenticated real-account route reads were non-mutating.
-- Interactive Playwright execution remains environment-blocked by Windows
-  process-spawn denial; authenticated SSR route audits are recorded at the top
-  of this file and in `docs/DISCOVERABILITY_UX_AUDIT.md`.
-- `/statistics` is committed; its guarded authenticated/two-user browser
-  evidence remains pending.
+- Branch and code HEAD: `master` at `2bb576a` (`fix: harden authenticated
+  profile privileges`), matching `origin/master` and the latest successful
+  Release Quality run.
+- The complete feature set through Part 15.5G is committed. The only current
+  working-tree changes are final Part 15.5E release-evidence documentation.
+- Latest migration:
+  `202608290001_profiles_privilege_hardening.sql`; all 11 migrations rebuild
+  from zero and hosted development has the intended final hardening.
+- Hosted readiness/security, fresh Auth/OTP/onboarding/recovery, account
+  deletion, authenticated core workflow, and QA A/B isolation evidence pass.
+- Automated authenticated Playwright remains blocked only on this Windows host
+  by process-spawn denial. Current manual browser evidence passes for core
+  workflows; a fresh mobile/tablet/export-download sweep is deferred to
+  Preview and is not mislabeled as local automation.
+- Current decision: **READY TO BEGIN PART 16 PREVIEW DEPLOYMENT**, not public
+  production. Preview must use a new production Supabase project and never
+  `watchflow-dev`.
 
 ## 21. Next Development Queue
 
 This is the roadmap, not completed functionality.
 
-1. **Part 15.5D - Final Visual/UI Polish**
-2. **Part 16 - Preview deployment**
-3. **Part 17 - Public beta preparation**
-4. **Part 18 - Notifications and calendar integration**
-5. **Part 19 - Paid SaaS**
+1. **Part 16 - Preview deployment**
+2. **Part 17 - Public beta preparation**
+3. **Part 18 - Notifications and calendar integration**
+4. **Part 19 - Paid SaaS**
 
 ## 22. Part 12 Implementation Notes
 
@@ -1007,8 +1105,8 @@ Implemented contract:
   route-protection coverage also includes `/lists` and one UUID detail URL.
 - Migration:
   `supabase/migrations/202607290001_part_13_private_custom_lists.sql`. It is
-  intentionally unapplied by this work and must be applied manually after the
-  prior migrations, followed by a separate PostgREST schema reload.
+  part of the passing from-zero chain and the hosted list/RLS behavior is
+  verified.
 - Scaling limits: summaries are currently unpaginated, picker results are
   capped at 50, movie batches at 100, and the movie-detail desired-list set at
   500. Source/mocked tests do not prove live PostgreSQL RLS, privileges,
@@ -1083,12 +1181,10 @@ Implemented contract:
 - Tests:
   `lib/discovery/{moods,picker,recommendations,mapping,supabase-discovery,actions,ui}.test.ts`;
   logged-out E2E route protection also covers both routes.
-- Browser limitation: repository Playwright passed the public/protection suite,
-  and MCP confirmed both new routes redirect to login plus `/auth/sign-up`
-  remains public at 390x844 with no overflow. No confirmed QA sessions or
-  storage states exist, so authenticated picker/recommendation flows,
-  mutation shortcuts, two-user isolation, five-viewport discovery layouts,
-  and requested discovery screenshots were not run and are not claimed.
+- Browser evidence: authenticated Picker and Recommendations have current
+  manual workflow evidence, and private dataset/two-user ownership checks pass.
+  A fresh post-hardening automated mobile/tablet sweep remains deferred to
+  Preview because local Windows Playwright cannot start its worker.
 
 ## 25. Part 15 Testing and Production-Hardening Notes
 
@@ -1262,40 +1358,20 @@ Final local results on 2026-07-30:
 - Security headers now include a scoped CSP, `nosniff`, frame denial,
   referrer policy, and a restrictive permissions policy.
 
-### Known blockers and readiness
+### Current readiness after historical Part 15 blockers
 
-- Full migration parity remains unproven even though the confirmed target has
-  the Part 15 scheduling and queue objects. Apply only
-  `202608030001_schedule_profile_permissions.sql` to that inspected target;
-  do not rerun Part 15. Then run both read-only verification scripts, resolve
-  every `MISSING`, and execute the owner/cross-user scheduling retest.
-- No disposable QA credentials were available. Valid/duplicate/unconfirmed
-  signup, real login/logout/session persistence, authenticated search/library/
-  detail/queue/schedule/import/settings/export/list/picker/recommendation
-  flows, complete two-user isolation, and destructive account cascades were
-  not executed. The guarded tests exist but are not claimed as passing.
-- Password-reset request validation and invalid/expired local routes pass; the
-  delivered email-link step is blocked without a test inbox.
-- Account deletion is blocked until the dedicated one-shot account and target
-  cascade verification are available. QA A/B or a developer account must
-  never substitute.
-- Part 15.1 `/statistics` is committed at `0c05fc8`; authenticated metric/
-  revalidation/responsive/two-user browser flows require guarded disposable QA
-  data and remain blocked.
-- Search provider pagination, list-summary pagination, schedule/dashboard
-  large-library bounds, cross-instance metadata refresh deduplication,
-  concurrent queue-append retry, slow-network image checks, authenticated
-  five-viewport/dialog accessibility, monitoring, backups, email delivery,
-  legal pages, TMDB attribution/licensing, production Supabase/Vercel
-  separation, domain redirects, and analytics remain Preview/production work.
-- `docs/PRODUCTION_READINESS.md` is the status checklist. Recommendation:
-  proceed only to a controlled Part 16 Preview setup, not public production.
+- Migration parity, hosted catalog/security, scheduling permission, fresh Auth
+  delivery, disposable deletion, core authenticated workflows, and QA A/B
+  isolation now pass the final Part 15.5E evidence gate.
+- Remaining online work is Preview-scoped: create the separate production
+  Supabase/Vercel environment, repeat SQL verification, run current
+  authenticated mobile/tablet/export-download QA, and record operational
+  backup/monitoring/rollback evidence.
+- Public-production gates such as legal pages and TMDB attribution/licensing do
+  not block beginning an access-limited Preview.
 
-Current milestone: Part 15.5D - Final Visual/UI Polish. Local
-application, documentation, and source coverage are complete; final quality
-gate results are summarized at the top of this document.
-
-Next milestone: Part 15.5E - Final Beta Regression QA.
+Current milestone: final Part 15.5E rerun complete.
+Next milestone: Part 16 Preview Deployment.
 
 ## 26. Part 15.1 Statistics Implementation Notes
 
@@ -1345,8 +1421,9 @@ Committed contract (`0c05fc8`):
   the documented several-hundred-to-1,000-row target.
 - Tests: focused calculation/mapping/formatting/adapter/safe-error and
   route/navigation/protection/rendering coverage plus guarded Statistics
-  Playwright coverage are committed. The local gate passed before commit;
-  credentialed QA remains pending.
+  Playwright coverage are committed. Current manual authenticated workflow and
+  two-user private-scope evidence pass; automated Windows browser execution
+  remains environment-blocked and is deferred to Preview.
 - History: investigation found no prior implementation in reachable Git,
   reflog-only commits, deleted paths, or another route. `statistics-v1` and
   `settings-v1` both point to commit `8f92cbe` and tree `38b1e70`; the tag is
