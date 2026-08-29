@@ -1,8 +1,20 @@
-import { AuthShell } from "@/components/auth/auth-shell";
-import { LoginForm } from "@/components/login-form";
-import { redirectAuthenticatedUser } from "@/lib/auth/server";
+import { Suspense } from "react";
 
-export default async function LoginPage() {
-  await redirectAuthenticatedUser();
-  return <AuthShell><LoginForm /></AuthShell>;
+import { AuthShell } from "@/components/auth/auth-shell";
+import {
+  AuthSessionFallback,
+  PublicAuthGate,
+} from "@/components/auth/public-auth-gate";
+import { LoginForm } from "@/components/login-form";
+
+export default function LoginPage() {
+  return (
+    <AuthShell>
+      <Suspense fallback={<AuthSessionFallback />}>
+        <PublicAuthGate>
+          <LoginForm />
+        </PublicAuthGate>
+      </Suspense>
+    </AuthShell>
+  );
 }

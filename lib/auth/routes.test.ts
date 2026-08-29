@@ -37,6 +37,9 @@ vi.mock("@/components/forgot-password-form", async () => {
 import ForgotPasswordPage from "../../app/auth/forgot-password/page";
 import LoginPage from "../../app/auth/login/page";
 import SignUpPage from "../../app/auth/sign-up/page";
+import { AuthShell } from "../../components/auth/auth-shell";
+import { LoginForm } from "../../components/login-form";
+import { SignUpForm } from "../../components/sign-up-form";
 import { isProtectedRoute } from "../supabase/proxy";
 
 const repositoryRoot = process.cwd();
@@ -60,19 +63,93 @@ describe("critical authentication route contracts", () => {
   it("keeps the canonical sign-up page and renders the existing form", async () => {
     const path = join(repositoryRoot, "app/auth/sign-up/page.tsx");
     expect(existsSync(path)).toBe(true);
-    expect(renderToStaticMarkup(await SignUpPage())).toContain(
+    expect(SignUpPage()).toBeTruthy();
+    expect(
+      renderToStaticMarkup(
+        createElement(AuthShell, null, createElement(SignUpForm)),
+      ),
+    ).toContain(
       'data-auth-form="sign-up"',
     );
     expect(source("app/auth/sign-up/page.tsx")).not.toContain("notFound(");
   });
 
   it("keeps login and forgot-password pages renderable", async () => {
-    expect(renderToStaticMarkup(await LoginPage())).toContain(
+    expect(LoginPage()).toBeTruthy();
+    expect(
+      renderToStaticMarkup(
+        createElement(AuthShell, null, createElement(LoginForm)),
+      ),
+    ).toContain(
       'data-auth-form="login"',
     );
     expect(renderToStaticMarkup(createElement(ForgotPasswordPage))).toContain(
       'data-auth-form="forgot-password"',
     );
+  });
+
+  it("isolates public auth request data behind focused Suspense boundaries", () => {
+    expect(source("next.config.ts")).toContain("cacheComponents: true");
+
+    const gatedPages = {
+      "app/auth/login/page.tsx": "LoginForm",
+      "app/auth/sign-up/page.tsx": "SignUpForm",
+      "app/auth/verify-email/page.tsx": "VerifyEmailContent",
+    };
+
+    for (const [relativePath, contentComponent] of Object.entries(gatedPages)) {
+      const page = source(relativePath);
+      expect(page, relativePath).toContain('import { Suspense } from "react"');
+      expect(page, relativePath).toContain(
+        "fallback={<AuthSessionFallback />}",
+      );
+      expect(page, relativePath).toMatch(
+        new RegExp(
+          `<Suspense[\\s\\S]*?<PublicAuthGate>[\\s\\S]*?<${contentComponent} \\/>[\\s\\S]*?<\\/PublicAuthGate>[\\s\\S]*?<\\/Suspense>`,
+        ),
+      );
+      expect(page, relativePath).not.toContain(
+        "await redirectAuthenticatedUser()",
+      );
+    }
+
+    const gate = source("components/auth/public-auth-gate.tsx");
+    expect(gate).toContain('import "server-only"');
+    expect(gate).toContain("await redirectAuthenticatedUser()");
+
+    const authServer = source("lib/auth/server.ts");
+    const supabaseServer = source("lib/supabase/server.ts");
+    expect(authServer).toContain("const supabase = await createClient()");
+    expect(authServer).toContain("supabase.auth.getClaims()");
+    expect(supabaseServer).toContain("const cookieStore = await cookies()");
+
+    const updatePassword = source("app/auth/update-password/page.tsx");
+    expect(updatePassword).toMatch(
+      /<Suspense[\s\S]*?<UpdatePasswordContent \/>[\s\S]*?<\/Suspense>/,
+    );
+
+    const authError = source("app/auth/error/page.tsx");
+    expect(authError).toMatch(
+      /<Suspense[\s\S]*?<ErrorContent searchParams=\{searchParams\} \/>[\s\S]*?<\/Suspense>/,
+    );
+
+    const forgotPassword = source("app/auth/forgot-password/page.tsx");
+    expect(forgotPassword).not.toMatch(
+      /cookies\(|headers\(|searchParams|createClient|getClaims|getUser/,
+    );
+  });
+
+  it("keeps server-only auth and request APIs out of Client Components", () => {
+    const clientFiles = ["app", "components"]
+      .flatMap((directory) => sourceFiles(join(repositoryRoot, directory)))
+      .filter((path) => /^\s*["']use client["'];/.test(readFileSync(path, "utf8")));
+
+    for (const path of clientFiles) {
+      const content = readFileSync(path, "utf8");
+      expect(content, path).not.toMatch(
+        /(?:@\/lib\/(?:supabase\/(?:server|admin)|auth\/(?:server|pending-verification))|next\/headers|@\/components\/auth\/public-auth-gate)/,
+      );
+    }
   });
 
   it("keeps reset-password, dashboard, and both callback route options", () => {

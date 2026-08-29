@@ -1,13 +1,45 @@
 # WatchFlow Project Context
 
-Last updated: 2026-08-28
+Last updated: 2026-08-29
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 15.5F release blocker remediation; hosted-catalog, browser, email, and clean-environment evidence still keeps the release gate NO-GO
-Current branch: `master` at `c347630` (`docs: record Part 15.5E beta no-go audit`), tagged `part-15-5e-no-go-audit`
-Local status: Part 15.5F remediation is uncommitted; one FROM-ZERO baseline migration and local/CI test scaffolding were added, with no hosted schema/configuration or production change (only guarded disposable development QA state was exercised)
+Current phase: Part 15.5G production-build regression remediation; the auth Cache Components fix is uncommitted and awaits the authoritative Ubuntu build
+Current branch: `master` at `f5a91d2` (`ci: run release quality checks on master`)
+Local status: focused auth Suspense/test changes are uncommitted; no workflow, database, hosted configuration, or production data changed
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-08-29 Part 15.5G auth production-build regression
+
+- The first clean Ubuntu release-quality run passed dependency installation,
+  the PostgreSQL FROM-ZERO rebuild and both SQL audits, lint, direct
+  TypeScript, and 71 files/716 tests. `npm run build` then compiled and
+  completed TypeScript but failed while prerendering `/auth/login` because
+  uncached data was accessed outside Suspense.
+- Exact source path: `/auth/login` awaited `redirectAuthenticatedUser()` at
+  page scope; that helper constructed the cookie-bound server Supabase client,
+  whose first request-time operation is `await cookies()`, then called the
+  uncached `auth.getClaims()`. With Cache Components enabled and no Suspense
+  ancestor, the whole route blocked prerendering before it could emit a static
+  shell. Sign-up and verify-email had the same unbounded session-check pattern;
+  verify-email also reads its short-lived pending-verification cookie.
+- Added a server-only `PublicAuthGate` beneath focused Suspense boundaries on
+  login, sign-up, and verify-email. The static `AuthShell` and an accessible
+  session-check fallback remain prerenderable; cookie/claims and pending-email
+  reads are deferred to request time. Update-password and auth-error already
+  had correct local Suspense boundaries, and forgot-password remains static.
+- No dynamic route opt-out, Cache Components change, auth-check removal,
+  Client Component conversion, workflow weakening, Supabase security change,
+  dependency, environment variable, or database migration was introduced.
+- Verification: `git diff --check`, lint, and direct TypeScript passed. Focused
+  auth/onboarding passed 12 files/98 tests; the full native-loader fallback
+  passed 72 files/721 tests, and the client-secret scan passed 260 browser
+  artifacts. Exact `npm test` remains blocked before config load by Windows
+  `spawn EPERM`. `npm run build` compiled successfully and then hit the same
+  Windows denial starting Next's TypeScript child, before static generation;
+  no local build pass is claimed. Commit/push is still required for the
+  unchanged Ubuntu workflow to provide authoritative build and prerender
+  evidence.
 
 ## 2026-08-28 Part 15.5F release blocker remediation
 
