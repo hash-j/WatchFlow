@@ -1,5 +1,26 @@
 # WatchFlow Production Readiness
 
+## Part 15.5F remediation decision
+
+**NO-GO remains in effect, with three original hard blockers remediated.** The
+development target guard passes, the repository rebuilds the complete schema
+from zero in disposable PostgreSQL 18, both local SQL audits pass, and both
+production-only and full dependency audits report zero vulnerabilities.
+
+Guarded development RLS, onboarding ownership/restoration, limiter behavior,
+OpenAPI contracts, and authenticated route reads pass. Preview is still
+blocked until exact hosted development catalog SQL, browser-driven live QA,
+disposable inbox OTP/recovery, separately authorized account deletion where
+required, and a clean-environment build/Playwright run are recorded. The
+Ubuntu workflow is prepared but unexecuted because this work is intentionally
+uncommitted.
+
+Do not apply `202607200001_base_schema.sql` to the existing development project.
+Use it for a new FROM-ZERO project, or reconcile the existing project's
+pre-repository objects through the supported reviewed migration-adoption
+workflow after catalog verification. See
+`docs/RELEASE_BLOCKER_REMEDIATION.md`.
+
 ## Part 15.5E release decision
 
 **NO-GO for Preview deployment.** Static analysis, direct TypeScript, source

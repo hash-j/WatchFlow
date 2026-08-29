@@ -1,5 +1,26 @@
 # WatchFlow Part 15 Security Audit
 
+## Part 15.5F blocker-remediation addendum
+
+The exact development target pin now passes through a deterministic loader;
+the guard was not removed or weakened. Live QA A/B RLS tests pass 5/5,
+onboarding ownership tests pass 4/4 with restored state, and limiter security
+tests pass 10/10. Guard-pinned OpenAPI confirms every final private/shared table
+contract and every current application RPC. Exact hosted policy/grant/index
+catalog attestation remains blocked by absent read-only database access.
+
+The reconstructed FROM-ZERO baseline plus all later migrations executed in a
+disposable PostgreSQL 18 database. Readiness verification found no missing
+object and the production security SQL returned zero findings across RLS,
+ownership policies, grants, RPC execution, limiter isolation, cascades,
+constraints, indexes, and trigger behavior.
+
+The previous production Nanoid finding is remediated with compatible patch
+versions; current Brace Expansion/js-yaml development-tool advisories were
+also patched. Production and full npm audits now report zero vulnerabilities.
+No production, hosted Auth, RLS, or remote schema setting was changed. See
+`docs/RELEASE_BLOCKER_REMEDIATION.md`.
+
 ## Part 15.5E release-gate addendum
 
 Source review and the built-client secret scan continue to pass. Live database

@@ -1,5 +1,20 @@
 # Part 15.5E Final Beta QA and Release Readiness
 
+## Part 15.5F remediation addendum (2026-08-28)
+
+The original NO-GO remains the historical Part 15.5E result. Part 15.5F has
+since fixed the environment-loader mismatch, added and actually executed the
+missing FROM-ZERO baseline through all migrations, passed both local SQL
+audits, and eliminated all production and development npm audit findings.
+Guarded development RLS, onboarding, limiter, OpenAPI, and authenticated route
+read evidence also passes.
+
+The release is still NO-GO pending hosted development catalog SQL,
+browser-driven live regression, disposable inbox OTP/recovery, separately
+authorized deletion where required, and a successful clean-environment
+workflow/build. Full evidence and safe reconciliation guidance are in
+`docs/RELEASE_BLOCKER_REMEDIATION.md`.
+
 Date: 2026-08-27  
 Target: Part 16 Preview Deployment
 

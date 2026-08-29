@@ -1,5 +1,9 @@
 import { defineConfig } from "@playwright/test";
 
+import { loadLocalTestEnvironment } from "./lib/testing/local-environment.mjs";
+
+loadLocalTestEnvironment();
+
 const baseURL =
   process.env.E2E_BASE_URL?.trim() ||
   process.env.PLAYWRIGHT_BASE_URL?.trim() ||

@@ -3,16 +3,38 @@
 ## Scope and source of truth
 
 The deployed Supabase database already contains `profiles`, `movies`, and
-`user_movies`, with RLS enabled. The repository does not contain the original
-base-schema migration, schema dump, or generated database types. It does contain
-reviewed Phase 3, Part 10B, Part 12, Part 13, Part 15, and Part 15.5B incremental
-migrations, so this document combines the previously verified deployed
-contract with those version-controlled changes.
+`user_movies`, with RLS enabled. Part 15.5F reconstructs the previously missing
+base contract in `202607200001_base_schema.sql`; reviewed Phase 3, Part 10B,
+Part 12, Part 13, Part 15, and Part 15.5B migrations evolve it normally.
 
-The live Supabase schema remains authoritative. A read-only OpenAPI inspection
-before Phase 3 confirmed the base columns documented below. Incremental
-migrations add schedule/queue fixes and Part 10B settings without recreating the
-base tables.
+The baseline is for FROM-ZERO environments. Do not apply it blindly to the
+existing development project, where those objects predate repository migration
+history. Guard-pinned OpenAPI confirms the documented final columns, and a
+disposable local PostgreSQL 18 rebuild applied every migration and passed both
+verification SQL files. Exact hosted catalog parity still requires read-only
+PostgreSQL access before migration history is reconciled through the supported
+Supabase workflow; never insert migration-history rows manually.
+
+## Part 15.5F baseline provenance
+
+The reconstructed baseline creates only the evidenced pre-Phase-3 objects:
+
+- `profiles`, including Auth cascade, `full_name`, timezone/subscription
+  defaults, timestamps, own-row RLS/grants, and profile creation behavior;
+- `movies`, including unique `tmdb_id`, the final Phase 2 metadata mapping,
+  JSON requirements, timestamps/checks, authenticated reads, and service-role
+  writes; and
+- `user_movies`, including Auth/movie cascades, the unique owner/movie pair,
+  initial personal/queue/schedule fields, ownership RLS/grants, defaults, and
+  checks.
+
+Later-owned fields and objects are absent from the baseline: `schedule_note`,
+`schedule_timezone`, `favourite`, `tmdb_adult`, `metadata_language`,
+`onboarding_completed_at`, preferences, lists, and the TMDB limiter. The exact
+legacy profile-trigger name was not recoverable; the baseline uses a stable
+WatchFlow-owned name while hosted verification checks its behavior. See
+`docs/RELEASE_BLOCKER_REMEDIATION.md` for evidence and the executed FROM-ZERO
+result.
 
 ## Relationship model
 

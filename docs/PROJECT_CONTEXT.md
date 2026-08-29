@@ -1,13 +1,45 @@
 # WatchFlow Project Context
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 15.5E final beta regression QA; release gate is NO-GO pending documented blockers
-Current branch: `master` at `480303f` (`feat: polish WatchFlow visual design system`), tagged `part-15-5d-visual-polish` and `pre-15-5e-beta-qa`
-Local status: Part 15.5E QA documentation and migration-order coverage are uncommitted; no database migration or remote data/configuration change was created
+Current phase: Part 15.5F release blocker remediation; hosted-catalog, browser, email, and clean-environment evidence still keeps the release gate NO-GO
+Current branch: `master` at `c347630` (`docs: record Part 15.5E beta no-go audit`), tagged `part-15-5e-no-go-audit`
+Local status: Part 15.5F remediation is uncommitted; one FROM-ZERO baseline migration and local/CI test scaffolding were added, with no hosted schema/configuration or production change (only guarded disposable development QA state was exercised)
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-08-28 Part 15.5F release blocker remediation
+
+- Fixed the development guard's loader-order defect without weakening its
+  exact URL pin. `.env.local` remains authoritative for app configuration,
+  `.env.test.local` supplies only missing QA values, final declarations win
+  within each file, and explicit shell/CI values remain authoritative.
+- Reconstructed `202607200001_base_schema.sql` from Git, docs, code, later
+  migrations, verification SQL, and guarded development OpenAPI evidence. It
+  creates the pre-Phase-3 profiles/movies/user_movies contract, RLS, grants,
+  checks, cascades, and profile trigger while leaving later columns/tables to
+  their existing migrations.
+- Executed a genuine FROM-ZERO rebuild in a disposable local PostgreSQL 18
+  cluster. The first attempt identified a baseline policy-name collision; the
+  corrected baseline plus all nine existing migrations then applied cleanly.
+  Both SQL audits passed the rebuilt final schema with zero security findings.
+- Guarded development evidence now passes: OpenAPI table/column and current
+  RPC contracts; QA A/B RLS (5 tests); reversible onboarding ownership (4);
+  TMDB limiter behavior (10); and 15/15 authenticated protected-route reads for
+  each QA account. Exact hosted catalog SQL remains blocked by absent database
+  connection credentials/linked CLI.
+- Safely patched the Next/PostCSS/Nanoid production path and current ESLint
+  transitive advisories. Production-only and full npm audits report zero
+  vulnerabilities; no force or major upgrade was used.
+- Added an Ubuntu non-live workflow for `npm ci`, FROM-ZERO PostgreSQL
+  verification, lint, TypeScript, unit/source tests, build, client-secret scan,
+  and public responsive Playwright. It contains no real QA or hosted Supabase
+  secret and is not yet executed because changes remain uncommitted/unpushed.
+- Remaining blockers: hosted development catalog SQL, Playwright/live browser
+  flows, disposable inbox OTP/recovery, separately authorized deletion, and a
+  successful clean-environment workflow/build run. See
+  `docs/RELEASE_BLOCKER_REMEDIATION.md`.
 
 ## 2026-08-27 Part 15.5E final beta regression QA
 

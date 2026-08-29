@@ -1,17 +1,45 @@
 # WatchFlow Testing Guide
 
+## Part 15.5F blocker-remediation coverage
+
+`lib/testing/local-environment.test.ts` protects deterministic ignored-file
+loading and shell/CI precedence. `lib/release/migration-order.test.ts` now
+requires the baseline to sort first, preserves dependency order, checks its
+ownership/key/trigger security contracts, and prevents later milestone fields
+from leaking into the base.
+
+The baseline was executed, not merely source-tested. A disposable local
+PostgreSQL 18 cluster applied `supabase/testing/from_zero_bootstrap.sql` and all
+ten migrations in order. `development_readiness.sql` reported no missing
+objects and `production_security_audit.sql` returned zero findings. The first
+fresh database exposed and led to correction of a baseline-only policy-name
+collision; a second brand-new database passed completely.
+
+The shared local loader now powers Playwright and integration Vitest configs.
+It keeps `.env.local` app configuration authoritative and reads QA-only values
+from `.env.test.local`, with explicit shell/CI values winning. Guarded
+development results are RLS 5/5, onboarding 4/4 with restoration, limiter
+10/10, OpenAPI schema/RPC PASS, and 15/15 protected HTTP routes for each QA
+account.
+
+`.github/workflows/release-quality.yml` is the clean Ubuntu fallback for
+Windows child-process failures. It contains no live credentials and runs
+lockfile install, PostgreSQL 18 FROM-ZERO verification, lint, TypeScript, the
+required unit/source entry point, build, artifact secret scan, and public
+responsive Playwright. It is DEFERRED until a deliberate commit/push; live or
+destructive Supabase QA remains separately guarded.
+
+See `docs/RELEASE_BLOCKER_REMEDIATION.md` for exact PASS/BLOCKED evidence.
+
 ## Part 15.5E final beta gate
 
 The final beta matrix and exact PASS/FAIL/BLOCKED results are recorded in
-`docs/FINAL_BETA_QA.md`. The new migration-order contract verifies unique
-chronological versions, dependent patch ordering, and the explicitly
-documented absence of the original base schema.
+`docs/FINAL_BETA_QA.md`. The migration-order contract originally documented
+the missing base schema; Part 15.5F supersedes that finding with an executed
+reconstructed baseline.
 
-The live development guard currently fails because the configured Supabase URL
-does not exactly match the independently pinned expected URL. Guarded
-integration and authenticated browser tests must skip; do not override or
-weaken this check. Public HTTP route smoke passes, but Playwright worker startup
-is environment-blocked by `spawn EPERM`.
+The live development guard now passes without weakening the exact pin.
+Authenticated browser execution remains environment-blocked by `spawn EPERM`.
 
 ## Part 15.5C discoverability coverage
 

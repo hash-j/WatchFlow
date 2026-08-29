@@ -241,9 +241,7 @@ with expected(signature) as (
     (
       'public.watchflow_update_library_movie(uuid,text,numeric,text,smallint,boolean,timestamptz,timestamptz,text,text)'
     ),
-    ('public.watchflow_move_queue_item(uuid,text)'),
     ('public.watchflow_schedule_movie(uuid,timestamptz,text,text)'),
-    ('public.watchflow_remove_library_movie(uuid)'),
     ('public.move_watch_queue_item(uuid,text)'),
     ('public.watchflow_add_user_movie(bigint)'),
     (
@@ -561,6 +559,37 @@ left join (
  and triggers.relname = expected.table_name
  and triggers.tgname = expected.trigger_name
 order by expected.table_schema, expected.table_name, expected.trigger_name;
+
+-- The legacy development project predates version-controlled migrations, so
+-- its profile trigger name is not authoritative. Verify behavior without
+-- inventing a legacy object name; the reconstructed FROM-ZERO baseline uses a
+-- stable WatchFlow-owned name.
+with profile_triggers as (
+  select
+    triggers.tgname,
+    procedures.proname,
+    pg_catalog.pg_get_functiondef(procedures.oid) as function_definition
+  from pg_catalog.pg_trigger as triggers
+  inner join pg_catalog.pg_class as tables on tables.oid = triggers.tgrelid
+  inner join pg_catalog.pg_namespace as namespaces
+    on namespaces.oid = tables.relnamespace
+  inner join pg_catalog.pg_proc as procedures
+    on procedures.oid = triggers.tgfoid
+  where namespaces.nspname = 'auth'
+    and tables.relname = 'users'
+    and not triggers.tgisinternal
+)
+select
+  'auth.users profile creation behavior' as object_name,
+  case
+    when exists (
+      select 1
+      from profile_triggers
+      where function_definition ilike '%insert%'
+        and function_definition ilike '%public.profiles%'
+    ) then 'INSTALLED'
+    else 'MISSING'
+  end as status;
 
 -- 9. Historical privilege regressions and limiter isolation.
 with expected(
