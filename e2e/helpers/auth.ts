@@ -36,7 +36,10 @@ export async function logout(page: Page) {
     page.getByRole("button", { name: "Sign out" }).click(),
   ]);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Login" }),
+    page.getByRole("heading", {
+      level: 1,
+      name: "Log in to WatchFlow",
+    }),
   ).toBeVisible();
 }
 

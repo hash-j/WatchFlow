@@ -139,6 +139,16 @@ describe("critical authentication route contracts", () => {
     );
   });
 
+  it("keeps the verification countdown stable through hydration", () => {
+    const page = source("app/auth/verify-email/page.tsx");
+    const form = source("components/verify-email-form.tsx");
+
+    expect(page).not.toContain("initialNow");
+    expect(form).toContain("useState<number | null>(null)");
+    expect(form).toContain("Checking resend availability…");
+    expect(form).not.toContain("useState(() => Date.now())");
+  });
+
   it("keeps server-only auth and request APIs out of Client Components", () => {
     const clientFiles = ["app", "components"]
       .flatMap((directory) => sourceFiles(join(repositoryRoot, directory)))

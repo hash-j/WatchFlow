@@ -64,18 +64,32 @@ function OtpInput({ initialValue, error }: { initialValue: string; error: boolea
   );
 }
 
-export function VerifyEmailForm({ maskedEmail, resendAvailableAt: initialResendAvailableAt }: { maskedEmail: string; resendAvailableAt: number }) {
+export function VerifyEmailForm({
+  maskedEmail,
+  resendAvailableAt: initialResendAvailableAt,
+}: {
+  maskedEmail: string;
+  resendAvailableAt: number;
+}) {
   const [verifyState, verifyAction] = useActionState(verifyEmailAction, INITIAL_VERIFICATION_STATE);
   const [resendState, resendAction] = useActionState(resendVerificationAction, INITIAL_VERIFICATION_STATE);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState<number | null>(null);
   const [resendAvailableAt, setResendAvailableAt] = useState(initialResendAvailableAt);
 
   useEffect(() => {
-    const interval = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(interval);
+    const updateNow = () => setNow(Date.now());
+    const initialTick = window.setTimeout(updateNow, 0);
+    const interval = window.setInterval(updateNow, 1000);
+
+    return () => {
+      window.clearTimeout(initialTick);
+      window.clearInterval(interval);
+    };
   }, []);
 
-  const secondsRemaining = Math.max(0, Math.ceil((resendAvailableAt - now) / 1000));
+  const secondsRemaining = now === null
+    ? null
+    : Math.max(0, Math.ceil((resendAvailableAt - now) / 1000));
 
   return (
     <div className="space-y-6">
@@ -97,8 +111,12 @@ export function VerifyEmailForm({ maskedEmail, resendAvailableAt: initialResendA
             setResendAvailableAt(Date.now() + RESEND_COOLDOWN_SECONDS * 1000);
           }}
         >
-          <Button type="submit" variant="outline" className="w-full" disabled={secondsRemaining > 0}>
-            {secondsRemaining > 0 ? `Resend code in ${secondsRemaining}s` : "Resend code"}
+          <Button type="submit" variant="outline" className="w-full" disabled={secondsRemaining === null || secondsRemaining > 0}>
+            {secondsRemaining === null
+              ? "Checking resend availability…"
+              : secondsRemaining > 0
+                ? `Resend code in ${secondsRemaining}s`
+                : "Resend code"}
           </Button>
         </form>
         <div className="mt-3 min-h-5" aria-live="polite">

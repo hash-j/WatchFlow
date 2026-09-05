@@ -79,7 +79,7 @@ test.describe("authentication regressions", () => {
     await page.getByLabel("Full name").fill("QA Local");
     await page.getByLabel("Email").fill("qa-invalid@example.invalid");
     const password = page.getByLabel("Password", { exact: true });
-    const repeated = page.getByLabel("Confirm password");
+    const repeated = page.getByLabel("Confirm password", { exact: true });
     await password.fill("LocalOnly!123");
     await repeated.fill("Different!123");
 
@@ -178,7 +178,7 @@ test.describe("authentication regressions", () => {
       page.getByLabel("Email"),
       page.getByLabel("Password", { exact: true }),
       page.getByRole("button", { name: "Show password" }),
-      page.getByLabel("Confirm password"),
+      page.getByLabel("Confirm password", { exact: true }),
       page.getByRole("button", { name: "Show confirm password" }),
       page.getByRole("button", { name: "Create account" }),
       page.getByRole("link", { name: "Log in" }),
@@ -191,16 +191,21 @@ test.describe("authentication regressions", () => {
   });
 
   test("verification code supports numeric keyboard entry, full paste, and resend countdown", async ({
+    baseURL,
     context,
     page,
   }) => {
+    if (!baseURL) {
+      throw new Error("Playwright base URL is required for the verification test.");
+    }
+
     const now = Date.now();
     const pending = Buffer.from(JSON.stringify({
       email: "qa-verification@example.com",
       expiresAt: now + 10 * 60_000,
       resendAvailableAt: now + 60_000,
     }), "utf8").toString("base64url");
-    await context.addCookies([{ name: "watchflow_pending_verification", value: pending, url: "http://localhost:3000/auth", httpOnly: true, sameSite: "Lax" }]);
+    await context.addCookies([{ name: "watchflow_pending_verification", value: pending, url: new URL("/auth", baseURL).toString(), httpOnly: true, sameSite: "Lax" }]);
 
     await page.goto("/auth/verify-email");
     await expect(page.getByRole("heading", { level: 1, name: "Check your email" })).toBeVisible();

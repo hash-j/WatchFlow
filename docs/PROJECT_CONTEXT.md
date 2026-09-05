@@ -1,17 +1,135 @@
 # WatchFlow Project Context
 
-Last updated: 2026-08-30
+Last updated: 2026-09-05
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 15.5E final rerun complete; ready to begin Part 16 Preview Deployment
-Current branch: `master` at `2bb576a` (`fix: harden authenticated profile privileges`)
-Local status: final release-evidence documentation changes are uncommitted; no application, test, workflow, dependency, migration, policy, schema, hosted configuration, or QA data changed
+Current phase: Part 16E deployed Preview acceptance QA is blocked and not ready for acceptance
+Current branch: `preview` at `7addace` (`docs: finalize preview release readiness`)
+Local status: the Part 16E OTP hydration fix, browser-harness corrections, and this handoff update are uncommitted; the pre-existing untracked Supabase CLI link state is preserved, and no dependency, migration, policy, schema, hosted configuration, account, or QA row changed
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
-`docs/RELEASE_EVIDENCE.md` is the current readiness authority. Older dated
-milestone sections below are retained as historical evidence and do not
-override the 2026-08-30 final rerun.
+`docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
+isolated Preview. The newer Part 16E section below is the authority for deployed
+Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-05 Part 16E deployed Preview acceptance QA rerun
+
+- Final result: **PREVIEW ACCEPTANCE NOT READY**. The canonical deployment is
+  correctly isolated on `watchflow-preview`, and public route/responsive checks
+  pass, but current deployed OTP-state browser health has a confirmed hydration
+  failure. A minimal local fix passes its regression but has not been deployed.
+  Dedicated Preview QA identities and disposable signup/recovery inboxes are
+  also still unavailable, so the full authenticated acceptance gate cannot pass.
+- Target guard passed before the only Auth request. Linked CLI metadata names
+  `watchflow-preview` and its project-ref file agrees with that metadata. The
+  live HTTP 200 response CSP pins exactly the corresponding Supabase HTTPS and
+  WebSocket hostname, with the expected `nosniff`, frame denial, referrer, and
+  restrictive permissions headers. No `watchflow-dev` destination was observed.
+- Public deployed evidence passes: landing/login/sign-up/forgot-password/
+  verify-email responses, safe callback/confirmation handling, 21/21 anonymous
+  protected-route redirects, controlled recovery-session errors and 404, local
+  signup validation, keyboard order, and neutral invalid-login copy. The
+  in-app browser recorded zero warnings/errors for the normal public and
+  invalid-login paths. `/auth/sign-up` returned HTTP 200.
+- Public responsive Playwright passed all 13 widths from 320x568 through
+  1920x1080. The full run passed 12 widths and one 1920x1080 navigation timed
+  out; its focused rerun passed. Agent-browser checks at 390x844, 820x1180, and
+  1366x768 found no horizontal overflow or control-boundary violation. A
+  separate transient reset-page document/font timeout also passed immediately
+  on focused rerun and is not classified as an application defect.
+- Confirmed deployed defect: a synthetic, non-submitted pending-verification
+  state rendered and accepted six-position keyboard/paste input, but browser
+  diagnostics captured React hydration error 418. Root cause was the resend
+  countdown calling `Date.now()` independently for the server render and first
+  browser render. The local fix now renders a stable disabled availability
+  placeholder, starts the clock after hydration, and preserves the live
+  countdown. Its focused local production-browser regression passes with no
+  browser failure.
+- Browser-harness false failures were corrected without changing product
+  behavior: Confirm password locators are exact, logged-out/recovery assertions
+  use the current headings, logout uses the current login heading, and the
+  synthetic pending-verification cookie derives its origin from Playwright's
+  configured base URL. Focused Auth source coverage passes 15 tests.
+- The only configured QA A/B identities remain pinned to `development` and an
+  independently matching non-Preview Supabase target. They were not repurposed.
+  No Preview QA A/B credentials, disposable signup/recovery inbox, or existing
+  authenticated Preview session is available. Signup delivery, real OTP invalid/
+  resend/verification, onboarding, established login/session/logout, recovery,
+  every protected product mutation/read, browser-managed exports, authenticated
+  responsive UI, and two-user isolation remain **BLOCKED**, not passed.
+- Account deletion is **DEFERRED**: there is no dedicated disposable Preview
+  deletion identity and the one-use deletion authorization is false. QA A/B,
+  developer, owner, and personal accounts were not used.
+- Final local validation passes: `npm run lint`; `npx tsc --noEmit`; exact
+  `npm test` with 73 files/728 tests; `npm run build` with all 37 static pages;
+  `npm run scan:client-secrets` across 507 browser artifacts; and
+  `git diff --check`. Initial sandboxed test/browser/build process or network
+  denials were rerun in the permitted environment and are not recorded as
+  application failures.
+- No deployment, database, account, QA row, dependency, migration, schema,
+  policy, grant, or hosted configuration changed. Only the OTP Client Component,
+  Auth route source regression, three Playwright files, one Playwright helper,
+  and this handoff changed. Generated screenshots/traces/videos were removed.
+- Exact next milestone: deploy the reviewed OTP hydration fix to the canonical
+  Preview, provision dedicated `watchflow-preview` QA A/B identities plus
+  disposable signup/recovery inbox inputs, and rerun the full authenticated,
+  email, responsive, browser-health, isolation, and export matrix. Run deletion
+  only with its distinct one-use account and explicit authorization. Part 17
+  must not begin until Part 16E passes.
+
+## 2026-09-01 Part 16E deployed Preview acceptance QA
+
+- Final result: **PREVIEW ACCEPTANCE NOT READY**. The canonical deployed origin
+  is reachable and its database-target guard passes, but the required
+  authenticated acceptance, responsive, browser-health, email, and two-user
+  journeys could not run with valid Preview identities in a browser-capable
+  environment. This is a blocked evidence gate, not a confirmed application
+  defect and not authorization for public production.
+- Target guard: the existing linked-project metadata identifies
+  `watchflow-preview`. The deployed landing/login/sign-up responses returned
+  HTTP 200; their CSP and all 16 discovered browser JavaScript bundles contained
+  only the exact linked Preview Supabase hostname, including its expected HTTPS
+  and WebSocket origins. No foreign Supabase hostname or `watchflow-dev`
+  destination was observed. No authenticated mutation preceded this guard.
+- Public HTTP acceptance passes: landing, login, sign-up, forgot-password, and
+  verify-email content/status checks; 21/21 anonymous protected-route redirects;
+  safe callback, confirmation, and untrusted-next handling; exact Preview CSP,
+  nosniff, frame denial, referrer, and permissions headers; and a controlled 404.
+  `/auth/sign-up` returned 200. These are automated HTTP results, not browser or
+  responsive results.
+- Browser automation is **BLOCKED** before page execution. Repository
+  Playwright failed before its first worker with Windows `spawn EPERM`; a direct
+  Playwright Chrome launch failed before browser creation with the same error.
+  The separate browser connector required approval while approval was disabled.
+  No browser screenshot, trace, video, credential, cookie, token, or private
+  content was retained.
+- The configured QA A/B inputs remain explicitly development-targeted. A
+  fail-closed, nonprinting ordinary-client Preview login probe revalidated the
+  exact deployed target and then received `invalid_credentials` for both
+  identities. Consequently signup/OTP/onboarding/recovery, established login
+  and session persistence, all protected product mutations, browser-managed
+  exports, responsive authenticated UI, console/network health, and two-user
+  isolation are **BLOCKED**, not passed. No QA row or account was mutated.
+- Account deletion is **DEFERRED**: neither a dedicated disposable Preview
+  deletion identity nor explicit one-use authorization is configured. QA A/B
+  were not used.
+- Local validation: `npm run lint` and `npx tsc --noEmit` passed. Exact
+  `npm test` was blocked before config load by Windows `spawn EPERM`; the
+  documented native-loader/single-worker fallback passed 73 files/727 tests.
+  `npm run build` compiled successfully and then was blocked starting Next's
+  TypeScript child by `spawn EPERM`, so no local build pass is claimed.
+  `npm run scan:client-secrets` passed 260 browser artifacts, and
+  `git diff --check` passed before and after this documentation update.
+- No production behavior, test, dependency, migration, database object,
+  deployment configuration, account, or hosted data was changed. The only task
+  change is this project-context evidence update.
+- Exact next milestone: **Part 16E deployed Preview acceptance QA rerun —
+  blocked-evidence closure**. Provision dedicated `watchflow-preview` QA A/B
+  identities plus disposable signup/recovery inbox inputs, use a browser-capable
+  runner, rerun the full acceptance/responsive/health/isolation/export matrix,
+  and run deletion only if its distinct one-use account and authorization are
+  supplied. Part 17 must not begin until Part 16E passes.
 
 ## 2026-08-30 final Part 15.5E beta-readiness rerun
 

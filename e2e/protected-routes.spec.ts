@@ -31,7 +31,10 @@ test.describe("logged-out route protection", () => {
 
       await expect(page).toHaveURL("/auth/login");
       await expect(
-        page.getByRole("heading", { level: 1, name: "Login" }),
+        page.getByRole("heading", {
+          level: 1,
+          name: "Log in to WatchFlow",
+        }),
       ).toBeVisible();
     });
   }
@@ -47,7 +50,7 @@ test.describe("logged-out route protection", () => {
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Sorry, something went wrong.",
+        name: "We couldn’t complete that request",
       }),
     ).toBeVisible();
   });
@@ -63,7 +66,7 @@ test.describe("logged-out route protection", () => {
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Sorry, something went wrong.",
+        name: "We couldn’t complete that request",
       }),
     ).toBeVisible();
   });
