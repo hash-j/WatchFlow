@@ -1,17 +1,88 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-05
+Last updated: 2026-09-07
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16E deployed Preview acceptance QA is blocked and not ready for acceptance
-Current branch: `preview` at `7addace` (`docs: finalize preview release readiness`)
-Local status: the Part 16E OTP hydration fix, browser-harness corrections, and this handoff update are uncommitted; the pre-existing untracked Supabase CLI link state is preserved, and no dependency, migration, policy, schema, hosted configuration, account, or QA row changed
+Current phase: Part 16E final deployed Preview acceptance QA completed with a release-blocking post-recovery persistence failure
+Current branch: `master` at `4e2283c` (`fix: stabilize preview OTP verification QA`), matching `origin/master`
+Local status: this handoff update is uncommitted; no application code, dependency, migration, policy, or schema changed during this acceptance run; the user corrected the hosted Preview Auth recovery URL configuration, and authorized QA fixtures and the dedicated disposable deletion account were removed
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-07 Part 16E final deployed Preview acceptance QA
+
+- Final result: **PREVIEW ACCEPTANCE FAIL**. The canonical isolated Preview and
+  nearly the entire required authentication, product, responsive, browser-health,
+  export, two-user isolation, and deletion matrix passed. Acceptance is blocked
+  by an unexplained loss of User A's previously persisted library and profile
+  state after a successful password-recovery flow and subsequent login to the
+  same Preview account.
+- The target guard passed before authenticated mutations. The live deployment
+  used the exact `watchflow-preview` Supabase project origin in its CSP and did
+  not expose or contact `watchflow-dev`. The tested application origin was
+  `https://watch-flow-preview.vercel.app/`.
+- Fresh signup, delivered real-email OTP, invalid-code handling, resend with the
+  newest code, verification, onboarding, established login, session refresh,
+  logout/login, password-recovery request, and password update all completed.
+  Human assistance was limited to private mailbox/code/password steps. The
+  initial recovery email incorrectly targeted a removed Vercel hostname; the
+  user corrected the hosted Preview Auth URL configuration and a newly issued
+  recovery link then reached the deployed update-password page successfully.
+- Before recovery, authenticated product checks passed for server-side movie
+  search and details, private library mutations and personal metadata, Watch
+  Next ordering/reordering/removal, timezone-aware schedule create/edit/remove,
+  custom list create/edit/membership/order/removal, picker, recommendations and
+  reasoning, statistics, profile, preferences, notification preferences, and
+  browser-downloaded CSV/JSON exports. Refresh and route-revisit persistence
+  passed during those workflows.
+- Release-blocking persistence defect: after recovery and login with the same
+  stored account identifier on the same pinned Preview project, the earlier
+  three-movie library and customized profile/timezone were absent and the
+  timezone had reverted to its default. Source inspection found the password
+  update path only updates the Auth password and does not intentionally delete
+  application data. The underlying identity/database cause is unresolved and
+  must be audited in hosted Supabase Auth and database logs; no cause is assumed
+  from the browser evidence alone.
+- Broad two-user isolation passed through ordinary authenticated clients with no
+  service-role bypass. User B could not read or mutate User A's library,
+  favourites, personal metadata, Watch Next queue/order, schedule note/timezone,
+  custom list/membership/order, profile, preferences, notifications, or private
+  identifiers through normal pages, direct resource URLs, CSV, or JSON export.
+  User B's exports contained only User B's empty private dataset.
+- Authenticated responsive checks passed at 390x844, 820x1180, and 1366x768
+  across 15 protected routes with no horizontal overflow, clipped controls, or
+  unusable dialogs. Keyboard Escape/focus-return behavior passed. No React
+  hydration error, CSP violation, or browser console warning/error was observed
+  during the completed normal, OTP, protected, isolation, or cleanup journeys.
+- The explicitly authorized dedicated disposable account deletion passed: the
+  destructive confirmation completed, the app redirected with the deletion
+  result, and subsequent protected navigation required login. The retained QA
+  A/B accounts were not deleted.
+- Final repository validation passed: `npm run lint`; `npx tsc --noEmit`;
+  `npx vitest run` with 73 files/728 tests; `npm run build` with all 37 routes;
+  `npm run scan:client-secrets` across 507 browser artifacts; and the GitHub
+  Release Quality run for exact SHA `4e2283c`. The sandboxed exact `npm test`
+  process launch was denied by Windows `spawn EPERM`; the approved direct Vitest
+  run is the passing test evidence. The build's initial sandboxed Google-font
+  network denial passed on the approved network-enabled rerun.
+- Cleanup completed with explicit authorization. Temporary isolation rows,
+  User A's named isolation list and its membership, the two named library movie
+  fixtures and their cascading queue/schedule/personal metadata, User B's two
+  downloaded export files, and the dedicated disposable account were removed.
+  User A's Library, Watch Next, Schedule, and Lists ended empty. No credentials,
+  tokens, mailbox contents, or environment-variable values were retained here.
+- No application source, deployment, dependency, migration, schema, policy, or
+  grant changed in this run. The user made the hosted Auth URL correction; this
+  context update is the only repository change.
+- Exact next milestone: audit whether the recovery flow changed Auth identity or
+  orphaned/failed to load profile and user-owned rows, reproduce and fix the
+  post-recovery persistence loss, then rerun the affected session/persistence,
+  library, profile, and export acceptance items. Part 17 must not begin until
+  the rerun passes.
 
 ## 2026-09-05 Part 16E deployed Preview acceptance QA rerun
 
