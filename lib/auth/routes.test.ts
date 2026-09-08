@@ -169,6 +169,46 @@ describe("critical authentication route contracts", () => {
     expect(actions).toContain("A new verification code was sent.");
   });
 
+  it("renders the native existing-account result prominently on signup", () => {
+    const form = source("components/sign-up-form.tsx");
+    const feedback = source("components/ui/feedback.tsx");
+    const actions = source("lib/auth/actions.ts");
+    const errorMapping = source("lib/auth/action-errors.ts");
+
+    expect(form).toContain('variant="error"');
+    expect(form).toContain('title="Account already exists"');
+    expect(form).toContain('href="/auth/login"');
+    expect(form).toContain("Sign in instead");
+    expect(form).toContain('href="/auth/forgot-password"');
+    expect(form).toContain("Forgot password?");
+    expect(feedback).toContain(
+      'role={role ?? (variant === "error" ? "alert" : "status")}',
+    );
+    expect(actions).toContain("An account with this email already exists.");
+    expect(actions).toContain('errorKind: "account_exists"');
+    expect(errorMapping).toContain('normalizedCode === "user_already_exists"');
+    expect(errorMapping).toContain('normalizedCode === "email_exists"');
+  });
+
+  it("renders private invalid-login feedback and clears only the password", () => {
+    const form = source("components/login-form.tsx");
+    const errors = source("lib/auth/errors.ts");
+
+    expect(form).toContain('variant="error"');
+    expect(form).toContain('href="/auth/sign-up"');
+    expect(form).toContain("Create an account");
+    expect(form).toContain('href="/auth/forgot-password"');
+    expect(form).toContain("Reset password");
+    expect(form).toContain('setPassword("")');
+    expect(form).toContain("passwordRef.current?.focus()");
+    expect(form).not.toContain('setEmail("")');
+    expect(form).not.toContain("setPendingVerification");
+    expect(errors).toContain('title: "We couldn’t sign you in"');
+    expect(errors).toContain(
+      "The email or password you entered doesn’t match our records. Check your details and try again.",
+    );
+  });
+
   it("does not add anonymous account-existence lookup behavior", () => {
     for (const relativePath of [
       "lib/auth/actions.ts",
@@ -321,13 +361,13 @@ describe("critical authentication route contracts", () => {
   });
 
   it("maps browser authentication failures to controlled copy", () => {
-    for (const relativePath of [
-      "components/login-form.tsx",
-      "components/forgot-password-form.tsx",
-      "components/update-password-form.tsx",
-    ]) {
+    for (const [relativePath, mapper] of [
+      ["components/login-form.tsx", "getLoginErrorPresentation"],
+      ["components/forgot-password-form.tsx", "getControlledAuthErrorMessage"],
+      ["components/update-password-form.tsx", "getControlledAuthErrorMessage"],
+    ] as const) {
       const form = source(relativePath);
-      expect(form, relativePath).toContain("getControlledAuthErrorMessage");
+      expect(form, relativePath).toContain(mapper);
       expect(form, relativePath).not.toContain("error.message");
       expect(form.indexOf("try {"), relativePath).toBeLessThan(
         form.indexOf("createClient()"),

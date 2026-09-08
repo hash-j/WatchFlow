@@ -6,6 +6,7 @@ import { useActionState } from "react";
 import { PasswordField } from "@/components/auth/password-field";
 import { AuthSubmitButton } from "@/components/auth/submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Feedback } from "@/components/ui/feedback";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signUpAction } from "@/lib/auth/actions";
@@ -39,8 +40,33 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
             <p className="-mt-3 text-xs leading-5 text-muted-foreground">Use 8–72 characters. A longer, unique password is safest.</p>
             <PasswordField id="confirm-password" name="confirmPassword" label="Confirm password" autoComplete="new-password" required minLength={8} maxLength={72} error={state.fields.confirmPassword} />
 
-            <div className="min-h-5" aria-live="polite">
-              {state.error && <p role="alert" className="text-sm text-destructive">{state.error}</p>}
+            <div
+              className={cn(state.errorKind !== "account_exists" && "min-h-5")}
+              aria-live="polite"
+            >
+              {state.errorKind === "account_exists" ? (
+                <Feedback variant="error" title="Account already exists">
+                  <p>{state.error}</p>
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+                    <Link
+                      href="/auth/login"
+                      className="font-semibold text-foreground underline underline-offset-4"
+                    >
+                      Sign in instead
+                    </Link>
+                    <Link
+                      href="/auth/forgot-password"
+                      className="font-semibold text-foreground underline underline-offset-4"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                </Feedback>
+              ) : state.error ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {state.error}
+                </p>
+              ) : null}
             </div>
             <AuthSubmitButton idleLabel="Create account" pendingLabel="Creating account…" className="w-full" />
           </form>

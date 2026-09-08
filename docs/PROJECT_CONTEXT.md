@@ -1,17 +1,58 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-08
+Last updated: 2026-09-09
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16E password-recovery persistence blocker disproved by a controlled Preview rerun; Preview acceptance passes
-Current branch: `master` at `4e2283c` (`fix: stabilize preview OTP verification QA`), matching `origin/master`
-Local status: the recovery source-contract test and this handoff update are uncommitted; no application behavior, dependency, migration, policy, schema, hosted configuration, or deployment changed; the disposable recovery account and its QA fixtures remain pending explicit cleanup authorization
+Current phase: Existing-account signup UX implemented for native Supabase errors; deployed `watchflow-dev` remains blocked by an obfuscated success response
+Current branch: `fix/signup-existing-account` at `a840cae` (`wip: implement WatchFlow cinema theme foundation`)
+Local status: the signup UX, auth regressions, guarded browser expectation, and this handoff update are uncommitted; no dependency, migration, policy, schema, hosted configuration, deployment, service-role lookup, or admin account lookup changed
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-09 Existing-account signup UX
+
+- Implemented the requested native-error path for an already-confirmed signup.
+  Supabase Auth codes `user_already_exists` and `email_exists` are checked before
+  the compatibility-only message fallback (`User already registered` / already
+  exists). The Server Action returns a typed `account_exists` result before
+  pending-verification state is written and before the verification redirect.
+- The signup page now renders the shared destructive `Feedback` pattern with
+  the accessible alert title **Account already exists**, the safe message
+  **An account with this email already exists.**, and visible **Sign in instead**
+  and **Forgot password?** actions. Generic provider failures remain safely
+  mapped and raw provider details are not exposed.
+- New-signup success still writes only the pending email state and redirects to
+  `/auth/verify-email`. Verification, resend/countdown, onboarding, login,
+  recovery, and session implementations were not changed. No account lookup,
+  service-role/admin Auth call, database migration, dependency, or hosted Auth
+  setting was added or changed.
+- Automated coverage now locks both native codes, the legacy fallback, safe
+  generic failures, absence of pending state/redirect on existing-user errors,
+  the prominent error UI/actions, and preservation of the successful signup
+  verification path. Focused Auth Vitest passed 6 files/59 tests; the full suite
+  passed 73 files/738 tests; ESLint and direct TypeScript passed; the production
+  build passed with all 37 routes; the client-secret scan passed across 507
+  browser artifacts; and `git diff --check` passed.
+- Live `watchflow-dev` confirmed-account QA is **BLOCKED by hosted behavior**,
+  not passed. The guarded signup navigated to `/auth/verify-email`. A direct
+  public-client probe returned exactly `error: null`, a user object, no session,
+  and zero identities—the Supabase obfuscated/fake signup response—instead of
+  `user_already_exists` or `email_exists`. The strict browser regression
+  therefore failed as intended. No client-only inference from the identities
+  shape and no account-existence lookup was added; the hosted project must
+  actually return the native error for the new UI path to execute.
+- A new live email/OTP account and an existing-unconfirmed account were not
+  created during this change, so those two manual email-delivery journeys are
+  not newly claimed. Their implementation was left unchanged and the existing
+  OTP/recovery automated regressions pass. Re-run the guarded existing-user
+  browser case after correcting/verifying the hosted Supabase Auth behavior,
+  then complete the new-user and unconfirmed-user email QA.
+- Changes remain uncommitted and unpushed. The `ui-theme-polish` branch was not
+  checked out, modified, or merged.
 
 ## 2026-09-08 Part 16E password-recovery persistence investigation
 
