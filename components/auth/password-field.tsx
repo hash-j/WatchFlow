@@ -15,6 +15,7 @@ type PasswordFieldProps = Omit<
   label: string;
   error?: string;
   labelAction?: React.ReactNode;
+  inputRef?: React.Ref<HTMLInputElement>;
 };
 
 export function PasswordField({
@@ -22,6 +23,7 @@ export function PasswordField({
   label,
   error,
   labelAction,
+  inputRef,
   className,
   ...props
 }: PasswordFieldProps) {
@@ -37,6 +39,7 @@ export function PasswordField({
       <div className="relative">
         <Input
           {...props}
+          ref={inputRef}
           id={id}
           type={visible ? "text" : "password"}
           aria-invalid={Boolean(error)}

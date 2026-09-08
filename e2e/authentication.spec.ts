@@ -105,7 +105,8 @@ test.describe("authentication regressions", () => {
     }
   });
 
-  test("an existing confirmed signup reaches privacy-safe recovery choices", async ({
+  test("an existing confirmed signup stays on signup with recovery choices", async ({
+    context,
     page,
   }) => {
     test.skip(!authenticatedQaGuard.enabled, authenticatedQaGuard.reason);
@@ -124,19 +125,27 @@ test.describe("authentication regressions", () => {
 
     await page.getByRole("button", { name: "Create account" }).click();
 
-    await expect(page).toHaveURL("/auth/verify-email");
+    const alert = page.getByRole("alert");
     await expect(
-      page.getByText(
-        "If this email is new to WatchFlow, we sent a 6-digit verification code.",
+      alert.getByText("Account already exists", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      alert.getByText("An account with this email already exists.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      alert.getByRole("link", { name: "Sign in instead" }),
+    ).toBeVisible();
+    await expect(
+      alert.getByRole("link", { name: "Forgot password?" }),
+    ).toBeVisible();
+    await expect(page).toHaveURL("/auth/sign-up");
+    expect(
+      (await context.cookies()).some(
+        (cookie) => cookie.name === "watchflow_pending_verification",
       ),
-    ).toBeVisible();
-    await expect(
-      page.getByText("We sent a 6-digit verification code to your email."),
-    ).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "Forgot password" }),
-    ).toBeVisible();
+    ).toBe(false);
   });
 
   test("forgot-password requires a valid email field before requesting delivery", async ({
@@ -157,6 +166,7 @@ test.describe("authentication regressions", () => {
 
   test("invalid login shows an accessible provider error, not a network fallback", async ({
     browserAudit,
+    context,
     page,
   }) => {
     test.skip(
@@ -164,7 +174,9 @@ test.describe("authentication regressions", () => {
       developmentTargetGuard.reason,
     );
     await page.goto("/auth/login");
-    await page.getByLabel("Email").fill("qa-invalid@example.invalid");
+    const enteredEmail = "qa-invalid@example.invalid";
+    const email = page.getByLabel("Email");
+    await email.fill(enteredEmail);
     await page
       .getByLabel("Password", { exact: true })
       .evaluate((element: HTMLInputElement) => {
@@ -185,9 +197,28 @@ test.describe("authentication regressions", () => {
       await page.getByRole("button", { name: "Sign in" }).click();
 
       const alert = page.locator("form").getByRole("alert");
-      await expect(alert).toHaveText("Email or password is incorrect.");
+      await expect(
+        alert.getByText("We couldn’t sign you in", { exact: true }),
+      ).toBeVisible();
+      await expect(alert).toContainText(
+        "The email or password you entered doesn’t match our records.",
+      );
+      await expect(
+        alert.getByRole("link", { name: "Create an account" }),
+      ).toBeVisible();
+      await expect(
+        alert.getByRole("link", { name: "Reset password" }),
+      ).toBeVisible();
       await expect(alert).not.toContainText("Failed to fetch");
       await expect(page).toHaveURL("/auth/login");
+      await expect(email).toHaveValue(enteredEmail);
+      await expect(password).toHaveValue("");
+      await expect(password).toBeFocused();
+      expect(
+        (await context.cookies()).some(
+          (cookie) => cookie.name === "watchflow_pending_verification",
+        ),
+      ).toBe(false);
       expectNoUnexpectedBrowserFailures(expectedProviderDenial, {
         allowedHttpFailures: [
           {
@@ -207,6 +238,86 @@ test.describe("authentication regressions", () => {
       expectedProviderDenial.stop();
       await password.fill("");
     }
+  });
+
+  test("an existing user with a wrong password gets the same private feedback", async ({
+    browserAudit,
+    page,
+  }) => {
+    test.skip(!authenticatedQaGuard.enabled, authenticatedQaGuard.reason);
+    const { email } = getQaCredentials("A");
+    const emailInput = page.getByLabel("Email");
+    const password = page.getByLabel("Password", { exact: true });
+
+    await page.goto("/auth/login");
+    await emailInput.fill(email);
+    await password.evaluate((element: HTMLInputElement) => {
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )?.set;
+      const generatedNonCredential = `Qa!${window.crypto.randomUUID()}9z`;
+
+      setter?.call(element, generatedNonCredential);
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    browserAudit.stop();
+    const expectedProviderDenial = monitorBrowserFailures(page);
+    try {
+      await page.getByRole("button", { name: "Sign in" }).click();
+
+      const alert = page.locator("form").getByRole("alert");
+      await expect(
+        alert.getByText("We couldn’t sign you in", { exact: true }),
+      ).toBeVisible();
+      await expect(alert).toContainText(
+        "The email or password you entered doesn’t match our records.",
+      );
+      await expect(page).toHaveURL("/auth/login");
+      await expect(emailInput).toHaveValue(email);
+      await expect(password).toHaveValue("");
+      await expect(password).toBeFocused();
+      expectNoUnexpectedBrowserFailures(expectedProviderDenial, {
+        allowedHttpFailures: [
+          {
+            status: 400,
+            urlPattern: /^https:\/\/[^/]+\.supabase\.co\/auth\/v1\/token$/,
+          },
+        ],
+        allowedConsoleFailures: [
+          {
+            category: "browser-runtime",
+            locationPattern:
+              /^https:\/\/[^/]+\.supabase\.co\/auth\/v1\/token$/,
+          },
+        ],
+      });
+    } finally {
+      expectedProviderDenial.stop();
+      await password.fill("");
+    }
+  });
+
+  test("a valid existing login keeps the dashboard redirect", async ({
+    page,
+  }) => {
+    test.skip(!authenticatedQaGuard.enabled, authenticatedQaGuard.reason);
+    const { email, password } = getQaCredentials("B");
+
+    await page.goto("/auth/login");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+
+    await Promise.all([
+      page.waitForURL(/\/dashboard(?:\?.*)?$/),
+      page.getByRole("button", { name: "Sign in" }).click(),
+    ]);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Dashboard" }),
+    ).toBeVisible();
+    await expect(page.locator("form").getByRole("alert")).toHaveCount(0);
   });
 
   test("invalid callback and confirmation links fail safely", async ({ page }) => {

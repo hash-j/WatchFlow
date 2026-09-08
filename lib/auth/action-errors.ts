@@ -47,10 +47,15 @@ function isNetworkFailure(error: unknown) {
 
 export function isExistingAccountError(error: unknown) {
   const normalizedCode = code(error);
+  if (
+    normalizedCode === "user_already_exists" ||
+    normalizedCode === "email_exists"
+  ) {
+    return true;
+  }
+
   const normalizedMessage = message(error);
   return (
-    normalizedCode === "user_already_exists" ||
-    normalizedCode === "email_exists" ||
     normalizedMessage.includes("already registered") ||
     normalizedMessage.includes("already exists")
   );

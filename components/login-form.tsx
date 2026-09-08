@@ -2,29 +2,34 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { PasswordField } from "@/components/auth/password-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Feedback } from "@/components/ui/feedback";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getControlledAuthErrorMessage } from "@/lib/auth/errors";
+import {
+  getLoginErrorPresentation,
+  type LoginErrorPresentation,
+} from "@/lib/auth/errors";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<LoginErrorPresentation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const passwordRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   async function handleLogin(event: React.FormEvent) {
     event.preventDefault();
     if (isLoading) return;
     setIsLoading(true);
-    setError(null);
+    setFeedback(null);
 
     try {
       const supabase = createClient();
@@ -36,7 +41,13 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
       router.replace("/dashboard");
       router.refresh();
     } catch (caught: unknown) {
-      setError(getControlledAuthErrorMessage(caught, "login"));
+      const nextFeedback = getLoginErrorPresentation(caught);
+      setFeedback(nextFeedback);
+
+      if (nextFeedback.kind === "invalid_credentials") {
+        setPassword("");
+        window.requestAnimationFrame(() => passwordRef.current?.focus());
+      }
     } finally {
       setIsLoading(false);
     }
@@ -60,14 +71,42 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
               id="password"
               name="password"
               label="Password"
+              inputRef={passwordRef}
               autoComplete="current-password"
               required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               labelAction={<Link href="/auth/forgot-password" className="text-sm font-medium underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Forgot password?</Link>}
             />
-            <div className="min-h-5" aria-live="polite">
-              {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+            <div
+              className={cn(
+                feedback?.kind !== "invalid_credentials" && "min-h-5",
+              )}
+              aria-live="polite"
+            >
+              {feedback?.kind === "invalid_credentials" ? (
+                <Feedback variant="error" title={feedback.title}>
+                  <p>{feedback.message}</p>
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+                    <Link
+                      href="/auth/sign-up"
+                      className="font-semibold text-foreground underline underline-offset-4"
+                    >
+                      Create an account
+                    </Link>
+                    <Link
+                      href="/auth/forgot-password"
+                      className="font-semibold text-foreground underline underline-offset-4"
+                    >
+                      Reset password
+                    </Link>
+                  </div>
+                </Feedback>
+              ) : feedback ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {feedback.message}
+                </p>
+              ) : null}
             </div>
             <Button type="submit" className="w-full" disabled={isLoading} aria-disabled={isLoading}>
               {isLoading ? "Signing in…" : "Sign in"}
