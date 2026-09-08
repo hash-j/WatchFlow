@@ -48,6 +48,9 @@ export async function signUpAction(
       },
     });
 
+    // With Confirm Email enabled, Supabase may deliberately make an existing
+    // account indistinguishable from a new signup. Keep both outcomes on the
+    // same privacy-safe verification path; this pending state is not a session.
     if (error && !isExistingAccountError(error)) {
       return {
         error: getSignUpErrorMessage(error),
@@ -192,7 +195,7 @@ export async function resendVerificationAction(
       pending.email,
       Date.now() + RESEND_COOLDOWN_SECONDS * 1000,
     );
-    return { error: null, success: "New verification code sent.", code: "" };
+    return { error: null, success: "A new verification code was sent.", code: "" };
   } catch (error) {
     return { error: getResendErrorMessage(error), success: null, code: "" };
   }

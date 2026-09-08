@@ -38,4 +38,14 @@ describe("pending email state", () => {
     expect(source).toContain('path: "/auth"');
     expect(source).not.toMatch(/password|access_token|refresh_token|otp:/i);
   });
+
+  it("cannot create an authenticated session or grant protected access", () => {
+    const source = readFileSync(
+      resolve("lib/auth/pending-verification.ts"),
+      "utf8",
+    );
+
+    expect(source).not.toMatch(/createClient|\.auth\.|getSession|getUser|getClaims/);
+    expect(source).not.toMatch(/userId|user_id|session|authenticated/i);
+  });
 });

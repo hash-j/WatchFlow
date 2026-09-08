@@ -1,5 +1,13 @@
 import { expect, test } from "./fixtures/qa";
-import { developmentTargetGuard } from "./helpers/environment";
+import {
+  expectNoUnexpectedBrowserFailures,
+  monitorBrowserFailures,
+} from "./helpers/diagnostics";
+import {
+  authenticatedQaGuard,
+  developmentTargetGuard,
+  getQaCredentials,
+} from "./helpers/environment";
 
 test.describe("authentication regressions", () => {
   test("public authentication pages load with semantic headings and labels", async ({
@@ -70,6 +78,10 @@ test.describe("authentication regressions", () => {
     await expect(
       page.getByRole("link", { name: "Return to signup" }),
     ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Forgot password" }),
+    ).toBeVisible();
   });
 
   test("invalid local sign-up data is rejected before account creation", async ({
@@ -93,6 +105,40 @@ test.describe("authentication regressions", () => {
     }
   });
 
+  test("an existing confirmed signup reaches privacy-safe recovery choices", async ({
+    page,
+  }) => {
+    test.skip(!authenticatedQaGuard.enabled, authenticatedQaGuard.reason);
+    const { email } = getQaCredentials("A");
+    const nonCredentialPassword = "ExistingSignupCheck!9z";
+
+    await page.goto("/auth/sign-up");
+    await page.getByLabel("Full name").fill("Existing WatchFlow member");
+    await page.getByLabel("Email").fill(email);
+    await page
+      .getByLabel("Password", { exact: true })
+      .fill(nonCredentialPassword);
+    await page
+      .getByLabel("Confirm password", { exact: true })
+      .fill(nonCredentialPassword);
+
+    await page.getByRole("button", { name: "Create account" }).click();
+
+    await expect(page).toHaveURL("/auth/verify-email");
+    await expect(
+      page.getByText(
+        "If this email is new to WatchFlow, we sent a 6-digit verification code.",
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText("We sent a 6-digit verification code to your email."),
+    ).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Forgot password" }),
+    ).toBeVisible();
+  });
+
   test("forgot-password requires a valid email field before requesting delivery", async ({
     page,
   }) => {
@@ -110,6 +156,7 @@ test.describe("authentication regressions", () => {
   });
 
   test("invalid login shows an accessible provider error, not a network fallback", async ({
+    browserAudit,
     page,
   }) => {
     test.skip(
@@ -118,18 +165,22 @@ test.describe("authentication regressions", () => {
     );
     await page.goto("/auth/login");
     await page.getByLabel("Email").fill("qa-invalid@example.invalid");
-    await page.getByLabel("Password").evaluate((element: HTMLInputElement) => {
-      const setter = Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,
-        "value",
-      )?.set;
-      const generatedNonCredential = `Qa!${window.crypto.randomUUID()}9z`;
+    await page
+      .getByLabel("Password", { exact: true })
+      .evaluate((element: HTMLInputElement) => {
+        const setter = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value",
+        )?.set;
+        const generatedNonCredential = `Qa!${window.crypto.randomUUID()}9z`;
 
-      setter?.call(element, generatedNonCredential);
-      element.dispatchEvent(new Event("input", { bubbles: true }));
-      element.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    const password = page.getByLabel("Password");
+        setter?.call(element, generatedNonCredential);
+        element.dispatchEvent(new Event("input", { bubbles: true }));
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    const password = page.getByLabel("Password", { exact: true });
+    browserAudit.stop();
+    const expectedProviderDenial = monitorBrowserFailures(page);
     try {
       await page.getByRole("button", { name: "Sign in" }).click();
 
@@ -137,7 +188,23 @@ test.describe("authentication regressions", () => {
       await expect(alert).toHaveText("Email or password is incorrect.");
       await expect(alert).not.toContainText("Failed to fetch");
       await expect(page).toHaveURL("/auth/login");
+      expectNoUnexpectedBrowserFailures(expectedProviderDenial, {
+        allowedHttpFailures: [
+          {
+            status: 400,
+            urlPattern: /^https:\/\/[^/]+\.supabase\.co\/auth\/v1\/token$/,
+          },
+        ],
+        allowedConsoleFailures: [
+          {
+            category: "browser-runtime",
+            locationPattern:
+              /^https:\/\/[^/]+\.supabase\.co\/auth\/v1\/token$/,
+          },
+        ],
+      });
     } finally {
+      expectedProviderDenial.stop();
       await password.fill("");
     }
   });
@@ -209,8 +276,26 @@ test.describe("authentication regressions", () => {
 
     await page.goto("/auth/verify-email");
     await expect(page.getByRole("heading", { level: 1, name: "Check your email" })).toBeVisible();
+    await expect(
+      page.getByText(
+        "If this email is new to WatchFlow, we sent a 6-digit verification code.",
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText("We sent a 6-digit verification code to your email."),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", {
+        level: 2,
+        name: "Enter verification code",
+      }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Forgot password" }),
+    ).toBeVisible();
     await expect(page.getByTestId("otp-position")).toHaveCount(6);
-    const code = page.getByLabel("Verification code");
+    const code = page.getByLabel("Verification code", { exact: true });
     await code.pressSequentially("123456");
     await expect(code).toHaveValue("123456");
     await code.fill("");

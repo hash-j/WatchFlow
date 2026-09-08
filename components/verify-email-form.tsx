@@ -93,7 +93,19 @@ export function VerifyEmailForm({
 
   return (
     <div className="space-y-6">
-      <form action={verifyAction} className="space-y-5">
+      <form
+        action={verifyAction}
+        className="space-y-5"
+        aria-labelledby="verification-code-heading"
+      >
+        <div className="space-y-1">
+          <h2 id="verification-code-heading" className="font-semibold">
+            Enter verification code
+          </h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            You entered {maskedEmail}. Enter the code if one arrives.
+          </p>
+        </div>
         <OtpInput key={`${verifyState.error ?? "ready"}:${verifyState.code}`} initialValue={verifyState.code} error={Boolean(verifyState.error)} />
         <div id="verification-feedback" className="min-h-5" aria-live="polite">
           {verifyState.error && <p role="alert" className="text-sm text-destructive">{verifyState.error}</p>}
@@ -102,7 +114,10 @@ export function VerifyEmailForm({
       </form>
 
       <div className="border-t pt-5">
-        <p className="text-sm text-muted-foreground">Didn’t receive the email sent to <span className="font-medium text-foreground">{maskedEmail}</span>?</p>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Need another code? If this email is eligible, you can request a new
+          one.
+        </p>
         <form
           action={resendAction}
           className="mt-3"
@@ -128,9 +143,19 @@ export function VerifyEmailForm({
       <form action={changeVerificationEmailAction}>
         <Button type="submit" variant="ghost" className="w-full">Use a different email</Button>
       </form>
-      <p className="text-center text-sm text-muted-foreground">
-        Already verified? <Link href="/auth/login" className="font-medium text-foreground underline-offset-4 hover:underline">Return to login</Link>
-      </p>
+      <div className="space-y-3 border-t pt-5 text-center">
+        <p className="text-sm text-muted-foreground">
+          Already have an account? Sign in or reset your password.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button asChild variant="outline">
+            <Link href="/auth/login">Sign in</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/auth/forgot-password">Forgot password</Link>
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

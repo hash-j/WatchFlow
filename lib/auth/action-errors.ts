@@ -114,10 +114,10 @@ export function getVerificationErrorMessage(error: unknown) {
 
 export function getResendErrorMessage(error: unknown) {
   if (isRateLimited(error)) {
-    return "Too many requests. Please wait before requesting another code.";
+    return "Too many requests. Please wait before requesting another code, or sign in or reset your password.";
   }
   if (isNetworkFailure(error)) {
-    return "We could not reach the email service. Check your connection and try again.";
+    return "We could not reach the email service. Check your connection, try again, or use sign in or password reset.";
   }
-  return "We could not send a new code. Please wait and try again.";
+  return "We could not send a new code. Try again later, sign in, or reset your password.";
 }
