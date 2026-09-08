@@ -4,6 +4,7 @@ export type FieldErrors = Partial<
 
 export type SignUpActionState = {
   error: string | null;
+  errorKind: "account_exists" | null;
   fields: FieldErrors;
   values: {
     fullName: string;
@@ -19,6 +20,7 @@ export type VerificationActionState = {
 
 export const INITIAL_SIGN_UP_STATE: SignUpActionState = {
   error: null,
+  errorKind: null,
   fields: {},
   values: { fullName: "", email: "" },
 };
