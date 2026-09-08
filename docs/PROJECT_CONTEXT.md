@@ -1,17 +1,81 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-07
+Last updated: 2026-09-08
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16E final deployed Preview acceptance QA completed with a release-blocking post-recovery persistence failure
+Current phase: Part 16E password-recovery persistence blocker disproved by a controlled Preview rerun; Preview acceptance passes
 Current branch: `master` at `4e2283c` (`fix: stabilize preview OTP verification QA`), matching `origin/master`
-Local status: this handoff update is uncommitted; no application code, dependency, migration, policy, or schema changed during this acceptance run; the user corrected the hosted Preview Auth recovery URL configuration, and authorized QA fixtures and the dedicated disposable deletion account were removed
+Local status: the recovery source-contract test and this handoff update are uncommitted; no application behavior, dependency, migration, policy, schema, hosted configuration, or deployment changed; the disposable recovery account and its QA fixtures remain pending explicit cleanup authorization
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-08 Part 16E password-recovery persistence investigation
+
+- Final result: **PREVIEW ACCEPTANCE PASS**. A fresh disposable account on the
+  canonical deployed Preview retained its identity and every controlled
+  application-data fixture through an ordinary logout/login, real email-based
+  password recovery, and another logout/login using the new password. The
+  earlier one-off data-loss observation did not reproduce.
+- The target guard passed before the investigation's authenticated mutations.
+  The tested origin was `https://watch-flow-preview.vercel.app/`; its live CSP
+  named only Supabase project `pupzjbtjxtswslagxrbk` for the application data
+  connection and did not name or contact `watchflow-dev`.
+- The distinctive controlled fingerprint included an edited profile, complete
+  application and notification preferences, three Library movies, favourite,
+  status, priority, rating and review metadata, a two-item ordered Watch Next
+  queue, a timezone-aware schedule with a note, and a two-item ordered custom
+  list. All fixtures were verified before recovery, after recovery, and after a
+  fresh password login. The already-completed profile did not re-enter
+  onboarding.
+- Identity classification: the recovery session and subsequent password login
+  resolved to the same Auth ownership UUID. The raw UUID was deliberately not
+  retained in this handoff, but identity continuity is proven by continued
+  ordinary-client access to the exact pre-existing `profiles`,
+  `user_preferences`, `user_movies`, queue/schedule, `lists`, and `list_movies`
+  rows under policies that compare ownership to `auth.uid()`. No rows were
+  deleted, overwritten, orphaned, or merely hidden.
+- The static audit found no recovery data-loss path. Forgot password calls
+  `resetPasswordForEmail`; callback/confirm exchange or verify the recovery
+  credential; password update calls `auth.updateUser({ password })`; and login
+  uses `signInWithPassword`. None creates or deletes an Auth user or mutates
+  application tables. Logout is local-session-only. Existing-profile
+  onboarding does not recreate rows. Profile/preference creation triggers run
+  only after a new `auth.users` insert and use conflict-safe initialization.
+  Cascades are reachable only from explicit owner-scoped library/list/account
+  deletion paths, not from recovery.
+- Exact root-cause conclusion: no product data-loss defect was found. The prior
+  failure lacked a controlled before/after ownership fingerprint or UUID proof
+  and is classified as an evidence-attribution error unless independent hosted
+  logs later establish a different event. Applying a speculative behavior or
+  database fix would therefore be incorrect.
+- A focused source-contract regression now locks recovery to the existing
+  identity-preserving Auth operations and rejects Auth-user deletion/creation
+  or profile, preference, library, queue/schedule, and list mutations in the
+  recovery surface. No application behavior changed and no migration was added
+  or modified.
+- Post-recovery CSV and JSON exports were downloaded through the browser and
+  inspected without recording private identifiers. CSV contained all three
+  Library rows plus the expected favourite, priority, rating, review, scheduled
+  date, and timezone values. JSON contained the profile, preferences, Library,
+  schedule, and custom-list fingerprints. Browser warning/error logs were empty
+  and both attachment responses completed as downloads.
+- Final repository validation passed: `npm run lint`; `npx tsc --noEmit`;
+  `npx vitest run` with 73 files/729 tests; `npm run build` with all 37 routes;
+  `npm run scan:client-secrets` across 507 browser artifacts; and
+  `git diff --check`. The first sandboxed build attempt could not fetch the
+  Google font; the permitted network-enabled rerun passed and is the build
+  result of record.
+- The disposable account and its distinctive fixtures remain available for
+  review. They must not be deleted without a separate explicit authorization.
+  No credential, recovery link, token, cookie, mailbox content, or environment
+  value is recorded in this file.
+- Part 17 has not begun. The next action is review, followed by explicitly
+  authorized disposable-account cleanup if desired; do not commit or deploy
+  these unreviewed changes.
 
 ## 2026-09-07 Part 16E final deployed Preview acceptance QA
 

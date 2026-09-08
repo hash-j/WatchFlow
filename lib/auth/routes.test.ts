@@ -238,6 +238,34 @@ describe("critical authentication route contracts", () => {
     );
   });
 
+  it("keeps password recovery identity-preserving and free of application-data mutations", () => {
+    const recoverySources = [
+      "components/forgot-password-form.tsx",
+      "components/update-password-form.tsx",
+      "app/auth/callback/route.ts",
+      "app/auth/confirm/route.ts",
+    ].map((relativePath) => ({
+      relativePath,
+      content: source(relativePath),
+    }));
+
+    expect(recoverySources[0].content).toContain(
+      "supabase.auth.resetPasswordForEmail",
+    );
+    expect(recoverySources[1].content).toContain(
+      "supabase.auth.updateUser({ password })",
+    );
+    expect(recoverySources[2].content).toContain(
+      "supabase.auth.exchangeCodeForSession",
+    );
+
+    for (const { relativePath, content } of recoverySources) {
+      expect(content, relativePath).not.toMatch(
+        /auth\.(?:signUp|deleteUser)|admin\.deleteUser|\.from\(["'](?:profiles|user_movies|user_preferences|lists|list_movies)["']\)|\.(?:delete|insert|upsert)\(/,
+      );
+    }
+  });
+
   it("keeps authentication headings and mutation feedback accessible", () => {
     expect(source("components/ui/card.tsx")).toContain(
       'as?: "h1" | "h2" | "h3"',
