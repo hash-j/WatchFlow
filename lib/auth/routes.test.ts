@@ -149,6 +149,40 @@ describe("critical authentication route contracts", () => {
     expect(form).not.toContain("useState(() => Date.now())");
   });
 
+  it("uses privacy-safe signup and verification recovery copy", () => {
+    const page = source("app/auth/verify-email/page.tsx");
+    const form = source("components/verify-email-form.tsx");
+    const actions = source("lib/auth/actions.ts");
+
+    expect(page).toContain(
+      "If this email is new to WatchFlow, we sent a 6-digit verification code.",
+    );
+    expect(page).not.toContain(
+      "We sent a 6-digit verification code to your email.",
+    );
+    expect(form).toContain("Enter verification code");
+    expect(form).toContain(
+      "Already have an account? Sign in or reset your password.",
+    );
+    expect(form).toContain('href="/auth/login"');
+    expect(form).toContain('href="/auth/forgot-password"');
+    expect(actions).toContain("A new verification code was sent.");
+  });
+
+  it("does not add anonymous account-existence lookup behavior", () => {
+    for (const relativePath of [
+      "lib/auth/actions.ts",
+      "lib/auth/pending-verification.ts",
+      "app/auth/verify-email/page.tsx",
+      "components/verify-email-form.tsx",
+    ]) {
+      const content = source(relativePath);
+      expect(content, relativePath).not.toMatch(
+        /admin\.listUsers|listUsers\(|SUPABASE_SECRET_KEY|service.role|\.from\(["'](?:profiles|users)["']\)/i,
+      );
+    }
+  });
+
   it("keeps server-only auth and request APIs out of Client Components", () => {
     const clientFiles = ["app", "components"]
       .flatMap((directory) => sourceFiles(join(repositoryRoot, directory)))

@@ -76,6 +76,20 @@ describe("signup action", () => {
   it("never exposes an existing account response", async () => {
     mocks.createClient.mockResolvedValue({ auth: { signUp: vi.fn().mockResolvedValue({ data: null, error: { code: "user_already_exists" } }) } });
     await expect(signUpAction(INITIAL_SIGN_UP_STATE, validSignupForm())).rejects.toThrow("REDIRECT:/auth/verify-email");
+    expect(mocks.setPending).toHaveBeenCalledWith("user@example.com");
+  });
+
+  it("treats an obfuscated existing-user-compatible response like a new signup", async () => {
+    const signUp = vi.fn().mockResolvedValue({
+      data: { user: { identities: [] }, session: null },
+      error: null,
+    });
+    mocks.createClient.mockResolvedValue({ auth: { signUp } });
+
+    await expect(
+      signUpAction(INITIAL_SIGN_UP_STATE, validSignupForm()),
+    ).rejects.toThrow("REDIRECT:/auth/verify-email");
+    expect(mocks.setPending).toHaveBeenCalledWith("user@example.com");
   });
 
   it("refuses a provider session when email confirmation is disabled", async () => {
@@ -141,13 +155,37 @@ describe("resend and change-email actions", () => {
     const result = await resendVerificationAction(INITIAL_VERIFICATION_STATE, new FormData());
     expect(resend).toHaveBeenCalledWith({ type: "signup", email: pending.email });
     expect(mocks.setPending).toHaveBeenCalledWith(pending.email, expect.any(Number));
-    expect(result.success).toBe("New verification code sent.");
+    expect(result.success).toBe("A new verification code was sent.");
   });
 
   it("maps resend rate limits", async () => {
     mocks.createClient.mockResolvedValue({ auth: { resend: vi.fn().mockResolvedValue({ error: { status: 429 } }) } });
     const result = await resendVerificationAction(INITIAL_VERIFICATION_STATE, new FormData());
     expect(result.error).toContain("Too many requests");
+    expect(result.error).toContain("sign in or reset your password");
+  });
+
+  it("keeps ineligible resend errors privacy-safe", async () => {
+    mocks.createClient.mockResolvedValue({
+      auth: {
+        resend: vi.fn().mockResolvedValue({
+          error: {
+            code: "email_not_confirmed",
+            message: "User with this email is already confirmed",
+          },
+        }),
+      },
+    });
+
+    const result = await resendVerificationAction(
+      INITIAL_VERIFICATION_STATE,
+      new FormData(),
+    );
+
+    expect(result.error).toBe(
+      "We could not send a new code. Try again later, sign in, or reset your password.",
+    );
+    expect(result.error).not.toContain("already confirmed");
   });
 
   it("clears pending state before returning to signup", async () => {

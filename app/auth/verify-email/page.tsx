@@ -22,7 +22,7 @@ async function VerifyEmailContent() {
         <CardTitle as="h1" className="text-2xl sm:text-3xl">Check your email</CardTitle>
         <CardDescription>
           {pending
-            ? "We sent a 6-digit verification code to your email."
+            ? "If this email is new to WatchFlow, we sent a 6-digit verification code."
             : "Your verification details are no longer available on this device."}
         </CardDescription>
       </CardHeader>
@@ -38,7 +38,8 @@ async function VerifyEmailContent() {
               For your security, pending verification details expire after 15 minutes. Start signup again or return to login.
             </p>
             <Button asChild className="w-full"><Link href="/auth/sign-up">Return to signup</Link></Button>
-            <Button asChild variant="outline" className="w-full"><Link href="/auth/login">Return to login</Link></Button>
+            <Button asChild variant="outline" className="w-full"><Link href="/auth/login">Sign in</Link></Button>
+            <Button asChild variant="ghost" className="w-full"><Link href="/auth/forgot-password">Forgot password</Link></Button>
           </div>
         )}
       </CardContent>
