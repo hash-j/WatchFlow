@@ -3,15 +3,63 @@
 Last updated: 2026-09-08
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16E password-recovery persistence blocker disproved by a controlled Preview rerun; Preview acceptance passes
-Current branch: `master` at `4e2283c` (`fix: stabilize preview OTP verification QA`), matching `origin/master`
-Local status: the recovery source-contract test and this handoff update are uncommitted; no application behavior, dependency, migration, policy, schema, hosted configuration, or deployment changed; the disposable recovery account and its QA fixtures remain pending explicit cleanup authorization
+Current phase: Part 16F-A theme foundation and core-component polish implemented locally; public visual QA passes and authenticated-route visual QA remains pending a safe local authenticated fixture
+Current branch: `ui-theme-polish` at `f985a99` (`test: finalize preview acceptance recovery coverage`), matching `origin/ui-theme-polish` before the uncommitted Part 16F-A work
+Local status: the Part 16F-A visual-only source, regression test, and handoff changes are uncommitted; no database, authentication, business logic, server action, dependency, migration, policy, schema, hosted configuration, or deployment changed
 
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-08 Part 16F-A theme foundation and core-component polish
+
+- Implemented the cinema-inspired visual foundation as an uncommitted,
+  visual-only change on `ui-theme-polish`. Shared semantic CSS variables and
+  Tailwind mappings now own the light/dark page, surface, border, text, primary,
+  sidebar, and rating colors. Light mode uses the requested `#FAFAFA` page,
+  `#141414` sidebar/primary action, white cards, `#E5E7EB` borders, `#111827`
+  body text, and `#6B7280` secondary text. Dark mode uses the requested
+  `#121212` page, black sidebar, `#1E1E1E` cards, `#2C2C2C` borders,
+  `#F5F5F5`/`#A0A0A0` text, and `#F5C518` primary action. Existing green,
+  amber, and red semantic status treatments remain distinct.
+- Polished shared buttons, cards, inputs, checkboxes, dialogs, responsive
+  surfaces, and empty states without changing their behavior or public APIs.
+  Default actions are near-black in light mode and cinema yellow with dark text
+  in dark mode; outlines remain neutral. Empty states use a compact yellow
+  cinema icon tile instead of a large decorative color block.
+- Desktop and mobile navigation retain their existing information architecture
+  but now use near-black/black chrome, restrained muted labels, a yellow brand
+  accent, and a thin yellow left rail for the active destination. Focus styling
+  remains visible against the dark sidebar.
+- The reusable movie-rating treatment is now a compact yellow star pill with
+  dark text and an accessible rating label. Search, library, recommendations,
+  detail, and picker consumers continue to use the shared component. Poster-card
+  redesign remains explicitly deferred.
+- Public browser QA passed in both light and dark themes for `/`,
+  `/auth/login`, and `/auth/sign-up` at 390x844, 820x1180, and 1366x768. Every
+  case rendered the expected theme palette with no horizontal overflow; visual
+  inspection of the home and login surfaces passed, the UI theme control
+  switched and persisted correctly, `/auth/sign-up` rendered rather than 404,
+  and browser warning/error logs were empty.
+- Authenticated local visual QA across the protected-route matrix remains
+  pending. The repository has no local-only authenticated fixture or mock-auth
+  mode, and this milestone explicitly forbids touching hosted Supabase data.
+  The deployed Preview cannot validate these uncommitted styles. Protected
+  source contracts and focused UI tests pass, but that is not represented as a
+  substitute for browser coverage; Part 16F-A is therefore not marked fully
+  accepted yet.
+- Repository validation passed: `npm run lint`; `npx tsc --noEmit`;
+  `npx vitest run` with 74 files/734 tests; `npm run build` with all 37 routes;
+  `npm run scan:client-secrets` across 507 browser artifacts; and
+  `git diff --check`. The focused theme/auth/discovery/library/lists/statistics
+  suite also passed with 7 files/85 tests.
+- No database, authentication flow, authorization, business logic, server
+  action, route, dependency, migration, policy, schema, hosted configuration,
+  or deployment changed. Tag `part-16e-preview-acceptance-pass` remains on
+  `f985a99` and was not moved. No commit or push was created, and Part 16F-B and
+  Part 17 have not begun.
 
 ## 2026-09-08 Part 16E password-recovery persistence investigation
 

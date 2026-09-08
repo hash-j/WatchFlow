@@ -18,10 +18,9 @@ import type { StatisticsResult } from "@/lib/statistics/types";
 function EmptyLibraryState() {
   return (
     <section className="rounded-xl border border-dashed bg-card p-8 text-center shadow-sm sm:p-10">
-      <LibraryBig
-        className="mx-auto size-10 text-muted-foreground"
-        aria-hidden="true"
-      />
+      <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-rating text-rating-foreground shadow-sm">
+        <LibraryBig className="size-6" aria-hidden="true" />
+      </span>
       <h2 className="mt-4 text-xl font-semibold">No library statistics yet</h2>
       <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
         Add movies to your Library to begin building viewing statistics.
@@ -47,7 +46,9 @@ function NoWatchedState() {
       className="rounded-xl border border-dashed bg-card p-6 sm:p-8"
       aria-labelledby="no-watched-heading"
     >
-      <Clapperboard className="size-8 text-muted-foreground" aria-hidden="true" />
+      <span className="grid size-11 place-items-center rounded-xl bg-rating text-rating-foreground shadow-sm">
+        <Clapperboard className="size-5" aria-hidden="true" />
+      </span>
       <h2 id="no-watched-heading" className="mt-4 text-xl font-semibold">
         No watched movies yet
       </h2>

@@ -24,7 +24,7 @@ function getServerSnapshot() {
   return false;
 }
 
-const ThemeSwitcher = () => {
+const ThemeSwitcher = ({ className }: { className?: string }) => {
   const mounted = useSyncExternalStore(
     subscribeToHydration,
     getClientSnapshot,
@@ -44,6 +44,7 @@ const ThemeSwitcher = () => {
         <Button
           variant="ghost"
           size="icon"
+          className={className}
           aria-label="Choose color theme"
           title="Choose color theme"
         >

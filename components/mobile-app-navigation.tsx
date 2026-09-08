@@ -63,16 +63,16 @@ export function MobileAppNavigation({
         onClick={(event) => {
           if (event.target === event.currentTarget) closeDrawer();
         }}
-        className="fixed inset-y-0 left-0 m-0 h-svh max-h-none w-[min(21rem,calc(100vw-2rem))] max-w-none overflow-hidden border-0 border-r bg-background p-0 text-foreground shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+        className="fixed inset-y-0 left-0 m-0 h-svh max-h-none w-[min(21rem,calc(100vw-2rem))] max-w-none overflow-hidden border-0 border-r border-white/10 bg-sidebar p-0 text-sidebar-foreground shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm"
       >
         <div className="flex h-full min-w-0 flex-col">
-          <div className="flex min-h-16 items-center justify-between gap-3 border-b px-4">
+          <div className="flex min-h-16 items-center justify-between gap-3 border-b border-white/10 px-4">
             <Link
               href="/dashboard"
               onClick={closeDrawer}
-              className="flex min-w-0 items-center gap-2 font-semibold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex min-w-0 items-center gap-2 rounded-md font-semibold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active"
             >
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-sidebar-active text-rating-foreground">
                 <Clapperboard className="size-4" aria-hidden="true" />
               </span>
               <span className="truncate">WatchFlow</span>
@@ -93,16 +93,16 @@ export function MobileAppNavigation({
             className="flex-1 overflow-y-auto py-4"
           />
 
-          <div className="border-t p-4">
+          <div className="border-t border-white/10 p-4">
             <p className="break-words text-sm font-medium">{identity}</p>
             {email && email !== identity ? (
-              <p className="mt-1 break-all text-xs text-muted-foreground">
+              <p className="mt-1 break-all text-xs text-sidebar-muted">
                 {email}
               </p>
             ) : null}
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <LogoutButton />
-              <ThemeSwitcher />
+              <LogoutButton className="border-white/20 bg-transparent text-sidebar-foreground hover:border-white/30 hover:bg-white/10 hover:text-sidebar-foreground" />
+              <ThemeSwitcher className="text-sidebar-foreground hover:bg-white/10 hover:text-sidebar-foreground" />
             </div>
           </div>
         </div>

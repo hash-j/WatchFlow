@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Dices, FilterX, RotateCcw } from "lucide-react";
+import { Clapperboard, Dices, FilterX, RotateCcw } from "lucide-react";
 
 import { pickMovieAction } from "@/app/(app)/actions/discovery";
 import { PickerResult } from "@/components/discovery/picker-result";
@@ -439,7 +439,10 @@ export function MoviePicker({
 
       {libraryCount === 0 ? (
         <div className="rounded-xl border border-dashed bg-card p-8 text-center">
-          <h2 className="text-xl font-semibold">Your library is empty</h2>
+          <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-rating text-rating-foreground shadow-sm">
+            <Clapperboard className="size-6" aria-hidden="true" />
+          </span>
+          <h2 className="mt-4 text-xl font-semibold">Your library is empty</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Add or import movies before asking WatchFlow to choose one.
           </p>
@@ -457,10 +460,9 @@ export function MoviePicker({
         </div>
       ) : showActionOutput && state.status === "empty" ? (
         <div className="rounded-xl border border-dashed bg-card p-6 text-center">
-          <RotateCcw
-            className="mx-auto size-9 text-muted-foreground"
-            aria-hidden="true"
-          />
+          <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-rating text-rating-foreground shadow-sm">
+            <RotateCcw className="size-5" aria-hidden="true" />
+          </span>
           <h2 className="mt-3 text-xl font-semibold">No matches found</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             No movies in your library match these filters. Clear the mood,

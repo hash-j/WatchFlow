@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Clapperboard } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -79,7 +80,10 @@ export function SectionHeader({
       )}
     >
       <div className="min-w-0">
-        <h2 id={titleId} className="text-balance break-words text-xl font-semibold tracking-tight sm:text-2xl">
+        <h2
+          id={titleId}
+          className="text-balance break-words text-xl font-semibold tracking-tight sm:text-2xl"
+        >
           {title}
         </h2>
         {description ? (
@@ -137,7 +141,9 @@ export function FormSection({
   return (
     <section className={cn("min-w-0 space-y-6", className)}>
       <div>
-        <h2 className="break-words text-xl font-semibold tracking-tight">{title}</h2>
+        <h2 className="break-words text-xl font-semibold tracking-tight">
+          {title}
+        </h2>
         {description ? (
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
             {description}
@@ -165,16 +171,16 @@ export function EmptyState({
   return (
     <section
       className={cn(
-        "min-w-0 rounded-2xl border border-border/70 bg-card/80 px-4 py-8 text-center shadow-[0_1px_2px_hsl(var(--foreground)/0.03)] sm:px-8 sm:py-10",
+        "min-w-0 rounded-2xl border border-border bg-surface px-4 py-8 text-center shadow-[0_1px_2px_hsl(var(--foreground)/0.03)] sm:px-8 sm:py-10",
         className,
       )}
     >
-      {icon ? (
-        <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
-          {icon}
-        </div>
-      ) : null}
-      <h2 className="mt-4 break-words text-xl font-semibold tracking-tight">{title}</h2>
+      <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-rating text-rating-foreground shadow-sm">
+        {icon ?? <Clapperboard className="size-6" aria-hidden="true" />}
+      </div>
+      <h2 className="mt-4 break-words text-xl font-semibold tracking-tight">
+        {title}
+      </h2>
       <p className="mx-auto mt-2 max-w-lg break-words text-sm leading-6 text-muted-foreground">
         {description}
       </p>

@@ -16,15 +16,15 @@ export function AppShell({ children, email, profileName }: AppShellProps) {
   const identity = profileName ?? email ?? "WatchFlow member";
 
   return (
-    <div className="min-h-svh bg-muted/30 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-svh border-r bg-background lg:block">
+    <div className="min-h-svh bg-background lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
+      <aside className="sticky top-0 hidden h-svh border-r border-white/10 bg-sidebar text-sidebar-foreground lg:block">
         <div className="flex h-full flex-col">
-          <div className="flex h-16 items-center justify-between gap-4 border-b px-5">
+          <div className="flex h-16 items-center justify-between gap-4 border-b border-white/10 px-5">
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 font-semibold tracking-tight"
+              className="flex items-center gap-2 rounded-md font-semibold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
             >
-              <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
+              <span className="grid size-8 place-items-center rounded-lg bg-sidebar-active text-rating-foreground">
                 <Clapperboard className="size-4" aria-hidden="true" />
               </span>
               WatchFlow
@@ -33,14 +33,14 @@ export function AppShell({ children, email, profileName }: AppShellProps) {
 
           <AppNavigation className="flex-1 overflow-y-auto" />
 
-          <div className="border-t p-4">
+          <div className="border-t border-white/10 p-4">
             <p className="break-words text-sm font-medium">{identity}</p>
             {profileName && email ? (
-              <p className="break-all text-xs text-muted-foreground">{email}</p>
+              <p className="break-all text-xs text-sidebar-muted">{email}</p>
             ) : null}
             <div className="mt-4 flex items-center justify-between gap-2">
-              <LogoutButton />
-              <ThemeSwitcher />
+              <LogoutButton className="border-white/20 bg-transparent text-sidebar-foreground hover:border-white/30 hover:bg-white/10 hover:text-sidebar-foreground" />
+              <ThemeSwitcher className="text-sidebar-foreground hover:bg-white/10 hover:text-sidebar-foreground" />
             </div>
           </div>
         </div>

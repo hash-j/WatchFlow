@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { Clapperboard, RefreshCw } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import {
@@ -87,10 +87,9 @@ function RecommendationEmptyState({
 }) {
   return (
     <div className="rounded-xl border border-dashed bg-card p-8 text-center sm:p-10">
-      <Sparkles
-        className="mx-auto size-10 text-muted-foreground"
-        aria-hidden="true"
-      />
+      <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-rating text-rating-foreground shadow-sm">
+        <Clapperboard className="size-6" aria-hidden="true" />
+      </span>
       <h2 className="mt-4 text-xl font-semibold">
         {coldStart === "empty_library"
           ? "Add movies to get recommendations"
