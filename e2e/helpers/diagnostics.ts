@@ -59,6 +59,10 @@ type FailureAllowance = {
   }[];
   allowedUrlPatterns?: readonly RegExp[];
   allowedCategories?: readonly string[];
+  allowedConsoleFailures?: readonly {
+    category: string;
+    locationPattern: RegExp;
+  }[];
 };
 
 function redactPathSegment(segment: string) {
@@ -213,6 +217,18 @@ function isAllowed(
     allowance.allowedHttpFailures?.some(
       ({ status, urlPattern }) =>
         failure.status === status && urlPattern.test(failure.url),
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    failure.kind === "console" &&
+    failure.location &&
+    allowance.allowedConsoleFailures?.some(
+      ({ category, locationPattern }) =>
+        failure.category === category &&
+        locationPattern.test(failure.location ?? ""),
     )
   ) {
     return true;

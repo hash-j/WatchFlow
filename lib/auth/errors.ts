@@ -57,6 +57,12 @@ type ErrorShape = {
   message?: unknown;
 };
 
+export type LoginErrorPresentation = {
+  kind: "invalid_credentials" | "other";
+  title: string | null;
+  message: string;
+};
+
 function errorShape(error: unknown): ErrorShape {
   return typeof error === "object" && error !== null
     ? (error as ErrorShape)
@@ -93,6 +99,13 @@ function isNetworkError(error: unknown) {
   );
 }
 
+function isInvalidCredentialsError(error: unknown) {
+  return (
+    normalizedCode(error) === "invalid_credentials" ||
+    normalizedMessage(error).includes("invalid login credentials")
+  );
+}
+
 export function getControlledAuthErrorMessage(
   error: unknown,
   operation: AuthOperation,
@@ -108,11 +121,8 @@ export function getControlledAuthErrorMessage(
   const code = normalizedCode(error);
   const message = normalizedMessage(error);
 
-  if (
-    code === "invalid_credentials" ||
-    message.includes("invalid login credentials")
-  ) {
-    return "Email or password is incorrect.";
+  if (isInvalidCredentialsError(error)) {
+    return "The email or password you entered doesn’t match our records. Check your details and try again.";
   }
 
   if (code === "email_not_confirmed" || message.includes("email not confirmed")) {
@@ -149,6 +159,20 @@ export function getControlledAuthErrorMessage(
   }
 
   return OPERATION_FALLBACKS[operation];
+}
+
+export function getLoginErrorPresentation(
+  error: unknown,
+): LoginErrorPresentation {
+  const message = getControlledAuthErrorMessage(error, "login");
+
+  return isInvalidCredentialsError(error)
+    ? {
+        kind: "invalid_credentials",
+        title: "We couldn’t sign you in",
+        message,
+      }
+    : { kind: "other", title: null, message };
 }
 
 export function parseEmailOtpType(value: string | null): EmailOtpType | null {

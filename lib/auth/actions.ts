@@ -31,6 +31,7 @@ export async function signUpAction(
   if (!validation.success) {
     return {
       error: "Check the highlighted fields and try again.",
+      errorKind: null,
       fields: validation.fields,
       values: validation.values,
     };
@@ -48,9 +49,19 @@ export async function signUpAction(
       },
     });
 
-    if (error && !isExistingAccountError(error)) {
+    if (error && isExistingAccountError(error)) {
+      return {
+        error: "An account with this email already exists.",
+        errorKind: "account_exists",
+        fields: {},
+        values: { fullName, email },
+      };
+    }
+
+    if (error) {
       return {
         error: getSignUpErrorMessage(error),
+        errorKind: null,
         fields: {},
         values: { fullName, email },
       };
@@ -63,6 +74,7 @@ export async function signUpAction(
       return {
         error:
           "Email verification is not configured correctly. Please contact support.",
+        errorKind: null,
         fields: {},
         values: { fullName, email },
       };
@@ -72,6 +84,7 @@ export async function signUpAction(
   } catch (error) {
     return {
       error: getSignUpErrorMessage(error),
+      errorKind: null,
       fields: {},
       values: { fullName, email },
     };
@@ -192,7 +205,7 @@ export async function resendVerificationAction(
       pending.email,
       Date.now() + RESEND_COOLDOWN_SECONDS * 1000,
     );
-    return { error: null, success: "New verification code sent.", code: "" };
+    return { error: null, success: "A new verification code was sent.", code: "" };
   } catch (error) {
     return { error: getResendErrorMessage(error), success: null, code: "" };
   }

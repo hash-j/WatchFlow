@@ -7,6 +7,7 @@ import {
   getAuthCallbackFailureReason,
   getAuthErrorReasonMessage,
   getControlledAuthErrorMessage,
+  getLoginErrorPresentation,
   parseAuthErrorReason,
   parseEmailOtpType,
 } from "./errors";
@@ -50,7 +51,9 @@ describe("controlled authentication errors", () => {
         { code: "invalid_credentials", message: "provider copy" },
         "login",
       ),
-    ).toBe("Email or password is incorrect.");
+    ).toBe(
+      "The email or password you entered doesn’t match our records. Check your details and try again.",
+    );
     expect(
       getControlledAuthErrorMessage(
         { code: "email_not_confirmed", message: "provider copy" },
@@ -75,6 +78,44 @@ describe("controlled authentication errors", () => {
         "signup",
       ),
     ).toBe("Use a stronger password with at least 8 characters.");
+  });
+
+  it("maps invalid credentials to professional private login feedback", () => {
+    expect(
+      getLoginErrorPresentation({
+        code: "invalid_credentials",
+        message: "provider copy",
+      }),
+    ).toEqual({
+      kind: "invalid_credentials",
+      title: "We couldn’t sign you in",
+      message:
+        "The email or password you entered doesn’t match our records. Check your details and try again.",
+    });
+
+    expect(
+      getLoginErrorPresentation({ message: "Invalid login credentials" }),
+    ).toMatchObject({
+      kind: "invalid_credentials",
+      title: "We couldn’t sign you in",
+    });
+  });
+
+  it("preserves specialized non-credential login failures", () => {
+    expect(
+      getLoginErrorPresentation({ code: "email_not_confirmed" }),
+    ).toEqual({
+      kind: "other",
+      title: null,
+      message: "Confirm your email before signing in.",
+    });
+    expect(
+      getLoginErrorPresentation({ code: "over_request_rate_limit" }),
+    ).toEqual({
+      kind: "other",
+      title: null,
+      message: "Too many authentication attempts. Wait a moment and try again.",
+    });
   });
 
   it("allow-lists supported OTP types", () => {

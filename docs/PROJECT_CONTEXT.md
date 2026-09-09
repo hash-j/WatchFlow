@@ -1,12 +1,11 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-08
+Last updated: 2026-09-09
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16F-A theme foundation and core-component polish implemented locally; public visual QA passes and authenticated-route visual QA remains pending a safe local authenticated fixture
-Current branch: `ui-theme-polish` at `f985a99` (`test: finalize preview acceptance recovery coverage`), matching `origin/ui-theme-polish` before the uncommitted Part 16F-A work
-Local status: the Part 16F-A visual-only source, regression test, and handoff changes are uncommitted; no database, authentication, business logic, server action, dependency, migration, policy, schema, hosted configuration, or deployment changed
-
+Current phase: Part 16F-A theme foundation and core-component polish is implemented on `ui-theme-polish`. The latest signup/login account-feedback fixes from `master` are being merged into the theme branch before final authenticated UI review.
+Current branch: `ui-theme-polish`.
+Current status: Part 16E Preview Acceptance remains PASS. The signup/login account-feedback fixes are deployed and verified on Preview. Theme work remains isolated on `ui-theme-polish`; no database, migration, RLS, policy, schema, or hosted Supabase data changes are part of the theme work.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
@@ -60,6 +59,36 @@ Preview acceptance status. Older dated milestone sections are historical.
   or deployment changed. Tag `part-16e-preview-acceptance-pass` remains on
   `f985a99` and was not moved. No commit or push was created, and Part 16F-B and
   Part 17 have not begun.
+
+## 2026-09-09 Existing-account signup and login feedback finalization
+
+- The existing-account signup UX preserves native Supabase Auth error handling:
+  `user_already_exists` and `email_exists` are handled before the
+  compatibility-only message fallback (`User already registered` / already
+  exists). The Server Action returns a typed `account_exists` result before
+  pending-verification state is written and before any verification redirect.
+- Existing confirmed-account signup now shows the explicit **Account already
+  exists** feedback path, with the safe message **An account with this email
+  already exists.**, instead of navigating to verification. The UI retains the
+  visible **Sign in instead** and **Forgot password?** actions; generic provider
+  failures remain safely mapped and raw provider details are not exposed.
+- Invalid login credentials now use the professional, privacy-safe **We couldnt
+  sign you in** feedback state. This does not introduce a service-role or admin
+  lookup, an account-enumeration endpoint, or client-side inference from an
+  obfuscated Auth response.
+- New-signup success still writes only the pending-email state and redirects to
+  `/auth/verify-email`. OTP verification, resend/countdown, recovery, session,
+  onboarding, and established login behavior remain preserved.
+- Automated regression coverage locks the native codes, legacy fallback, safe
+  generic failures, absence of pending state/redirect on existing-user errors,
+  prominent existing-account and invalid-login feedback, and the successful
+  signup verification path.
+- Earlier live QA observed Supabase's obfuscated/fake signup success response
+  rather than the native existing-user errors. Live authentication QA was later
+  resolved by correcting the Supabase Auth phone-confirmation configuration and
+  deploying the finalized signup/login feedback changes. The finalized
+  authentication changes were merged into `master`, pushed, deployed to
+  Preview, and verified before returning to `ui-theme-polish`.
 
 ## 2026-09-08 Part 16E password-recovery persistence investigation
 

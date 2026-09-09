@@ -73,9 +73,88 @@ describe("signup action", () => {
     expect(mocks.setPending).toHaveBeenCalledWith("user@example.com");
   });
 
-  it("never exposes an existing account response", async () => {
-    mocks.createClient.mockResolvedValue({ auth: { signUp: vi.fn().mockResolvedValue({ data: null, error: { code: "user_already_exists" } }) } });
-    await expect(signUpAction(INITIAL_SIGN_UP_STATE, validSignupForm())).rejects.toThrow("REDIRECT:/auth/verify-email");
+  it.each(["user_already_exists", "email_exists"])(
+    "keeps %s on signup without creating pending verification",
+    async (code) => {
+      mocks.createClient.mockResolvedValue({
+        auth: {
+          signUp: vi.fn().mockResolvedValue({
+            data: null,
+            error: { code, message: "provider detail must stay private" },
+          }),
+        },
+      });
+
+      const result = await signUpAction(
+        INITIAL_SIGN_UP_STATE,
+        validSignupForm(),
+      );
+
+      expect(result).toMatchObject({
+        error: "An account with this email already exists.",
+        errorKind: "account_exists",
+        values: { fullName: "Aisha Khan", email: "user@example.com" },
+      });
+      expect(mocks.setPending).not.toHaveBeenCalled();
+      expect(mocks.redirect).not.toHaveBeenCalled();
+    },
+  );
+
+  it("supports the legacy registered-user message without exposing it", async () => {
+    mocks.createClient.mockResolvedValue({
+      auth: {
+        signUp: vi.fn().mockResolvedValue({
+          data: null,
+          error: { message: "User already registered" },
+        }),
+      },
+    });
+
+    const result = await signUpAction(
+      INITIAL_SIGN_UP_STATE,
+      validSignupForm(),
+    );
+
+    expect(result.errorKind).toBe("account_exists");
+    expect(result.error).toBe("An account with this email already exists.");
+    expect(mocks.setPending).not.toHaveBeenCalled();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+
+  it("treats an obfuscated existing-user-compatible response like a new signup", async () => {
+    const signUp = vi.fn().mockResolvedValue({
+      data: { user: { identities: [] }, session: null },
+      error: null,
+    });
+    mocks.createClient.mockResolvedValue({ auth: { signUp } });
+
+    await expect(
+      signUpAction(INITIAL_SIGN_UP_STATE, validSignupForm()),
+    ).rejects.toThrow("REDIRECT:/auth/verify-email");
+    expect(mocks.setPending).toHaveBeenCalledWith("user@example.com");
+  });
+
+  it("maps generic signup failures without exposing provider details", async () => {
+    mocks.createClient.mockResolvedValue({
+      auth: {
+        signUp: vi.fn().mockResolvedValue({
+          data: null,
+          error: { code: "unexpected_provider_error", message: "private" },
+        }),
+      },
+    });
+
+    const result = await signUpAction(
+      INITIAL_SIGN_UP_STATE,
+      validSignupForm(),
+    );
+
+    expect(result).toMatchObject({
+      error: "WatchFlow could not complete signup. Please try again.",
+      errorKind: null,
+    });
+    expect(result.error).not.toContain("private");
+    expect(mocks.setPending).not.toHaveBeenCalled();
   });
 
   it("refuses a provider session when email confirmation is disabled", async () => {
@@ -141,13 +220,37 @@ describe("resend and change-email actions", () => {
     const result = await resendVerificationAction(INITIAL_VERIFICATION_STATE, new FormData());
     expect(resend).toHaveBeenCalledWith({ type: "signup", email: pending.email });
     expect(mocks.setPending).toHaveBeenCalledWith(pending.email, expect.any(Number));
-    expect(result.success).toBe("New verification code sent.");
+    expect(result.success).toBe("A new verification code was sent.");
   });
 
   it("maps resend rate limits", async () => {
     mocks.createClient.mockResolvedValue({ auth: { resend: vi.fn().mockResolvedValue({ error: { status: 429 } }) } });
     const result = await resendVerificationAction(INITIAL_VERIFICATION_STATE, new FormData());
     expect(result.error).toContain("Too many requests");
+    expect(result.error).toContain("sign in or reset your password");
+  });
+
+  it("keeps ineligible resend errors privacy-safe", async () => {
+    mocks.createClient.mockResolvedValue({
+      auth: {
+        resend: vi.fn().mockResolvedValue({
+          error: {
+            code: "email_not_confirmed",
+            message: "User with this email is already confirmed",
+          },
+        }),
+      },
+    });
+
+    const result = await resendVerificationAction(
+      INITIAL_VERIFICATION_STATE,
+      new FormData(),
+    );
+
+    expect(result.error).toBe(
+      "We could not send a new code. Try again later, sign in, or reset your password.",
+    );
+    expect(result.error).not.toContain("already confirmed");
   });
 
   it("clears pending state before returning to signup", async () => {
