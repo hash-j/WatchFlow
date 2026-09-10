@@ -5,6 +5,7 @@ import {
   compareLocalDate,
   getLocalDateInput,
   getLocalTimeInput,
+  getWatchedDateInput,
   zonedDateTimeToIso,
 } from "./timezone";
 
@@ -49,5 +50,29 @@ describe("timezone scheduling", () => {
     expect(
       compareLocalDate("2026-07-20T12:00:00.000Z", "Asia/Karachi", now),
     ).toBeLessThan(0);
+  });
+});
+
+describe("watched date form values", () => {
+  it("maps persisted dates and timestamps to a native date input value", () => {
+    expect(getWatchedDateInput("2026-09-08")).toBe("2026-09-08");
+    expect(getWatchedDateInput("2026-09-08T00:00:00.000Z")).toBe(
+      "2026-09-08",
+    );
+    expect(getWatchedDateInput("2026-09-08T23:30:00-07:00")).toBe(
+      "2026-09-08",
+    );
+  });
+
+  it("does not locale-format, timezone-shift, or expose invalid stored values", () => {
+    for (const value of [
+      null,
+      "",
+      "09/08/2026",
+      "2026-02-30",
+      "2026-09-08Tnot-a-time",
+    ]) {
+      expect(getWatchedDateInput(value), String(value)).toBe("");
+    }
   });
 });

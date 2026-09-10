@@ -1,16 +1,57 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-10
+Last updated: 2026-09-11
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16F-B Batch 2A Library filter data, status behavior, and Watched Date changes are implemented for review on `ui-final-polish`. Batches 2B, 3, and 4 have not started.
+Current phase: Part 16F-B Batch 2A is committed on `ui-final-polish`; its Watched Date visual-persistence regression fix is implemented and remains uncommitted for review. Batches 2B, 3, and 4 have not started.
 Current branch: `ui-final-polish`.
-Current status: Part 16E Preview Acceptance remains PASS. Batch 1 is committed and checkpointed at tag `part-16fb-batch1-verified`. Batch 2A is uncommitted and adds an owner-scoped actor filter, simplified selectable status presentation, and lossless conditional Watched Date behavior. Automated and disposable-database validation pass; no hosted environment was changed.
+Current status: Part 16E Preview Acceptance remains PASS. Batch 1 is committed and checkpointed at tag `part-16fb-batch1-verified`; Batch 2A is committed at `9561e553`. The uncommitted regression fix reconciles movie-management form state with refreshed owner-scoped data and safely converts stored watched timestamps to native date-input values. Automated and authenticated localhost validation pass; no hosted environment was changed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-11 Part 16F-B Batch 2A Watched Date persistence regression
+
+- Authenticated localhost reproduction on an existing Watched movie confirmed
+  that the owner-scoped v2 RPC stored the submitted calendar date correctly.
+  The fresh server payload contained
+  `watchedAt: "2026-09-08T00:00:00+00:00"`, and a hard reload rendered
+  `2026-09-08`; the write, row mapping, and PostgreSQL preservation semantics
+  were therefore not the failure.
+- Root cause: `MovieManagementForm` initialized controlled status and
+  watched-date state from server props only once. After a successful Server
+  Action refresh, the component instance retained its prior local values, and
+  Next's client route cache restored that stale instance when revisiting the
+  movie. On a first date save this appeared as a blank field even though
+  `watched_at` was populated.
+- The action state now remains in a stable outer component while a keyed inner
+  fields component remounts whenever the persisted row version/status/date
+  changes. This reconciles controlled form values after save without
+  effect-driven state writes and keeps the success announcement visible.
+- Added `getWatchedDateInput` to validate and extract the stored calendar-date
+  prefix for native `<input type="date">` values. It preserves the intended
+  calendar day without timezone conversion and rejects localized, impossible,
+  or malformed values.
+- Manual localhost QA passed: date save remained visible after success;
+  Library navigation and client-side reopen restored the date; Watched → Saved
+  hid the field without clearing the stored date; Saved → Watched restored it;
+  and an explicit empty Watched save wrote `NULL`. The test movie was restored
+  to its original Watched/blank-date state.
+- Regression coverage now locks the full stored-timestamp read path, date-input
+  normalization, v2 RPC watched-date arguments, refreshed-form key, explicit
+  clearing, non-Watched/unrelated preservation, owner scoping, Actor behavior,
+  and existing status contracts.
+- Validation passes: `git diff --check`; `npm run lint`; `npx tsc --noEmit`;
+  focused watched-date/management coverage with 6 files and 59 tests;
+  `npx vitest run` with 76 files and 763 tests; `npm run build` with all 37
+  routes; and `npm run scan:client-secrets` across 507 browser artifacts. The
+  sandboxed build could not fetch Geist; the permitted network-enabled rerun
+  passed.
+- No migration, RLS, grant, Auth, Actor-filter, queue, status-domain, hosted
+  Preview/Production, deployment, dependency, commit, push, or Batch 2B change
+  was made. The regression fix remains uncommitted on `ui-final-polish`.
 
 ## 2026-09-10 Part 16F-B Batch 2A Library data and status behavior
 

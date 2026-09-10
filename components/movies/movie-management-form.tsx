@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { initialLibraryActionState } from "@/lib/library/action-state";
+import {
+  initialLibraryActionState,
+  type LibraryActionState,
+} from "@/lib/library/action-state";
+import { getWatchedDateInput } from "@/lib/library/timezone";
 import {
   isLegacyLibraryMovieStatus,
   LIBRARY_MOVIE_STATUS_LABELS,
@@ -24,20 +28,24 @@ type MovieManagementFormProps = {
   scheduledTime: string;
 };
 
-export function MovieManagementForm({
+type MovieManagementFieldsProps = MovieManagementFormProps & {
+  action: (payload: FormData) => void;
+  state: LibraryActionState;
+  isPending: boolean;
+};
+
+function MovieManagementFields({
   item,
   timezone,
   scheduledDate,
   scheduledTime,
-}: MovieManagementFormProps) {
+  action,
+  state,
+  isPending,
+}: MovieManagementFieldsProps) {
   const [status, setStatus] = useState<LibraryMovieStatus>(item.status);
-  const [watchedDate, setWatchedDate] = useState(
-    item.watchedAt?.slice(0, 10) ?? "",
-  );
-  const [state, action, isPending] = useActionState(
-    updateMovieAction,
-    initialLibraryActionState,
-  );
+  const persistedWatchedDate = getWatchedDateInput(item.watchedAt);
+  const [watchedDate, setWatchedDate] = useState(persistedWatchedDate);
 
   return (
     <form action={action} className="space-y-6">
@@ -205,5 +213,27 @@ export function MovieManagementForm({
         ) : null}
       </div>
     </form>
+  );
+}
+
+export function MovieManagementForm(props: MovieManagementFormProps) {
+  const [state, action, isPending] = useActionState(
+    updateMovieAction,
+    initialLibraryActionState,
+  );
+  const formVersion = [
+    props.item.updatedAt,
+    props.item.status,
+    props.item.watchedAt,
+  ].join(":");
+
+  return (
+    <MovieManagementFields
+      key={formVersion}
+      {...props}
+      action={action}
+      state={state}
+      isPending={isPending}
+    />
   );
 }

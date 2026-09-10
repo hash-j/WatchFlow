@@ -127,6 +127,29 @@ describe("authenticated Supabase movie updates", () => {
     });
   });
 
+  it("passes an explicitly provided watched date through the v2 RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
+    const client = { rpc } as unknown as SupabaseClient;
+
+    await expect(
+      updateAuthenticatedUserMovie(client, "verified-user-id", "owned-row-id", {
+        ...input,
+        status: "watched",
+        watchedAt: "2026-09-08T00:00:00.000Z",
+        watchedAtProvided: true,
+      }),
+    ).resolves.toBe(true);
+
+    expect(rpc).toHaveBeenCalledWith(
+      "watchflow_update_library_movie_v2",
+      expect.objectContaining({
+        p_status: "watched",
+        p_watched_at: "2026-09-08T00:00:00.000Z",
+        p_watched_at_provided: true,
+      }),
+    );
+  });
+
   it("reports an explicit RLS authorization failure", async () => {
     const client = {
       rpc: vi.fn().mockResolvedValue({

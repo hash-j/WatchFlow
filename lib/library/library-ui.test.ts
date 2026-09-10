@@ -171,6 +171,10 @@ describe("Part 12 library UI contracts", () => {
     expect(management).toContain('<option value={item.status} hidden>');
     expect(management).toContain('status === "watched"');
     expect(management).toContain('name="watchedDate"');
+    expect(management).toContain("getWatchedDateInput(item.watchedAt)");
+    expect(management).toContain("key={formVersion}");
+    expect(management).toContain("props.item.updatedAt");
+    expect(management).toContain("props.item.watchedAt");
     expect(management).toContain("setWatchedDate(event.target.value)");
     expect(bulk).toContain("BULK_LIBRARY_STATUSES");
     expect(settings).toContain("SELECTABLE_DEFAULT_MOVIE_STATUSES");
