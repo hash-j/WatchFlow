@@ -103,7 +103,7 @@
     cursor: default;
   }
   ::selection {
-    @apply bg-primary/20 text-foreground;
+    @apply bg-primary/20;
   }
   select,
   textarea {
@@ -112,6 +112,17 @@
   select[aria-invalid="true"],
   textarea[aria-invalid="true"] {
     @apply border-destructive focus-visible:border-destructive focus-visible:ring-destructive/15;
+  }
+  select {
+    color-scheme: light;
+  }
+  .dark select {
+    color-scheme: dark;
+  }
+  select option,
+  select optgroup {
+    background-color: hsl(var(--surface));
+    color: hsl(var(--foreground));
   }
   input[type="checkbox"],
   input[type="radio"] {

@@ -1,16 +1,62 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-09
+Last updated: 2026-09-10
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16F-A theme foundation and core-component polish is implemented on `ui-theme-polish`. The latest signup/login account-feedback fixes from `master` are being merged into the theme branch before final authenticated UI review.
-Current branch: `ui-theme-polish`.
-Current status: Part 16E Preview Acceptance remains PASS. The signup/login account-feedback fixes are deployed and verified on Preview. Theme work remains isolated on `ui-theme-polish`; no database, migration, RLS, policy, schema, or hosted Supabase data changes are part of the theme work.
+Current phase: Part 16F-B Batch 1 global shared controls and cross-app UI fixes are implemented for review on `ui-final-polish`. Batch 2 has not started.
+Current branch: `ui-final-polish`.
+Current status: Part 16E Preview Acceptance remains PASS. Batch 1 now has one shared native Select, cross-browser option-theme support, and the global Ctrl+A selection fix. Automated validation passes; authenticated visual inspection of opened native dropdown menus remains pending because the configured local QA account is unconfirmed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-10 Part 16F-B Batch 1 shared controls and cross-app UI fixes
+
+- Added `components/ui/select.tsx` as the canonical native Select. It preserves
+  browser semantics and consumer-controlled labels while providing a roughly
+  44px minimum target, deliberate left/right padding, a vertically centered
+  pointer-events-none chevron, semantic surface/text colors, responsive type,
+  and shared focus-visible, disabled, and invalid states.
+- Migrated all 29 user-facing native selects across 10 consumers: onboarding,
+  Library filters and bulk actions, movie management, scheduling, CSV import,
+  Add Movies, Movie Picker, and Settings preferences/notifications. Existing
+  names, values, default values, change handlers, options, and behavior were
+  preserved; no page-specific select class treatment remains in those
+  consumers.
+- Native option menus now receive semantic surface/foreground colors and an
+  explicit light/dark `color-scheme`. The closed control and its options no
+  longer depend on page-specific hard-coded colors. Because an authenticated
+  local session was unavailable, opened Windows Chrome option menus still need
+  authenticated manual inspection before visual acceptance can be claimed.
+- Removed the forced foreground color from the global `::selection` rule while
+  retaining its visible primary-tint background. Native Ctrl+A remains
+  untouched. A real Chromium regression passed in light and dark themes at
+  390x844, 820x1180, and 1366x768 for normal page selection, input selection,
+  and horizontal-overflow safety.
+- Focused Select/theme coverage validates native semantics, forwarded form
+  attributes, chevron spacing/alignment, shared focus/disabled/invalid styles,
+  the ten migrated consumers, light/dark option tokens, and the corrected
+  global selection rule. The full Vitest suite passes with 75 files and 751
+  tests; the additional Playwright selection suite passes 6 tests.
+- Repository validation passes: `git diff --check`, `npm run lint`,
+  `npx tsc --noEmit`, focused Select/theme tests, `npx vitest run`,
+  `npm run build` with all 37 routes, and `npm run scan:client-secrets` across
+  507 browser artifacts. The sandboxed build could not fetch the Geist font;
+  its permitted network-enabled rerun passed.
+- The protected responsive browser sweep was attempted at all three requested
+  viewports but stopped during login because the guarded QA account returned
+  **Confirm your email before signing in**. It never reached protected routes,
+  so dropdown opening, arrow placement in live forms, and protected-route
+  console/network health are not recorded as passing. No auth gate was bypassed
+  and no hosted Supabase state was changed.
+- No route, database, migration, RLS, policy, schema, hosted configuration,
+  authentication behavior, business logic, or user data changed. The approved
+  actor RPC, status presentation/selection work, Library redesign, export
+  investigation, Settings language removal, and every other page-specific PDF
+  item remain deferred to Batches 2-4. No commit, push, deploy, or Batch 2 work
+  was performed.
 
 ## 2026-09-08 Part 16F-A theme foundation and core-component polish
 

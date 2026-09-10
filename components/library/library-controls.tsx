@@ -11,6 +11,7 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
   buildClearLibraryFiltersUrl,
   buildLibraryUrl,
@@ -32,9 +33,6 @@ import {
 } from "@/lib/movies/types";
 import { MOVIES_PER_PAGE_OPTIONS } from "@/lib/settings/types";
 import { cn } from "@/lib/utils";
-
-const fieldClassName =
-  "flex min-h-11 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function HiddenLibraryParams({
   state,
@@ -224,27 +222,26 @@ export function LibraryControls({
           <HiddenLibraryParams state={state} omit={["sort", "perPage"]} />
           <label className="col-span-2 space-y-1 text-sm font-medium lg:col-span-1">
             Sort
-            <select name="sort" defaultValue={state.sort} className={fieldClassName}>
+            <Select name="sort" defaultValue={state.sort}>
               {LIBRARY_SORTS.map((sort) => (
                 <option key={sort} value={sort}>
                   {LIBRARY_SORT_LABELS[sort]}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label className="space-y-1 text-sm font-medium">
             Per page
-            <select
+            <Select
               name="perPage"
               defaultValue={String(state.perPage)}
-              className={fieldClassName}
             >
               {MOVIES_PER_PAGE_OPTIONS.map((size) => (
                 <option key={size} value={size}>
                   {size}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <Button type="submit" variant="outline" className="col-span-2 lg:col-span-1">
             Apply
@@ -331,19 +328,19 @@ export function LibraryControls({
 
           <label className="space-y-1 text-sm font-medium">
             Status
-            <select name="status" defaultValue={state.status} className={fieldClassName}>
+            <Select name="status" defaultValue={state.status}>
               <option value="all">All statuses</option>
               {LIBRARY_MOVIE_STATUSES.map((status) => (
                 <option key={status} value={status}>
                   {LIBRARY_MOVIE_STATUS_LABELS[status]}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="space-y-1 text-sm font-medium">
             Watched state
-            <select name="watched" defaultValue={state.watched} className={fieldClassName}>
+            <Select name="watched" defaultValue={state.watched}>
               {LIBRARY_WATCHED_FILTERS.map((value) => (
                 <option key={value} value={value}>
                   {watchedLabel(value)}
@@ -354,15 +351,14 @@ export function LibraryControls({
                       : ` (${facets.counts.all})`}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="space-y-1 text-sm font-medium">
             Favourite
-            <select
+            <Select
               name="favourite"
               defaultValue={state.favourite}
-              className={fieldClassName}
             >
               {LIBRARY_FAVOURITE_FILTERS.map((value) => (
                 <option key={value} value={value}>
@@ -372,19 +368,19 @@ export function LibraryControls({
                     : ""}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="space-y-1 text-sm font-medium">
             Genre
-            <select name="genre" defaultValue={state.genre ?? ""} className={fieldClassName}>
+            <Select name="genre" defaultValue={state.genre ?? ""}>
               <option value="">All genres</option>
               {facets.genres.map((genre) => (
                 <option key={genre} value={genre}>
                   {genre}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="space-y-1 text-sm font-medium">

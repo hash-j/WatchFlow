@@ -7,6 +7,7 @@ import { updateMovieAction } from "@/app/(app)/actions/management";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { initialLibraryActionState } from "@/lib/library/action-state";
 import {
   LIBRARY_MOVIE_STATUSES,
@@ -21,9 +22,6 @@ type MovieManagementFormProps = {
   scheduledDate: string;
   scheduledTime: string;
 };
-
-const fieldClassName =
-  "flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function MovieManagementForm({
   item,
@@ -45,37 +43,35 @@ export function MovieManagementForm({
       <div className="grid gap-5 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="movie-status">Status</Label>
-          <select
+          <Select
             id="movie-status"
             name="status"
             value={status}
             onChange={(event) =>
               setStatus(event.target.value as LibraryMovieStatus)
             }
-            className={fieldClassName}
           >
             {LIBRARY_MOVIE_STATUSES.map((value) => (
               <option key={value} value={value}>
                 {LIBRARY_MOVIE_STATUS_LABELS[value]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="movie-priority">Priority</Label>
-          <select
+          <Select
             id="movie-priority"
             name="priority"
             defaultValue={String(item.priority)}
-            className={fieldClassName}
           >
             {Array.from({ length: 6 }).map((_, priority) => (
               <option key={priority} value={priority}>
                 {priority}
               </option>
             ))}
-          </select>
+          </Select>
           <p className="text-xs text-muted-foreground">0 is lowest; 5 is highest.</p>
         </div>
 

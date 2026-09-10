@@ -29,6 +29,7 @@ import { MoviePoster } from "@/components/movies/movie-poster";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataScrollRegion, ResponsiveActions } from "@/components/ui/responsive-layout";
+import { Select } from "@/components/ui/select";
 import { escapeCsvCell } from "@/lib/csv/safety";
 import {
   CsvImportValidationError,
@@ -508,17 +509,17 @@ export function ImportWizard() {
                   <label htmlFor={`mapping-${field}`} className="text-sm font-medium">
                     {IMPORT_FIELD_LABELS[field]} {field === "title" ? <span className="text-destructive">*</span> : null}
                   </label>
-                  <select
+                  <Select
                     id={`mapping-${field}`}
                     value={mapping[field] ?? ""}
                     onChange={(event) => updateMapping(field, event.target.value)}
-                    className="mt-2 min-h-11 min-w-0 w-full max-w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    containerClassName="mt-2"
                   >
                     <option value="">Not imported</option>
                     {parsed.columns.map((column) => (
                       <option key={column.id} value={column.id}>{column.header}</option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               ))}
             </div>

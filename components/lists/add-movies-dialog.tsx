@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { DialogCloseButton, ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
   initialListActionState,
   type ListMovieCandidate,
@@ -26,9 +27,6 @@ import {
   LIBRARY_MOVIE_STATUSES,
   LIBRARY_MOVIE_STATUS_LABELS,
 } from "@/lib/movies/types";
-
-const selectClassName =
-  "flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function AddMoviesDialog({
   listId,
@@ -170,10 +168,9 @@ export function AddMoviesDialog({
             </div>
             <label className="space-y-1 text-sm font-medium">
               Status
-              <select
+              <Select
                 name="listStatus"
                 defaultValue={picker.status}
-                className={selectClassName}
               >
                 <option value="all">All statuses</option>
                 {LIBRARY_MOVIE_STATUSES.map((status) => (
@@ -181,18 +178,17 @@ export function AddMoviesDialog({
                     {LIBRARY_MOVIE_STATUS_LABELS[status]}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="space-y-1 text-sm font-medium">
               Favourite
-              <select
+              <Select
                 name="listFavourite"
                 defaultValue={picker.favourite}
-                className={selectClassName}
               >
                 <option value="all">All movies</option>
                 <option value="favourites">Favourites only</option>
-              </select>
+              </Select>
             </label>
             <Button type="submit" className="self-end">
               <Search className="size-4" aria-hidden="true" />

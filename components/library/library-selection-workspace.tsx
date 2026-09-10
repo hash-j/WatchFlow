@@ -18,6 +18,7 @@ import {
   bulkUpdateStatusAction,
 } from "@/app/(app)/actions/library";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import {
   DialogBody,
   DialogCloseButton,
@@ -248,19 +249,18 @@ function BulkActions({
     <MobileToolbar className="grid gap-3 sm:rounded-lg sm:border sm:bg-muted/30 sm:p-3 lg:grid-cols-[minmax(12rem,1fr)_auto_auto] lg:items-end">
       <label className="space-y-1 text-sm font-medium">
         Change status
-        <select
+        <Select
           value={targetStatus}
           onChange={(event) =>
             setTargetStatus(event.target.value as BulkLibraryStatus)
           }
-          className="flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {BULK_LIBRARY_STATUSES.map((status) => (
             <option key={status} value={status}>
               {LIBRARY_MOVIE_STATUS_LABELS[status]}
             </option>
           ))}
-        </select>
+        </Select>
         <span className="block text-xs font-normal text-muted-foreground">
           Scheduled is unavailable in bulk because every schedule needs a date
           and time.

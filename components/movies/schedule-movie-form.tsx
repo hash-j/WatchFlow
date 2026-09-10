@@ -7,6 +7,7 @@ import { scheduleMovieAction } from "@/app/(app)/actions/management";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { initialLibraryActionState } from "@/lib/library/action-state";
 import { getLocalDateInput } from "@/lib/library/timezone";
 
@@ -15,9 +16,6 @@ type ScheduleMovieFormProps = {
   profileTimezone: string | null;
   defaultDate: string;
 };
-
-const selectClassName =
-  "flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function ScheduleMovieForm({
   movies,
@@ -62,13 +60,12 @@ export function ScheduleMovieForm({
 
       <div className="space-y-2">
         <Label htmlFor="schedule-library-id">Movie</Label>
-        <select
+        <Select
           id="schedule-library-id"
           name="libraryId"
           required
           disabled={movies.length === 0}
           defaultValue=""
-          className={selectClassName}
         >
           <option value="" disabled>
             Select a movie
@@ -78,7 +75,7 @@ export function ScheduleMovieForm({
               {movie.title}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
