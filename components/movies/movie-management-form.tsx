@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { initialLibraryActionState } from "@/lib/library/action-state";
 import {
-  LIBRARY_MOVIE_STATUSES,
+  isLegacyLibraryMovieStatus,
   LIBRARY_MOVIE_STATUS_LABELS,
+  SELECTABLE_LIBRARY_MOVIE_STATUSES,
   type LibraryMovie,
   type LibraryMovieStatus,
 } from "@/lib/movies/types";
@@ -30,6 +31,9 @@ export function MovieManagementForm({
   scheduledTime,
 }: MovieManagementFormProps) {
   const [status, setStatus] = useState<LibraryMovieStatus>(item.status);
+  const [watchedDate, setWatchedDate] = useState(
+    item.watchedAt?.slice(0, 10) ?? "",
+  );
   const [state, action, isPending] = useActionState(
     updateMovieAction,
     initialLibraryActionState,
@@ -51,7 +55,12 @@ export function MovieManagementForm({
               setStatus(event.target.value as LibraryMovieStatus)
             }
           >
-            {LIBRARY_MOVIE_STATUSES.map((value) => (
+            {isLegacyLibraryMovieStatus(item.status) ? (
+              <option value={item.status} hidden>
+                {LIBRARY_MOVIE_STATUS_LABELS[item.status]}
+              </option>
+            ) : null}
+            {SELECTABLE_LIBRARY_MOVIE_STATUSES.map((value) => (
               <option key={value} value={value}>
                 {LIBRARY_MOVIE_STATUS_LABELS[value]}
               </option>
@@ -89,15 +98,18 @@ export function MovieManagementForm({
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="watched-date">Watched date</Label>
-          <Input
-            id="watched-date"
-            name="watchedDate"
-            type="date"
-            defaultValue={item.watchedAt?.slice(0, 10) ?? ""}
-          />
-        </div>
+        {status === "watched" ? (
+          <div className="space-y-2">
+            <Label htmlFor="watched-date">Watched date</Label>
+            <Input
+              id="watched-date"
+              name="watchedDate"
+              type="date"
+              value={watchedDate}
+              onChange={(event) => setWatchedDate(event.target.value)}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="space-y-2">

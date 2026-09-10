@@ -88,11 +88,18 @@ describe("bulk library input validation", () => {
     "watch_next",
     "currently_watching",
     "watched",
-    "on_hold",
-    "dropped",
   ])("accepts bulk status %s", (status) => {
     expect(validateBulkLibraryStatus(status)).toBe(status);
   });
+
+  it.each(["on_hold", "dropped"])(
+    "does not allow legacy status %s as a new bulk selection",
+    (status) => {
+      expect(() => validateBulkLibraryStatus(status)).toThrow(
+        LibraryValidationError,
+      );
+    },
+  );
 
   it("excludes scheduled from bulk status changes", () => {
     expect(() => validateBulkLibraryStatus("scheduled")).toThrow(
@@ -108,6 +115,32 @@ describe("bulk library input validation", () => {
 });
 
 describe("authenticated library mutations", () => {
+  it("keeps Saved as want_to_watch without triggering Watch Next behavior", async () => {
+    const bulkUpdateStatus = vi.fn().mockResolvedValue({
+      success: true,
+      requested: 1,
+      matched: 1,
+      affected: 1,
+      skipped: 0,
+      failed: 0,
+      reason: null,
+    });
+    const deps = dependencies({ bulkUpdateStatus });
+
+    await bulkUpdateLibraryStatus([firstId], "want_to_watch", deps);
+
+    expect(bulkUpdateStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "verified-user" }),
+      [firstId],
+      "want_to_watch",
+    );
+    expect(bulkUpdateStatus).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      "watch_next",
+    );
+  });
+
   it("refuses an unauthenticated favourite or bulk action", async () => {
     const deps = dependencies({
       authenticate: vi.fn().mockResolvedValue(null),

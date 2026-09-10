@@ -74,6 +74,7 @@ export async function updateMovieAction(
         priority: formData.get("priority"),
         wouldWatchAgain: formData.get("wouldWatchAgain"),
         watchedDate: formData.get("watchedDate"),
+        watchedDateProvided: formData.has("watchedDate"),
         scheduledDate: formData.get("scheduledDate"),
         scheduledTime: formData.get("scheduledTime"),
         timezone: formData.get("timezone"),

@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import {
+  isLegacyLibraryMovieStatus,
   LIBRARY_MOVIE_STATUS_LABELS,
 } from "@/lib/movies/types";
 import {
   DATE_FORMATS,
-  DEFAULT_MOVIE_STATUSES,
   INITIAL_SETTINGS_ACTION_STATE,
   MOVIES_PER_PAGE_OPTIONS,
+  SELECTABLE_DEFAULT_MOVIE_STATUSES,
   SUPPORTED_LANGUAGES,
   TIME_FORMATS,
   type UserPreferences,
@@ -74,7 +75,12 @@ export function PreferencesForm({ preferences }: { preferences: UserPreferences 
             name="defaultMovieStatus"
             defaultValue={preferences.defaultMovieStatus}
           >
-            {DEFAULT_MOVIE_STATUSES.map((status) => (
+            {isLegacyLibraryMovieStatus(preferences.defaultMovieStatus) ? (
+              <option value={preferences.defaultMovieStatus} hidden>
+                {LIBRARY_MOVIE_STATUS_LABELS[preferences.defaultMovieStatus]}
+              </option>
+            ) : null}
+            {SELECTABLE_DEFAULT_MOVIE_STATUSES.map((status) => (
               <option key={status} value={status}>
                 {LIBRARY_MOVIE_STATUS_LABELS[status]}
               </option>

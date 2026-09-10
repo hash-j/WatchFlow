@@ -111,6 +111,14 @@ describe("library watched and unwatched UI", () => {
     }
 
     expect(MOVIE_STATUS_VISUALS.watched.cardAccentClasses).toContain("emerald");
+    expect(MOVIE_STATUS_VISUALS.want_to_watch.label).toBe("Saved");
+    for (const legacy of ["on_hold", "dropped"] as const) {
+      expect(MOVIE_STATUS_VISUALS[legacy].label).toContain("legacy");
+      expect(MOVIE_STATUS_VISUALS[legacy].badgeClasses).toContain("bg-muted");
+      expect(MOVIE_STATUS_VISUALS[legacy].cardAccentClasses).toBe(
+        "border-border",
+      );
+    }
   });
 });
 
@@ -127,22 +135,49 @@ describe("Part 12 library UI contracts", () => {
       "q",
       "status",
       "watched",
-      "favourite",
       "genre",
       "director",
+      "actor",
       "year",
-      "yearFrom",
-      "yearTo",
-      "ratingMin",
-      "ratingMax",
       "sort",
       "perPage",
     ]) {
       expect(controls).toContain(`name="${name}"`);
     }
+    for (const removed of [
+      "favourite",
+      "yearFrom",
+      "yearTo",
+      "ratingMin",
+      "ratingMax",
+    ]) {
+      expect(controls).not.toContain(`name="${removed}"`);
+    }
     expect(page).toContain("getLibraryPageData");
     expect(page).not.toContain("listLibraryMovies");
     expect(page).not.toContain("filterLibraryMovies");
+  });
+
+  it("limits new status choices and conditionally preserves the watched date", () => {
+    const management = source("components/movies/movie-management-form.tsx");
+    const bulk = source(
+      "components/library/library-selection-workspace.tsx",
+    );
+    const settings = source("components/settings/preferences-form.tsx");
+    const lists = source("components/lists/add-movies-dialog.tsx");
+
+    expect(management).toContain("SELECTABLE_LIBRARY_MOVIE_STATUSES");
+    expect(management).toContain("isLegacyLibraryMovieStatus(item.status)");
+    expect(management).toContain('<option value={item.status} hidden>');
+    expect(management).toContain('status === "watched"');
+    expect(management).toContain('name="watchedDate"');
+    expect(management).toContain("setWatchedDate(event.target.value)");
+    expect(bulk).toContain("BULK_LIBRARY_STATUSES");
+    expect(settings).toContain("SELECTABLE_DEFAULT_MOVIE_STATUSES");
+    expect(settings).toContain(
+      '<option value={preferences.defaultMovieStatus} hidden>',
+    );
+    expect(lists).toContain("SELECTABLE_LIBRARY_MOVIE_STATUSES");
   });
 
   it("renders accessible favourite state and labels outside the movie detail link", () => {

@@ -24,8 +24,8 @@ import {
   type ListPickerState,
 } from "@/lib/lists/types";
 import {
-  LIBRARY_MOVIE_STATUSES,
   LIBRARY_MOVIE_STATUS_LABELS,
+  SELECTABLE_LIBRARY_MOVIE_STATUSES,
 } from "@/lib/movies/types";
 
 export function AddMoviesDialog({
@@ -173,7 +173,7 @@ export function AddMoviesDialog({
                 defaultValue={picker.status}
               >
                 <option value="all">All statuses</option>
-                {LIBRARY_MOVIE_STATUSES.map((status) => (
+                {SELECTABLE_LIBRARY_MOVIE_STATUSES.map((status) => (
                   <option key={status} value={status}>
                     {LIBRARY_MOVIE_STATUS_LABELS[status]}
                   </option>

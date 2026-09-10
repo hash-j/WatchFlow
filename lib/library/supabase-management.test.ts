@@ -30,6 +30,7 @@ const input: ValidatedMovieManagement = {
   priority: 0,
   wouldWatchAgain: false,
   watchedAt: null,
+  watchedAtProvided: false,
   scheduledFor: null,
   timezone: null,
   scheduleNote: null,
@@ -90,7 +91,7 @@ describe("authenticated Supabase movie updates", () => {
     ).resolves.toBe(false);
 
     expect(rpc).toHaveBeenCalledWith(
-      "watchflow_update_library_movie",
+      "watchflow_update_library_movie_v2",
       expect.objectContaining({ p_library_id: "another-users-row-id" }),
     );
     expect(rpc.mock.calls[0][1]).not.toHaveProperty("user_id");
@@ -111,7 +112,7 @@ describe("authenticated Supabase movie updates", () => {
     ).resolves.toBe(true);
 
     expect(rpc).toHaveBeenCalledOnce();
-    expect(rpc).toHaveBeenCalledWith("watchflow_update_library_movie", {
+    expect(rpc).toHaveBeenCalledWith("watchflow_update_library_movie_v2", {
       p_library_id: "owned-row-id",
       p_status: "want_to_watch",
       p_personal_rating: 8.5,
@@ -119,6 +120,7 @@ describe("authenticated Supabase movie updates", () => {
       p_priority: 0,
       p_would_watch_again: false,
       p_watched_at: null,
+      p_watched_at_provided: false,
       p_scheduled_for: null,
       p_timezone: null,
       p_schedule_note: null,
@@ -176,7 +178,7 @@ describe("authenticated Supabase movie updates", () => {
 
     expect(rpc).toHaveBeenCalledOnce();
     expect(rpc).toHaveBeenCalledWith(
-      "watchflow_update_library_movie",
+      "watchflow_update_library_movie_v2",
       expect.objectContaining({ p_status: "watch_next" }),
     );
   });

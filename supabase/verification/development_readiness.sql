@@ -241,11 +241,17 @@ with expected(signature) as (
     (
       'public.watchflow_update_library_movie(uuid,text,numeric,text,smallint,boolean,timestamptz,timestamptz,text,text)'
     ),
+    (
+      'public.watchflow_update_library_movie_v2(uuid,text,numeric,text,smallint,boolean,timestamptz,boolean,timestamptz,text,text)'
+    ),
     ('public.watchflow_schedule_movie(uuid,timestamptz,text,text)'),
     ('public.move_watch_queue_item(uuid,text)'),
     ('public.watchflow_add_user_movie(bigint)'),
     (
       'public.watchflow_library_rows(text,text,boolean,boolean,text,text,integer,integer,integer,numeric,numeric)'
+    ),
+    (
+      'public.watchflow_library_rows_v2(text,text,boolean,text,text,text,integer)'
     ),
     ('public.watchflow_library_filter_options()'),
     ('public.watchflow_bulk_update_library_status(uuid[],text)'),

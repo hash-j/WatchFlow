@@ -200,9 +200,9 @@ async function RecommendationsContent({
               favourite genres, and stored public ratings.
             </p>
             <p>
-              Candidate statuses are Want to Watch, Watch Next, Scheduled, and
-              On Hold. Watched, Dropped, and Currently Watching movies are
-              excluded.
+              Candidate statuses are Saved, Watch Next, Scheduled, and legacy
+              On Hold. Watched, legacy Dropped, and Currently Watching movies
+              are excluded.
             </p>
             <p>
               Scoring: +{RECOMMENDATION_SCORE_WEIGHTS.sharedGenre} per shared

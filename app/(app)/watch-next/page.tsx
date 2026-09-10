@@ -29,7 +29,7 @@ async function WatchNextQueue() {
         className="mt-8"
         icon={<ListOrdered className="size-9" aria-hidden="true" />}
         title="Your Watch Next queue is empty"
-        description="Want to Watch can hold anything you may watch later. Add a Library movie to Watch Next when you want to watch it soon."
+        description="Saved can hold anything you may watch later. Add a Library movie to Watch Next when you want to watch it soon."
         actions={
           <Button asChild>
             <Link href="/library">Browse Library</Link>
@@ -97,7 +97,7 @@ export default function WatchNextPage() {
       <PageHeader
         eyebrow="Your movies"
         title="Watch Next"
-        description="An ordered queue for movies you plan to watch soon—separate from your broader Want to Watch collection."
+        description="An ordered queue for movies you plan to watch soon—separate from your broader Saved collection."
         className="mb-0"
       />
       <Suspense fallback={<QueueLoading />}>

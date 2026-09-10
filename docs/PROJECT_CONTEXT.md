@@ -3,14 +3,65 @@
 Last updated: 2026-09-10
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16F-B Batch 1 global shared controls and cross-app UI fixes are implemented for review on `ui-final-polish`. Batch 2 has not started.
+Current phase: Part 16F-B Batch 2A Library filter data, status behavior, and Watched Date changes are implemented for review on `ui-final-polish`. Batches 2B, 3, and 4 have not started.
 Current branch: `ui-final-polish`.
-Current status: Part 16E Preview Acceptance remains PASS. Batch 1 now has one shared native Select, cross-browser option-theme support, and the global Ctrl+A selection fix. Automated validation passes; authenticated visual inspection of opened native dropdown menus remains pending because the configured local QA account is unconfirmed.
+Current status: Part 16E Preview Acceptance remains PASS. Batch 1 is committed and checkpointed at tag `part-16fb-batch1-verified`. Batch 2A is uncommitted and adds an owner-scoped actor filter, simplified selectable status presentation, and lossless conditional Watched Date behavior. Automated and disposable-database validation pass; no hosted environment was changed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-10 Part 16F-B Batch 2A Library data and status behavior
+
+- Added forward-only migration
+  `supabase/migrations/202609100001_part_16fb_library_actor_status.sql`.
+  `watchflow_library_rows_v2` is a separate security-invoker RPC, avoiding
+  PostgREST overload ambiguity. It normalizes `p_actor`, matches normalized
+  string and object-name entries in `movies.main_cast`, and applies the actor
+  predicate inside the `auth.uid()`-owned relation before PostgREST exact
+  count, stable ordering, and range pagination. Existing query, status,
+  watched, genre, director, and exact-year filters remain combinable.
+- The visible Library filter set no longer includes Favourite, personal-rating
+  range, or release-year range. Actor is now a dedicated filter rather than an
+  alias for general search. Exact release year and the other useful filters
+  remain, with the filter grid rebalanced responsively. Favourite data and
+  favourite-first sorting are unchanged.
+- The stored status domain is unchanged. New selectors expose **Saved**
+  (`want_to_watch`), Watch Next, Scheduled where supported, Currently Watching,
+  and Watched; bulk and Settings controls retain their previously narrower
+  valid subsets. Saved does not enqueue a movie. `on_hold` and `dropped` remain
+  accepted by compatibility mappings, statistics, exports, and the database,
+  but cannot be newly selected. Existing legacy values remain readable without
+  rewrite and use neutral muted labels/treatment.
+- Watched Date is rendered only while the movie-management status is Watched.
+  Its controlled local value survives switching away and back. The action now
+  distinguishes an omitted field from an explicit empty Watched field, and the
+  new owner-scoped `watchflow_update_library_movie_v2` preserves `watched_at`
+  for non-Watched and unrelated edits while allowing an explicit clear when
+  Watched. Existing schedule validation, queue locking/normalization, and
+  `auth.uid()` ownership checks are preserved.
+- Added/updated regression coverage for actor parsing/RPC arguments, exact
+  count and pagination contracts, owner isolation, combined filters, removed
+  fields, Saved compatibility, legacy selection/read/export behavior,
+  conditional/restored/cleared Watched Date handling, and Saved queue safety.
+  A local-only PostgreSQL behavior script at
+  `supabase/testing/part16fb_library_actor_status.sql` verifies real actor
+  results, stable pages, cross-user isolation, legacy-row readability,
+  watched-date preservation/clearing, and non-queued Saved state.
+- Validation passes: `git diff --check`; `npm run lint`; `npx tsc --noEmit`;
+  focused Library/query/management tests with 10 files and 164 tests;
+  `npx vitest run` with 76 files and 759 tests; `npm run build`; and
+  `npm run scan:client-secrets` across 507 browser artifacts. A disposable
+  PostgreSQL 18 cluster also passed the repository bootstrap, all migrations
+  from zero in filename order, development readiness, production security
+  audit, and the Batch 2A behavior smoke; the cluster and fixtures were then
+  removed.
+- No hosted Preview/Production configuration or data was changed. No Library
+  card/list/mobile visual redesign, onboarding work, Batch 2B, Batch 3, Batch
+  4, commit, push, deployment, schema-domain deletion, legacy-row rewrite, or
+  RLS/grant weakening was performed. The remaining PDF work stays assigned to
+  Batches 2B, 3, and 4.
 
 ## 2026-09-10 Part 16F-B Batch 1 shared controls and cross-app UI fixes
 

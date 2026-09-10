@@ -609,7 +609,7 @@ export function ImportWizard() {
                     </div>
                   ) : null}
                   {row.importedStatus && row.status === null && !skippedRows[row.id] ? (
-                    <label className="mt-4 flex min-h-11 items-center gap-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"><input type="checkbox" checked={acceptedStatuses[row.id] === true} onChange={(event) => setAcceptedStatuses((current) => ({ ...current, [row.id]: event.target.checked }))} className="size-4" />Use Want to Watch instead of unrecognized status “{row.importedStatus}”.</label>
+                    <label className="mt-4 flex min-h-11 items-center gap-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"><input type="checkbox" checked={acceptedStatuses[row.id] === true} onChange={(event) => setAcceptedStatuses((current) => ({ ...current, [row.id]: event.target.checked }))} className="size-4" />Use Saved instead of unrecognized status “{row.importedStatus}”.</label>
                   ) : null}
                   <label className="mt-4 flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={skippedRows[row.id] === true} onChange={(event) => setSkippedRows((current) => ({ ...current, [row.id]: event.target.checked }))} className="size-4" />Skip this CSV row</label>
                 </CardContent>

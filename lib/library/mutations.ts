@@ -15,8 +15,6 @@ export const BULK_LIBRARY_STATUSES = [
   "watch_next",
   "currently_watching",
   "watched",
-  "on_hold",
-  "dropped",
 ] as const satisfies readonly LibraryMovieStatus[];
 
 export type BulkLibraryStatus = (typeof BULK_LIBRARY_STATUSES)[number];

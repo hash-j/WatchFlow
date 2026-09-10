@@ -77,7 +77,8 @@ describe("Part 16F-A cinema theme foundation", () => {
 
     expect(statuses).toContain("bg-emerald-50");
     expect(statuses).toContain("bg-amber-50");
-    expect(statuses).toContain("bg-red-50");
+    expect(statuses).toContain("bg-muted text-muted-foreground");
+    expect(statuses).not.toContain("bg-red-50");
   });
 
   it("preserves hydration-safe system, light, and dark theme switching", () => {
