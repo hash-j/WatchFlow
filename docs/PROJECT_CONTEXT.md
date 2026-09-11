@@ -12,6 +12,17 @@ This document records repository evidence, not assumptions about an uninspected 
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
 
+## 2026-09-12 Part 17 Production Launch Acceptance (PASS)
+
+- Final result: **PART 17 PRODUCTION LAUNCH PASS**.
+- Production URL: `https://watchflow-movies.vercel.app`.
+- Production Git branch: `production`.
+- Production Supabase backend: former isolated Preview project, now designated as WatchFlow Production.
+- Production Auth Site URL and redirect URLs use the final production hostname.
+- Signup, OTP verification, existing-account handling, login/session persistence, password recovery, onboarding, core Library workflows, Actor filtering, Watched Date persistence, Watch Next, Schedule, Lists, Picker, Recommendations, Statistics, Settings, CSV/JSON exports, responsive layouts, themes, and controlled account deletion were verified.
+- Production database readiness and security audits passed.
+- Part 17 production release is complete.
+
 ## 2026-09-12 Part 16F deployed Preview acceptance (PASS)
 
 - Final result: **PART 16F PREVIEW ACCEPTANCE PASS**.
