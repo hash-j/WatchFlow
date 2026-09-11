@@ -3,14 +3,40 @@
 Last updated: 2026-09-11
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16F-B Batch 3 onboarding, import, Watch Next, schedule, lists, and picker polish is implemented and remains uncommitted on `ui-final-polish`. Batch 4 has not started.
+Current phase: Part 16F-B Batch 4 Settings, exports, and final cross-app polish is implemented and remains uncommitted on `ui-final-polish`.
 Current branch: `ui-final-polish`.
-Current status: Part 16E Preview Acceptance remains PASS. Theme, Batch 1, and Batch 2A checkpoints exist at `part-16f-theme-verified`, `part-16fb-batch1-verified`, and `part-16fb-batch2a-verified`; the Batch 2A watched-date regression fix is committed at `6a6ea55`. Batch 3 removes the prescribed onboarding and import visual clutter, makes search/loading and responsive queue/list/picker actions clearer, and retains the shared schedule controls. Automated validation and authenticated responsive browser QA pass without hosted changes or user-data mutations.
+Current status: Part 16E Preview Acceptance remains PASS. All Part 16F-B Batch 1-3 checkpoints exist through `part-16fb-batch3-verified`. Batch 4 removes the Settings-only language selector while retaining its stored value on other preference saves, and confirms the existing private CSV/JSON route handlers are valid direct-download endpoints. No hosted configuration or user data was changed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-11 Part 16F-B Batch 4 Settings, exports, and final cross-app polish
+
+- Removed the visible Preferred TMDB Language control from Settings Preferences
+  only. Onboarding retains its language selector and search behavior. The
+  authenticated preferences action reads the existing stored preference and
+  supplies that value to the existing full preference upsert, so a Settings
+  save cannot blank or reset the language field.
+- CSV and JSON export investigation found correctly grouped App Router GET
+  handlers, matching direct anchor targets, and both routes in the production
+  app-path manifest. Authenticated browser clicks returned `200` for both
+  download endpoints with no navigation to a 404. The PDF failure is therefore
+  not reproducible from the current route tree; the download attribute makes
+  the browser-download intent explicit without replacing the private,
+  no-store attachment architecture.
+- Expanded export response regression coverage and added Batch 4 Settings
+  source contracts. Focused Settings/export plus protected Batch 1-3 coverage
+  passed (12 files/102 tests); full Vitest passed (79 files/786 tests). Lint,
+  direct TypeScript, `git diff --check`, production build (37 routes, including
+  both dynamic export routes), and client-secret scan passed.
+- The in-app browser does not expose a saved-download file path for inspection,
+  so a real browser-download-file existence/size check remains a pre-production
+  manual QA item. The exact 1366x768 dark Settings viewport and full three-size
+  Settings matrix also remain manual QA items. No database schema, migration,
+  RPC, RLS, Auth, hosted Supabase configuration, deployment, or user data was
+  changed. Batch 4 remains an uncommitted review diff.
 
 ## 2026-09-11 Part 16F-B Batch 3 onboarding, import, queue, schedule, lists, and picker polish
 

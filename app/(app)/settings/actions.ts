@@ -13,11 +13,12 @@ import {
 import { SettingsPersistenceError } from "@/lib/settings/errors";
 import {
   authenticateSettings,
+  readUserPreferences,
   updateApplicationPreferences,
   updateNotificationPreferences,
   updateOwnedProfile,
 } from "@/lib/settings/supabase-settings";
-import type { SettingsActionState } from "@/lib/settings/types";
+import type { SettingsActionState, UserPreferences } from "@/lib/settings/types";
 import {
   applicationPreferencesSchema,
   deleteAccountSchema,
@@ -107,6 +108,16 @@ export async function updateApplicationPreferencesAction(
   const session = await authenticateSettings();
   if (!session) return authenticationError();
 
+  let existingPreferences: UserPreferences;
+  try {
+    existingPreferences = await readUserPreferences(
+      session.client,
+      session.user.id,
+    );
+  } catch (error) {
+    return persistenceError(error);
+  }
+
   const parsed = applicationPreferencesSchema.safeParse({
     defaultMovieStatus: value(formData, "defaultMovieStatus"),
     defaultPriority: value(formData, "defaultPriority"),
@@ -115,7 +126,9 @@ export async function updateApplicationPreferencesAction(
     timeFormat: value(formData, "timeFormat"),
     showAdultResults: formData.get("showAdultResults"),
     includeUnreleasedMovies: formData.get("includeUnreleasedMovies"),
-    preferredLanguage: value(formData, "preferredLanguage"),
+    // The language selector belongs to onboarding. Preferences saves retain the
+    // already stored value instead of accepting a hidden browser field.
+    preferredLanguage: existingPreferences.preferredLanguage,
     moviesPerPage: value(formData, "moviesPerPage"),
   });
 

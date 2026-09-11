@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   authenticateSettings: vi.fn(),
+  readUserPreferences: vi.fn(),
   updateOwnedProfile: vi.fn(),
   updateApplicationPreferences: vi.fn(),
   updateNotificationPreferences: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/settings/supabase-settings", () => ({
   authenticateSettings: mocks.authenticateSettings,
+  readUserPreferences: mocks.readUserPreferences,
   updateOwnedProfile: mocks.updateOwnedProfile,
   updateApplicationPreferences: mocks.updateApplicationPreferences,
   updateNotificationPreferences: mocks.updateNotificationPreferences,
@@ -30,6 +32,7 @@ vi.mock("@/lib/settings/data-controls", () => ({
 import {
   deleteAccountAction,
   deleteLibraryDataAction,
+  updateApplicationPreferencesAction,
   updateNotificationPreferencesAction,
   updateProfileSettingsAction,
 } from "../../app/(app)/settings/actions";
@@ -57,6 +60,22 @@ const session = {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.authenticateSettings.mockResolvedValue(session);
+  mocks.readUserPreferences.mockResolvedValue({
+    defaultMovieStatus: "want_to_watch",
+    defaultPriority: 0,
+    defaultLibraryView: "grid",
+    dateFormat: "DD/MM/YYYY",
+    timeFormat: "12h",
+    showAdultResults: false,
+    includeUnreleasedMovies: true,
+    preferredLanguage: "ur",
+    moviesPerPage: 24,
+    emailNotificationsEnabled: false,
+    scheduleRemindersEnabled: false,
+    reminderOffsetMinutes: 60,
+    weeklySummaryEnabled: false,
+  });
+  mocks.updateApplicationPreferences.mockResolvedValue(undefined);
   mocks.updateOwnedProfile.mockResolvedValue({ fullName: "Aisha" });
   mocks.updateNotificationPreferences.mockResolvedValue(undefined);
   mocks.deleteOwnedLibraryData.mockResolvedValue(3);
@@ -122,6 +141,33 @@ describe("settings Server Actions", () => {
     );
     expect(result.message).toContain("future delivery");
     expect(result.message).not.toMatch(/sent|sending|active/i);
+  });
+
+  it("preserves the stored TMDB language when saving other preferences", async () => {
+    const result = await updateApplicationPreferencesAction(
+      INITIAL_SETTINGS_ACTION_STATE,
+      form({
+        defaultMovieStatus: "watch_next",
+        defaultPriority: "2",
+        defaultLibraryView: "list",
+        dateFormat: "YYYY-MM-DD",
+        timeFormat: "24h",
+        showAdultResults: true,
+        includeUnreleasedMovies: false,
+        moviesPerPage: "48",
+      }),
+    );
+
+    expect(result.status).toBe("success");
+    expect(mocks.readUserPreferences).toHaveBeenCalledWith(
+      session.client,
+      "verified-user",
+    );
+    expect(mocks.updateApplicationPreferences).toHaveBeenCalledWith(
+      session.client,
+      "verified-user",
+      expect.objectContaining({ preferredLanguage: "ur" }),
+    );
   });
 
   it("requires the exact library confirmation phrase", async () => {

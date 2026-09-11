@@ -16,19 +16,10 @@ import {
   INITIAL_SETTINGS_ACTION_STATE,
   MOVIES_PER_PAGE_OPTIONS,
   SELECTABLE_DEFAULT_MOVIE_STATUSES,
-  SUPPORTED_LANGUAGES,
   TIME_FORMATS,
   type UserPreferences,
 } from "@/lib/settings/types";
 import { FieldError, FormMessage } from "./form-message";
-
-const languageLabels = {
-  en: "English",
-  ur: "Urdu",
-  es: "Spanish",
-  fr: "French",
-  de: "German",
-} as const;
 
 function Toggle({
   name,
@@ -175,24 +166,6 @@ export function PreferencesForm({ preferences }: { preferences: UserPreferences 
           <FieldError errors={state.fieldErrors.timeFormat} id="time-format-error" />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="preferred-language">Preferred TMDB language</Label>
-          <Select
-            id="preferred-language"
-            name="preferredLanguage"
-            defaultValue={preferences.preferredLanguage}
-          >
-            {SUPPORTED_LANGUAGES.map((language) => (
-              <option key={language} value={language}>
-                {languageLabels[language]}
-              </option>
-            ))}
-          </Select>
-          <FieldError
-            errors={state.fieldErrors.preferredLanguage}
-            id="preferred-language-error"
-          />
-        </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">

@@ -40,6 +40,7 @@ describe("private export Route Handlers", () => {
     await expect(getCsv()).resolves.toMatchObject({ status: 401 });
     await expect(getJson()).resolves.toMatchObject({ status: 401 });
     expect(mocks.readOwnedLibraryExportRows).not.toHaveBeenCalled();
+    expect(mocks.readAccountExportSource).not.toHaveBeenCalled();
   });
 
   it("scopes CSV export to the verified current user", async () => {
@@ -54,6 +55,8 @@ describe("private export Route Handlers", () => {
       /watchflow-library-\d{4}-\d{2}-\d{2}\.csv/,
     );
     expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(response.headers.get("pragma")).toBe("no-cache");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
     expect((await response.text()).split("\r\n")).toHaveLength(1);
   });
 
@@ -75,6 +78,9 @@ describe("private export Route Handlers", () => {
     expect(response.headers.get("content-disposition")).toMatch(
       /watchflow-account-data-\d{4}-\d{2}-\d{2}\.json/,
     );
+    expect(response.headers.get("content-type")).toContain("application/json");
+    expect(response.headers.get("cache-control")).toContain("private, no-store");
+    expect(response.headers.get("pragma")).toBe("no-cache");
     expect(JSON.stringify(data)).not.toMatch(/refresh_token|access_token|password/i);
   });
 });
