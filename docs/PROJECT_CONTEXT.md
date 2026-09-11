@@ -1,16 +1,42 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-11
-Last updated by: Codex  
+Last updated: 2026-09-12
+Last updated by: Hashim / manual Preview acceptance  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16F final local UI/UX acceptance is complete. All requested PDF UI/UX changes have been implemented and manually verified.
-Current branch: `ui-final-polish`.
-Current status: Part 16E Preview Acceptance remains PASS. Part 16F local acceptance is now PASS after final manual review of the requested UI/UX changes. The latest Add Movies dialog alignment issue was also corrected and verified. No database, migration, RLS, policy, schema, Auth, or hosted Supabase data changes were introduced by the final UI corrections.
+Current phase: Part 16F is complete. The finalized WatchFlow UI/UX polish has passed local acceptance and deployed Preview acceptance.
+Current branch: `master`.
+Current status: Part 16E Preview Acceptance remains PASS. Part 16F local and deployed Preview acceptance are now PASS. All requested PDF UI/UX changes were implemented and manually verified, the Batch 2A migration is available to the Preview application, and the finalized Preview deployment passed targeted functional, responsive, theme, Auth, Library, Watched Date, Watch Next, Schedule, Lists, Picker, Settings, and export verification. Part 17 has not begun.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-12 Part 16F deployed Preview acceptance (PASS)
+
+- Final result: **PART 16F PREVIEW ACCEPTANCE PASS**.
+- Deployed Preview URL: `https://watch-flow-preview.vercel.app/`.
+- The finalized Part 16F implementation was deployed to the isolated `watchflow-preview` environment and manually verified.
+- All requested changes from the 27-page WatchFlow UI/UX audit are complete.
+- Existing-account signup feedback works as intended.
+- Login/session behavior remains functional.
+- Library Actor filtering works against the Preview environment.
+- Library grid/list responsive polish remains correct.
+- Watched movies retain the accepted green-border treatment without the duplicate poster overlay.
+- Watched Date persists after save, navigation away, and reopening the same movie.
+- Saved status behavior remains compatible and does not automatically add movies to Watch Next.
+- Watch Next ordering remains functional.
+- Schedule behavior remains functional.
+- Lists and Add Movies behavior remain functional, including the final left-alignment corrections for filter labels, movie titles, and release years.
+- Movie Picker behavior remains functional.
+- Settings Profile, Preferences, Notifications, and Data surfaces remain functional.
+- Preferred TMDB Language remains removed from Settings while its stored behavior is preserved.
+- CSV and JSON exports were verified from Preview without the previously reported 404 behavior.
+- Light and dark themes were verified.
+- Responsive behavior was verified on representative mobile and desktop layouts without material overflow or clipping.
+- No new database, RLS, Auth, schema, policy, or business-logic changes were introduced during final Preview verification.
+- Part 16F is complete.
+- Next phase: **Part 17 — Production Release and Operational Readiness**.
 
 ## 2026-09-11 Part 16F final local UI/UX acceptance (PASS)
 
