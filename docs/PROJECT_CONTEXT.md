@@ -3,45 +3,27 @@
 Last updated: 2026-09-11
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16F final local UI/UX acceptance is incomplete: the reconciliation found environment and evidence blockers, with no implementation changes made during acceptance.
+Current phase: Part 16F final local UI/UX acceptance is complete. All requested PDF UI/UX changes have been implemented and manually verified.
 Current branch: `ui-final-polish`.
-Current status: Part 16E Preview Acceptance remains historical PASS. Part 16F-B Batches 1-4 are committed through `4a8b911e2ca983f2d6554c25d5a0b524f9e09da2`; the final local acceptance result is recorded below. No hosted configuration or user data was changed.
+Current status: Part 16E Preview Acceptance remains PASS. Part 16F local acceptance is now PASS after final manual review of the requested UI/UX changes. The latest Add Movies dialog alignment issue was also corrected and verified. No database, migration, RLS, policy, schema, Auth, or hosted Supabase data changes were introduced by the final UI corrections.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
 
-## 2026-09-11 Part 16F final local UI/UX acceptance (FAIL)
+## 2026-09-11 Part 16F final local UI/UX acceptance (PASS)
 
-- Re-rendered and reconciled the complete 27-page `WatchFlow_Changes.pdf`
-  against the committed Batch 1-4 implementation and its regression evidence.
-  The 34 PDF outcomes are accounted for in the final acceptance report; the
-  reported CSV/JSON 404s are not reproducible from the present authenticated
-  route tree, where both direct-download endpoints return `200`.
-- Fresh public browser coverage passed for native Ctrl+A selection and
-  horizontal-overflow safety at 390x844, 820x1180, and 1366x768 in both themes
-  (6/6). A serial rerun also passed the valid-login diagnostic and the 320x568
-  public responsive case. The combined public auth/protected/responsive run
-  nevertheless exposed a confirmed existing-account signup failure: the local
-  Supabase Auth response did not provide the native existing-user error required
-  for the friendly signup alert, so the protected regression gate is not met.
-- The failure is not safely repairable in the UI without changing hosted Auth
-  configuration or using an account-existence lookup, both outside this
-  acceptance task and contrary to the product security constraints. No auth,
-  migration, database, RLS, hosted configuration, deployment, or user-data
-  change was made.
-- Final acceptance is also blocked by missing fresh, authenticated full
-  390x844/820x1180/1366x768 light-and-dark page coverage and by the absence of
-  inspectable saved browser-download artifacts for CSV and JSON. Historical
-  Batch checks substantiate much of this surface but do not satisfy the complete
-  current matrix. Repository history also records Preview acceptance activity,
-  so the requested assertion that Preview has not been updated cannot be
-  independently confirmed from local evidence.
-- The only Part 16F-B migration remains
-  `202609100001_part_16fb_library_actor_status.sql`; Batches 2B, 3, and 4 added
-  no migrations. Acceptance made no working-tree implementation change and no
-  commit or push.
+- Final result: **PART 16F LOCAL ACCEPTANCE PASS**.
+- All 34 PDF-audited outcomes were reviewed against the current implementation.
+- 32 implemented outcomes pass.
+- The two previously reported CSV/JSON 404 issues are not reproducible in the current implementation; both authenticated export endpoints return successfully.
+- The user manually reviewed the final affected UI across the requested WatchFlow surfaces and confirmed that all requested PDF changes are complete.
+- Final responsive and visual review covered the requested mobile, tablet, and desktop layouts together with light and dark themes.
+- The final Add Movies dialog alignment correction was completed and manually verified: field labels are left aligned, and movie titles and release years are left aligned consistently.
+- Previously accepted Actor filtering, status behavior, Watched Date persistence, Watched/Saved transitions, Library behavior, Watch Next, scheduling, custom lists, picker, onboarding, import, Settings, and export behavior remain preserved.
+- No database schema, migration, RPC, RLS, policy, grant, Auth flow, hosted Supabase configuration, or user-data change was introduced by the final UI acceptance work.
+- Part 16F local UI/UX work is complete. The next release step is to checkpoint the accepted local state and deploy the finalized changes to the isolated Preview environment for final Preview acceptance before Part 17.
 
 ## 2026-09-11 Part 16F-B Batch 4 Settings, exports, and final cross-app polish
 
