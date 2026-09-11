@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { LibraryBig, SearchX } from "lucide-react";
+import { CheckCircle2, LibraryBig, SearchX } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import { LibraryControls } from "@/components/library/library-controls";
@@ -22,6 +22,10 @@ import {
   libraryStateToSearchParams,
   type RawLibrarySearchParams,
 } from "@/lib/library/query";
+import {
+  getMovieRemovalMessage,
+  sanitizeRemovalMovieTitle,
+} from "@/lib/library/removal-feedback";
 import { getLibraryPageData } from "@/lib/library/supabase-query";
 
 type LibraryPageProps = {
@@ -49,6 +53,7 @@ function LibraryLoading() {
 async function LibraryContent({ searchParams }: LibraryPageProps) {
   const rawSearchParams = await searchParams;
   const data = await getLibraryPageData(rawSearchParams);
+  const removedTitle = sanitizeRemovalMovieTitle(rawSearchParams.removed);
 
   if (data.state.page !== data.pagination.page) {
     redirect(buildLibraryUrl(data.state, { page: data.pagination.page }));
@@ -59,6 +64,18 @@ async function LibraryContent({ searchParams }: LibraryPageProps) {
 
   return (
     <div className="space-y-6">
+      {removedTitle ? (
+        <div
+          className="flex items-start gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-medium text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100"
+          role="status"
+        >
+          <CheckCircle2 className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+          <p className="min-w-0 break-words">
+            {getMovieRemovalMessage(removedTitle)}
+          </p>
+        </div>
+      ) : null}
+
       <LibraryControls
         state={data.state}
         facets={data.facets}
@@ -127,7 +144,7 @@ async function LibraryContent({ searchParams }: LibraryPageProps) {
           }))}
         >
           {data.state.view === "grid" ? (
-            <div className="grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:grid-cols-3 lg:gap-5 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:gap-5 xl:grid-cols-4">
               {data.items.map((item) => (
                 <LibraryMovieCard key={item.libraryId} item={item} />
               ))}

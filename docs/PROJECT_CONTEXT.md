@@ -3,14 +3,71 @@
 Last updated: 2026-09-11
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16F-B Batch 2A is committed on `ui-final-polish`; its Watched Date visual-persistence regression fix is implemented and remains uncommitted for review. Batches 2B, 3, and 4 have not started.
+Current phase: Part 16F-B Batch 2B Library and movie-detail visual/responsive polish is implemented and remains uncommitted on `ui-final-polish`. Batches 3 and 4 have not started.
 Current branch: `ui-final-polish`.
-Current status: Part 16E Preview Acceptance remains PASS. Batch 1 is committed and checkpointed at tag `part-16fb-batch1-verified`; Batch 2A is committed at `9561e553`. The uncommitted regression fix reconciles movie-management form state with refreshed owner-scoped data and safely converts stored watched timestamps to native date-input values. Automated and authenticated localhost validation pass; no hosted environment was changed.
+Current status: Part 16E Preview Acceptance remains PASS. Theme, Batch 1, and Batch 2A checkpoints exist at `part-16f-theme-verified`, `part-16fb-batch1-verified`, and `part-16fb-batch2a-verified`; the Batch 2A watched-date regression fix is committed at `6a6ea55`. Batch 2B removes duplicated poster status UI, polishes responsive grid/list/action/selection/custom-list layouts, and provides sanitized named removal feedback after the detail redirect. Automated validation and exact-size browser QA pass; no hosted environment or user data was changed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-11 Part 16F-B Batch 2B Library and movie-detail polish
+
+- The Library grid now becomes a compact two-column layout from 360px while
+  retaining poster, title, year, rating, status, favourite, and removal
+  controls. Titles clamp to two lines, secondary spacing is reduced, actions
+  keep a consistent full-width 44px minimum target, and long content cannot
+  force horizontal overflow.
+- The mobile List view now uses a poster-left/content-right row with its
+  actions in the content column; Priority is hidden only on narrow screens.
+  Tablet and desktop retain the spacious three-column row architecture.
+- Removed the duplicated green Watched overlay from posters. Status remains
+  available through the existing text-and-icon badge below the movie metadata.
+  Both grid cards and list rows use the shared status accent contract; Watched
+  is the only green border treatment, while other statuses keep their existing
+  distinct or neutral accents.
+- Favourite and removal controls now share stable sizing/alignment. The
+  initial removal action is a clearly destructive red outline with a
+  movie-specific accessible label; the destructive confirmation remains
+  unchanged.
+- Selection mode has a contained responsive header, visibly bordered Clear
+  Selection and Exit Selection controls, and an aligned status/action toolbar
+  that stacks at mobile, balances into two columns at tablet, and aligns into
+  one row at wide desktop. Current-page selection, confirmation, and bulk
+  mutation behavior are unchanged.
+- The movie-detail Custom Lists header now owns explicit minimum-width and
+  wrapping constraints. Create New List is full-width on narrow screens and
+  intrinsic-width from `sm`, preventing the control and long list content from
+  escaping the card.
+- Single-movie deletion now carries the server-rendered title through the
+  existing action, normalizes control characters/whitespace, caps it at 160
+  characters, and returns `<title> was removed from your library.` Detail
+  removal preserves its `/library` redirect and adds a sanitized success
+  notice there. Empty or invalid titles use a generic safe fallback.
+- Persistent regression coverage adds 11 tests for removal-message
+  normalization and the Batch 2B grid/list/status/action/selection/custom-list
+  contracts, while retaining Batch 2A Actor, selectable-status, watched-date,
+  owner-scoping, and queue coverage. Focused tests passed 3 files/32 tests;
+  the combined Batch 2B/Watched Date regression selection passed 6 files/66
+  tests; the full suite passed 77 files/774 tests.
+- Browser QA rendered the production components in Chromium for grid, list,
+  detail custom lists, and selected-state toolbar at 390x844, 820x1180, and
+  1366x768 in light and dark. All 24 cases passed horizontal-overflow and
+  control-visibility/border checks, and every capture was visually inspected.
+  The named success notice was also inspected on the real authenticated local
+  Library without deleting or altering user data.
+  The temporary public fixture, spec, captures, and test results were removed
+  or moved out of the repository after inspection.
+- Final validation passes: `git diff --check`; `npm run lint`;
+  `npx tsc --noEmit`; focused Vitest; `npx vitest run` with 77 files/774 tests;
+  `npm run build` with all 37 routes; and `npm run scan:client-secrets` across
+  507 browser artifacts. The sandboxed build could not fetch Geist; the
+  permitted network-enabled rerun passed.
+- No database schema, migration, RPC, RLS, grant, Auth/Supabase configuration,
+  filter semantics, status storage, queue behavior, watched-date semantics,
+  dependency, hosted deployment, Batch 3/4, commit, or push change was made.
+  Batch 2B remains an uncommitted review diff on `ui-final-polish`.
 
 ## 2026-09-11 Part 16F-B Batch 2A Watched Date persistence regression
 

@@ -22,7 +22,7 @@ export function LibraryItemActions({
   const { isSelecting } = useLibrarySelection();
 
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-2 min-[520px]:flex min-[520px]:flex-wrap min-[520px]:items-start [&_form]:min-w-0 [&_form]:w-full min-[520px]:[&_form]:w-auto [&_button]:w-full min-[520px]:[&_button]:w-auto">
+    <div className="grid min-w-0 grid-cols-1 items-start gap-2 [&_button]:min-h-11 [&_button]:w-full [&_form]:min-w-0 [&_form]:w-full">
       <LibrarySelectionCheckbox libraryId={userMovieId} title={title} />
       <FavouriteToggleForm
         libraryId={userMovieId}
@@ -35,6 +35,8 @@ export function LibraryItemActions({
         <RemoveFromLibraryForm
           userMovieId={userMovieId}
           movieId={movieId}
+          movieTitle={title}
+          compact
         />
       ) : null}
     </div>

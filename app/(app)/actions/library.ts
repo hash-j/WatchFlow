@@ -22,6 +22,7 @@ import {
   removeLibraryMovie,
   setLibraryMovieFavourite,
 } from "@/lib/library/mutations";
+import { getMovieRemovalMessage } from "@/lib/library/removal-feedback";
 import { addMovieToLibrary } from "@/lib/library/service";
 import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
 import { createSupabaseLibraryMutationDependencies } from "@/lib/library/supabase-mutations";
@@ -127,7 +128,10 @@ export async function removeMovieAction(
     revalidateMovieDetail(formData.get("movieId"));
     revalidateLibraryViews();
 
-    return { status: "success", message: "Removed from your library." };
+    return {
+      status: "success",
+      message: getMovieRemovalMessage(formData.get("movieTitle")),
+    };
   } catch (error) {
     if (error instanceof AuthenticationRequiredError) {
       return { status: "error", message: "Please sign in again." };

@@ -299,6 +299,7 @@ async function MovieDetail({ params }: MovieDetailPageProps) {
             <RemoveFromLibraryForm
               userMovieId={item.libraryId}
               movieId={movie.id}
+              movieTitle={movie.title}
               redirectAfterRemoval
             />
           </div>

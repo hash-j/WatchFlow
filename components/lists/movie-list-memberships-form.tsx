@@ -72,8 +72,8 @@ function MovieListMembershipsFormState({
       aria-labelledby="custom-lists-heading"
       className="mt-10 rounded-xl border bg-card p-5 shadow-sm sm:p-6"
     >
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-        <div>
+      <div className="flex min-w-0 flex-col justify-between gap-3 sm:flex-row sm:items-start">
+        <div className="min-w-0">
           <h2 id="custom-lists-heading" className="text-xl font-semibold">
             Custom Lists
           </h2>
@@ -84,7 +84,11 @@ function MovieListMembershipsFormState({
         </div>
         <Link
           href="/lists?create=1"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
+          className={buttonVariants({
+            variant: "outline",
+            size: "sm",
+            className: "w-full shrink-0 sm:w-auto",
+          })}
         >
           <ListPlus className="size-4" aria-hidden="true" />
           Create New List

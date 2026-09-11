@@ -77,12 +77,13 @@ describe("Part 12 library Server Actions", () => {
     const formData = new FormData();
     formData.set("userMovieId", libraryId);
     formData.set("movieId", "42");
+    formData.set("movieTitle", "The Matrix");
 
     await expect(
       removeMovieAction(initialLibraryActionState, formData),
     ).resolves.toEqual({
       status: "success",
-      message: "Removed from your library.",
+      message: "The Matrix was removed from your library.",
     });
 
     expect(removeMovieMock).toHaveBeenCalledWith(
