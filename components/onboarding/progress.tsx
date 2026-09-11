@@ -41,8 +41,7 @@ export function OnboardingProgress({ step }: { step: OnboardingStep }) {
                   {complete ? <Check className="size-3" /> : number}
                 </span>
                 <span className={cn("truncate", current && "font-semibold")}>
-                  <span className="sm:hidden">{number} of 3</span>
-                  <span className="hidden sm:inline">{label}</span>
+                  {label}
                 </span>
               </div>
             </li>

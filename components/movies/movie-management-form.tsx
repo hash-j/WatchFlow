@@ -7,10 +7,16 @@ import { updateMovieAction } from "@/app/(app)/actions/management";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { initialLibraryActionState } from "@/lib/library/action-state";
+import { Select } from "@/components/ui/select";
 import {
-  LIBRARY_MOVIE_STATUSES,
+  initialLibraryActionState,
+  type LibraryActionState,
+} from "@/lib/library/action-state";
+import { getWatchedDateInput } from "@/lib/library/timezone";
+import {
+  isLegacyLibraryMovieStatus,
   LIBRARY_MOVIE_STATUS_LABELS,
+  SELECTABLE_LIBRARY_MOVIE_STATUSES,
   type LibraryMovie,
   type LibraryMovieStatus,
 } from "@/lib/movies/types";
@@ -22,20 +28,24 @@ type MovieManagementFormProps = {
   scheduledTime: string;
 };
 
-const fieldClassName =
-  "flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+type MovieManagementFieldsProps = MovieManagementFormProps & {
+  action: (payload: FormData) => void;
+  state: LibraryActionState;
+  isPending: boolean;
+};
 
-export function MovieManagementForm({
+function MovieManagementFields({
   item,
   timezone,
   scheduledDate,
   scheduledTime,
-}: MovieManagementFormProps) {
+  action,
+  state,
+  isPending,
+}: MovieManagementFieldsProps) {
   const [status, setStatus] = useState<LibraryMovieStatus>(item.status);
-  const [state, action, isPending] = useActionState(
-    updateMovieAction,
-    initialLibraryActionState,
-  );
+  const persistedWatchedDate = getWatchedDateInput(item.watchedAt);
+  const [watchedDate, setWatchedDate] = useState(persistedWatchedDate);
 
   return (
     <form action={action} className="space-y-6">
@@ -45,37 +55,40 @@ export function MovieManagementForm({
       <div className="grid gap-5 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="movie-status">Status</Label>
-          <select
+          <Select
             id="movie-status"
             name="status"
             value={status}
             onChange={(event) =>
               setStatus(event.target.value as LibraryMovieStatus)
             }
-            className={fieldClassName}
           >
-            {LIBRARY_MOVIE_STATUSES.map((value) => (
+            {isLegacyLibraryMovieStatus(item.status) ? (
+              <option value={item.status} hidden>
+                {LIBRARY_MOVIE_STATUS_LABELS[item.status]}
+              </option>
+            ) : null}
+            {SELECTABLE_LIBRARY_MOVIE_STATUSES.map((value) => (
               <option key={value} value={value}>
                 {LIBRARY_MOVIE_STATUS_LABELS[value]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="movie-priority">Priority</Label>
-          <select
+          <Select
             id="movie-priority"
             name="priority"
             defaultValue={String(item.priority)}
-            className={fieldClassName}
           >
             {Array.from({ length: 6 }).map((_, priority) => (
               <option key={priority} value={priority}>
                 {priority}
               </option>
             ))}
-          </select>
+          </Select>
           <p className="text-xs text-muted-foreground">0 is lowest; 5 is highest.</p>
         </div>
 
@@ -93,15 +106,18 @@ export function MovieManagementForm({
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="watched-date">Watched date</Label>
-          <Input
-            id="watched-date"
-            name="watchedDate"
-            type="date"
-            defaultValue={item.watchedAt?.slice(0, 10) ?? ""}
-          />
-        </div>
+        {status === "watched" ? (
+          <div className="space-y-2">
+            <Label htmlFor="watched-date">Watched date</Label>
+            <Input
+              id="watched-date"
+              name="watchedDate"
+              type="date"
+              value={watchedDate}
+              onChange={(event) => setWatchedDate(event.target.value)}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -197,5 +213,27 @@ export function MovieManagementForm({
         ) : null}
       </div>
     </form>
+  );
+}
+
+export function MovieManagementForm(props: MovieManagementFormProps) {
+  const [state, action, isPending] = useActionState(
+    updateMovieAction,
+    initialLibraryActionState,
+  );
+  const formVersion = [
+    props.item.updatedAt,
+    props.item.status,
+    props.item.watchedAt,
+  ].join(":");
+
+  return (
+    <MovieManagementFields
+      key={formVersion}
+      {...props}
+      action={action}
+      state={state}
+      isPending={isPending}
+    />
   );
 }

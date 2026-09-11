@@ -76,7 +76,7 @@ export async function updateAuthenticatedUserMovie(
   }
 
   const { data, error } = await client.rpc(
-    "watchflow_update_library_movie",
+    "watchflow_update_library_movie_v2",
     {
       p_library_id: libraryId,
       p_status: input.status,
@@ -85,6 +85,7 @@ export async function updateAuthenticatedUserMovie(
       p_priority: input.priority,
       p_would_watch_again: input.wouldWatchAgain,
       p_watched_at: input.watchedAt,
+      p_watched_at_provided: input.watchedAtProvided,
       p_scheduled_for: input.scheduledFor,
       p_timezone: input.timezone,
       p_schedule_note: input.scheduleNote,

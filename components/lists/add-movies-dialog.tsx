@@ -17,18 +17,16 @@ import { Button } from "@/components/ui/button";
 import { DialogCloseButton, ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
   initialListActionState,
   type ListMovieCandidate,
   type ListPickerState,
 } from "@/lib/lists/types";
 import {
-  LIBRARY_MOVIE_STATUSES,
   LIBRARY_MOVIE_STATUS_LABELS,
+  SELECTABLE_LIBRARY_MOVIE_STATUSES,
 } from "@/lib/movies/types";
-
-const selectClassName =
-  "flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function AddMoviesDialog({
   listId,
@@ -151,10 +149,10 @@ export function AddMoviesDialog({
             action={basePath}
             role="search"
             onSubmit={() => setSelectedIds(new Set())}
-            className="grid gap-3 rounded-xl border bg-muted/30 p-3 md:grid-cols-[minmax(12rem,1fr)_12rem_11rem_auto]"
-          >
+            className="grid items-end gap-3 rounded-xl border bg-muted/30 p-3 sm:grid-cols-2 lg:grid-cols-[minmax(14rem,1.6fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_auto]"
+            >
             <input type="hidden" name="add" value="1" />
-            <div className="space-y-1">
+            <div className="space-y-1 text-left sm:col-span-2 lg:col-span-1">
               <Label htmlFor={`list-picker-query-${listId}`}>
                 Search your library
               </Label>
@@ -168,33 +166,34 @@ export function AddMoviesDialog({
                 className="min-h-11"
               />
             </div>
-            <label className="space-y-1 text-sm font-medium">
+            <label className="space-y-1 text-left text-sm font-medium">
               Status
-              <select
+              <Select
                 name="listStatus"
                 defaultValue={picker.status}
-                className={selectClassName}
               >
                 <option value="all">All statuses</option>
-                {LIBRARY_MOVIE_STATUSES.map((status) => (
+                {SELECTABLE_LIBRARY_MOVIE_STATUSES.map((status) => (
                   <option key={status} value={status}>
                     {LIBRARY_MOVIE_STATUS_LABELS[status]}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
-            <label className="space-y-1 text-sm font-medium">
+            <label className="space-y-1 text-left text-sm font-medium">
               Favourite
-              <select
+              <Select
                 name="listFavourite"
                 defaultValue={picker.favourite}
-                className={selectClassName}
               >
                 <option value="all">All movies</option>
                 <option value="favourites">Favourites only</option>
-              </select>
+              </Select>
             </label>
-            <Button type="submit" className="self-end">
+            <Button
+              type="submit"
+              className="w-full sm:col-span-2 sm:justify-self-end lg:col-span-1 lg:w-auto"
+            >
               <Search className="size-4" aria-hidden="true" />
               Search
             </Button>
@@ -317,7 +316,7 @@ export function AddMoviesDialog({
                             sizes="64px"
                           />
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 text-left">
                           <p className="break-words text-sm font-semibold">
                             {candidate.title}
                           </p>

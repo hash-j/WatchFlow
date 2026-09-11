@@ -71,30 +71,20 @@ function watchedArgument(state: LibraryQueryState) {
   return null;
 }
 
-function favouriteArgument(state: LibraryQueryState) {
-  if (state.favourite === "favourites") return true;
-  if (state.favourite === "not-favourites") return false;
-  return null;
-}
-
 export async function queryOwnedLibraryPage(
   client: SupabaseClient,
   state: LibraryQueryState,
 ) {
   let request = client.rpc(
-    "watchflow_library_rows",
+    "watchflow_library_rows_v2",
     {
       p_query: state.q || null,
       p_status: state.status === "all" ? null : state.status,
       p_watched: watchedArgument(state),
-      p_favourite: favouriteArgument(state),
       p_genre: state.genre,
       p_director: state.director,
+      p_actor: state.actor,
       p_year: state.year,
-      p_year_from: state.yearFrom,
-      p_year_to: state.yearTo,
-      p_rating_min: state.ratingMin,
-      p_rating_max: state.ratingMax,
     },
     { count: "exact" },
   );
@@ -167,4 +157,3 @@ export async function getLibraryPageData(
     facets,
   };
 }
-

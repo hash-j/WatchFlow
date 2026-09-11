@@ -28,6 +28,7 @@ const baseInput: MovieManagementInput = {
   priority: "3",
   wouldWatchAgain: true,
   watchedDate: "2026-07-20",
+  watchedDateProvided: true,
   scheduledDate: "",
   scheduledTime: "",
   timezone: "",
@@ -67,7 +68,8 @@ describe("movie management", () => {
         personalRating: 8.5,
         priority: 3,
         wouldWatchAgain: true,
-        watchedAt: "2026-07-20T00:00:00.000Z",
+        watchedAt: null,
+        watchedAtProvided: false,
       }),
     );
   });
@@ -92,6 +94,7 @@ describe("movie management", () => {
       "library-item-id",
       {
         ...baseInput,
+        status: "watched",
         personalRating: "",
         watchedDate: "",
         review: "   ",
@@ -105,9 +108,65 @@ describe("movie management", () => {
       expect.objectContaining({
         personalRating: null,
         watchedAt: null,
+        watchedAtProvided: true,
         review: null,
       }),
     );
+  });
+
+  it("updates or explicitly clears watched_at only for a Watched submission", async () => {
+    const updateMovieMock = vi.fn().mockResolvedValue(true);
+    const dependencies = createDependencies({ updateMovie: updateMovieMock });
+
+    await updateLibraryMovie(
+      "library-item-id",
+      { ...baseInput, status: "watched" },
+      dependencies,
+    );
+    expect(updateMovieMock).toHaveBeenLastCalledWith(
+      session,
+      "library-item-id",
+      expect.objectContaining({
+        watchedAt: "2026-07-20T00:00:00.000Z",
+        watchedAtProvided: true,
+      }),
+    );
+
+    await updateLibraryMovie(
+      "library-item-id",
+      {
+        ...baseInput,
+        status: "watched",
+        watchedDate: "",
+      },
+      dependencies,
+    );
+    expect(updateMovieMock).toHaveBeenLastCalledWith(
+      session,
+      "library-item-id",
+      expect.objectContaining({ watchedAt: null, watchedAtProvided: true }),
+    );
+  });
+
+  it("preserves watched_at for non-Watched and unrelated submissions", async () => {
+    const updateMovieMock = vi.fn().mockResolvedValue(true);
+    const dependencies = createDependencies({ updateMovie: updateMovieMock });
+
+    for (const input of [
+      { ...baseInput, status: "currently_watching" },
+      {
+        ...baseInput,
+        status: "watched",
+        watchedDateProvided: false,
+      },
+    ]) {
+      await updateLibraryMovie("library-item-id", input, dependencies);
+      expect(updateMovieMock).toHaveBeenLastCalledWith(
+        session,
+        "library-item-id",
+        expect.objectContaining({ watchedAt: null, watchedAtProvided: false }),
+      );
+    }
   });
 
   it("normalizes checked and unchecked rewatch values", () => {

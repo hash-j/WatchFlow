@@ -27,7 +27,7 @@ const features = [
 
 export default function Home() {
   return (
-    <main className="min-h-svh bg-muted/30">
+    <main className="min-h-svh bg-background">
       <nav className="border-b bg-background/90">
         <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6">
           <Link href="/" className="font-semibold tracking-tight">
@@ -71,7 +71,9 @@ export default function Home() {
         <div className="grid gap-4">
           {features.map(({ title, description, icon: Icon }) => (
             <div key={title} className="rounded-xl border bg-card p-5 shadow-sm">
-              <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
+              <span className="grid size-9 place-items-center rounded-lg bg-rating text-rating-foreground">
+                <Icon className="size-4" aria-hidden="true" />
+              </span>
               <h2 className="mt-3 font-semibold">{title}</h2>
               <p className="mt-1 text-sm text-muted-foreground">{description}</p>
             </div>

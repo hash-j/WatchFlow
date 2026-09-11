@@ -71,6 +71,24 @@ describe("CSV account export", () => {
     expect(csv).toContain("'=HYPERLINK");
   });
 
+  it.each(["on_hold", "dropped"])(
+    "keeps legacy status %s readable in CSV and JSON exports",
+    (status) => {
+      const legacyRow = { ...libraryRow, status };
+      const csv = buildLibraryCsv([legacyRow]);
+      const json = buildAccountDataExport({
+        exportedAt: "2026-09-10T00:00:00.000Z",
+        email: "member@example.com",
+        profile: null,
+        preferences: null,
+        library: [legacyRow],
+      });
+
+      expect(csv).toContain(status);
+      expect(json.library[0]?.status).toBe(status);
+    },
+  );
+
   it("builds the dated filename suffix", () => {
     expect(exportFilenameDate(new Date("2026-07-22T23:59:59.000Z"))).toBe(
       "2026-07-22",

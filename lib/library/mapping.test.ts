@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { MovieDetails } from "../movies/types";
-import { toSharedMovieRow } from "./mapping";
+import { mapLibraryMovieRow, toSharedMovieRow } from "./mapping";
 
 describe("shared movie database mapping", () => {
   it("uses only columns from the deployed movies table", () => {
@@ -58,5 +58,22 @@ describe("shared movie database mapping", () => {
       public_rating: 8.4,
     });
     expect(row.metadata_updated_at).toEqual(expect.any(String));
+  });
+});
+
+describe("owned library movie mapping", () => {
+  it("preserves the stored watched timestamp for form normalization", () => {
+    expect(
+      mapLibraryMovieRow({
+        id: "owned-library-row",
+        status: "watched",
+        watched_at: "2026-09-08T00:00:00+00:00",
+        movies: {
+          id: 42,
+          tmdb_id: 27205,
+          title: "Inception",
+        },
+      })?.watchedAt,
+    ).toBe("2026-09-08T00:00:00+00:00");
   });
 });

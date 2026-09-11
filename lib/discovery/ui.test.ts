@@ -163,7 +163,9 @@ describe("Part 14 recommendation UX contracts", () => {
     expect(page).toContain("Rule-based recommendations");
     expect(page).toContain("How recommendations work");
     expect(page).toContain("not AI");
-    expect(page).toContain("Watched, Dropped, and Currently Watching");
+    expect(page).toContain(
+      "Watched, legacy Dropped, and Currently Watching",
+    );
     expect(page).toContain("Refresh suggestions");
     expect(page).toContain("similar-score window");
   });

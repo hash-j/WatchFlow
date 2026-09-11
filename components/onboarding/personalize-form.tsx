@@ -7,6 +7,7 @@ import { saveOnboardingPreferencesAction } from "@/app/onboarding/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { INITIAL_ONBOARDING_ACTION_STATE, type OnboardingPreferences } from "@/lib/onboarding/types";
 import { SUPPORTED_LANGUAGES } from "@/lib/settings/types";
 import { PendingButton } from "./pending-button";
@@ -34,9 +35,6 @@ const languageLabels = {
   fr: "French",
   de: "German",
 } as const;
-
-const selectClassName =
-  "flex min-h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function FieldError({ errors, id }: { errors?: string[]; id: string }) {
   return errors?.length ? (
@@ -86,39 +84,34 @@ export function PersonalizeForm({
 
           <div className="space-y-2">
             <Label htmlFor="onboarding-library-view">Default Library view</Label>
-            <select
+            <Select
               id="onboarding-library-view"
               name="defaultLibraryView"
               defaultValue={preferences.defaultLibraryView}
-              className={selectClassName}
               aria-invalid={Boolean(state.fieldErrors.defaultLibraryView)}
               aria-describedby="onboarding-library-view-error"
             >
               <option value="grid">Grid</option>
               <option value="list">List</option>
-            </select>
+            </Select>
             <FieldError errors={state.fieldErrors.defaultLibraryView} id="onboarding-library-view-error" />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="onboarding-language">Preferred movie language</Label>
-            <select
+            <Select
               id="onboarding-language"
               name="preferredLanguage"
               defaultValue={preferences.preferredLanguage}
-              className={selectClassName}
               aria-invalid={Boolean(state.fieldErrors.preferredLanguage)}
-              aria-describedby="onboarding-language-help onboarding-language-error"
+              aria-describedby="onboarding-language-error"
             >
               {SUPPORTED_LANGUAGES.map((language) => (
                 <option key={language} value={language}>
                   {languageLabels[language]}
                 </option>
               ))}
-            </select>
-            <p id="onboarding-language-help" className="text-xs leading-5 text-muted-foreground">
-              Used when searching TMDB. Movie details stay in WatchFlow&apos;s canonical format.
-            </p>
+            </Select>
             <FieldError errors={state.fieldErrors.preferredLanguage} id="onboarding-language-error" />
           </div>
         </div>

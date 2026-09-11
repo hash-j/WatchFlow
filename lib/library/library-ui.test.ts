@@ -111,6 +111,14 @@ describe("library watched and unwatched UI", () => {
     }
 
     expect(MOVIE_STATUS_VISUALS.watched.cardAccentClasses).toContain("emerald");
+    expect(MOVIE_STATUS_VISUALS.want_to_watch.label).toBe("Saved");
+    for (const legacy of ["on_hold", "dropped"] as const) {
+      expect(MOVIE_STATUS_VISUALS[legacy].label).toContain("legacy");
+      expect(MOVIE_STATUS_VISUALS[legacy].badgeClasses).toContain("bg-muted");
+      expect(MOVIE_STATUS_VISUALS[legacy].cardAccentClasses).toBe(
+        "border-border",
+      );
+    }
   });
 });
 
@@ -127,22 +135,53 @@ describe("Part 12 library UI contracts", () => {
       "q",
       "status",
       "watched",
-      "favourite",
       "genre",
       "director",
+      "actor",
       "year",
-      "yearFrom",
-      "yearTo",
-      "ratingMin",
-      "ratingMax",
       "sort",
       "perPage",
     ]) {
       expect(controls).toContain(`name="${name}"`);
     }
+    for (const removed of [
+      "favourite",
+      "yearFrom",
+      "yearTo",
+      "ratingMin",
+      "ratingMax",
+    ]) {
+      expect(controls).not.toContain(`name="${removed}"`);
+    }
     expect(page).toContain("getLibraryPageData");
     expect(page).not.toContain("listLibraryMovies");
     expect(page).not.toContain("filterLibraryMovies");
+  });
+
+  it("limits new status choices and conditionally preserves the watched date", () => {
+    const management = source("components/movies/movie-management-form.tsx");
+    const bulk = source(
+      "components/library/library-selection-workspace.tsx",
+    );
+    const settings = source("components/settings/preferences-form.tsx");
+    const lists = source("components/lists/add-movies-dialog.tsx");
+
+    expect(management).toContain("SELECTABLE_LIBRARY_MOVIE_STATUSES");
+    expect(management).toContain("isLegacyLibraryMovieStatus(item.status)");
+    expect(management).toContain('<option value={item.status} hidden>');
+    expect(management).toContain('status === "watched"');
+    expect(management).toContain('name="watchedDate"');
+    expect(management).toContain("getWatchedDateInput(item.watchedAt)");
+    expect(management).toContain("key={formVersion}");
+    expect(management).toContain("props.item.updatedAt");
+    expect(management).toContain("props.item.watchedAt");
+    expect(management).toContain("setWatchedDate(event.target.value)");
+    expect(bulk).toContain("BULK_LIBRARY_STATUSES");
+    expect(settings).toContain("SELECTABLE_DEFAULT_MOVIE_STATUSES");
+    expect(settings).toContain(
+      '<option value={preferences.defaultMovieStatus} hidden>',
+    );
+    expect(lists).toContain("SELECTABLE_LIBRARY_MOVIE_STATUSES");
   });
 
   it("renders accessible favourite state and labels outside the movie detail link", () => {
@@ -237,5 +276,112 @@ describe("Part 12 library UI contracts", () => {
       'aria-current={page === pagination.page ? "page" : undefined}',
     );
     expect(pagination).toContain('aria-label="Library pagination"');
+  });
+});
+
+describe("Part 16F-B Batch 2B library polish contracts", () => {
+  const source = (path: string) =>
+    readFileSync(resolve(process.cwd(), path), "utf8");
+
+  it("removes the duplicated Watched poster overlay and keeps the status badge", () => {
+    const card = source("components/movies/library-movie-card.tsx");
+
+    expect(card).not.toContain('aria-label="Watched movie"');
+    expect(card).not.toContain("absolute right-2 top-2");
+    expect(card).toContain("<MovieStatusBadge status={item.status}");
+  });
+
+  it("applies status accents to both grid cards and list rows", () => {
+    const card = source("components/movies/library-movie-card.tsx");
+    const listItem = source("components/movies/library-movie-list-item.tsx");
+
+    expect(card).toContain("statusVisual.cardAccentClasses");
+    expect(listItem).toContain(
+      "MOVIE_STATUS_VISUALS[item.status].cardAccentClasses",
+    );
+    expect(MOVIE_STATUS_VISUALS.watched.cardAccentClasses).toContain(
+      "emerald",
+    );
+    for (const [status, visual] of Object.entries(MOVIE_STATUS_VISUALS)) {
+      if (status !== "watched") {
+        expect(visual.cardAccentClasses).not.toContain("emerald");
+      }
+    }
+  });
+
+  it("uses a compact two-column mobile grid and a poster-left mobile list row", () => {
+    const page = source("app/(app)/library/page.tsx");
+    const card = source("components/movies/library-movie-card.tsx");
+    const listItem = source("components/movies/library-movie-list-item.tsx");
+
+    expect(page).toContain("min-[360px]:grid-cols-2");
+    expect(card).toContain("line-clamp-2");
+    expect(card).not.toContain("Priority");
+    expect(listItem).toContain(
+      "grid-cols-[4.25rem_minmax(0,1fr)]",
+    );
+    expect(listItem).toContain("col-start-2");
+    expect(listItem).toContain('className="hidden sm:inline"');
+  });
+
+  it("keeps item actions full-width, aligned, accessible, and visibly bordered", () => {
+    const actions = source("components/library/library-item-actions.tsx");
+    const remove = source("components/movies/remove-from-library-form.tsx");
+    const favourite = source("components/movies/favourite-toggle-form.tsx");
+
+    expect(actions).toContain("[&_button]:min-h-11");
+    expect(actions).toContain("[&_button]:w-full");
+    expect(remove).toContain('variant="outline"');
+    expect(remove).toContain("border-destructive/50");
+    expect(remove).toContain("aria-label={`Remove ${movieTitle}");
+    expect(favourite).toContain("aria-pressed={favourite}");
+  });
+
+  it("aligns the responsive selection toolbar and gives clear and exit visible borders", () => {
+    const selection = source(
+      "components/library/library-selection-workspace.tsx",
+    );
+
+    expect(selection).toContain("grid items-end gap-3");
+    expect(selection).toContain("sm:grid-cols-2");
+    expect(selection).toContain("xl:grid-cols-[minmax(15rem,1fr)_auto_auto]");
+    expect(selection).not.toContain('variant="ghost"');
+    expect(selection.match(/variant="outline"/g)?.length).toBeGreaterThanOrEqual(
+      3,
+    );
+    expect(selection).toContain("Select all movies on this page");
+  });
+
+  it("keeps the detail custom-list action within narrow viewports", () => {
+    const memberships = source(
+      "components/lists/movie-list-memberships-form.tsx",
+    );
+
+    expect(memberships).toContain("flex min-w-0 flex-col");
+    expect(memberships).toContain('className: "w-full shrink-0 sm:w-auto"');
+    expect(memberships).toContain("Create New List");
+  });
+
+  it("shows named removal feedback after the detail redirect", () => {
+    const form = source("components/movies/remove-from-library-form.tsx");
+    const page = source("app/(app)/library/page.tsx");
+    const action = source("app/(app)/actions/library.ts");
+
+    expect(form).toContain('name="movieTitle" value={movieTitle}');
+    expect(form).toContain("/library?removed=");
+    expect(page).toContain("getMovieRemovalMessage(removedTitle)");
+    expect(page).toContain('role="status"');
+    expect(action).toContain('formData.get("movieTitle")');
+  });
+
+  it("preserves Batch 2A actor, selectable-status, and watched-date contracts", () => {
+    const controls = source("components/library/library-controls.tsx");
+    const management = source("components/movies/movie-management-form.tsx");
+
+    expect(controls).toContain('name="actor"');
+    expect(management).toContain("SELECTABLE_LIBRARY_MOVIE_STATUSES");
+    expect(management).toContain('status === "watched"');
+    expect(management).toContain("getWatchedDateInput(item.watchedAt)");
+    expect(management).toContain("setWatchedDate(event.target.value)");
   });
 });

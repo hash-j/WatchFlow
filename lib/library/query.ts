@@ -1,5 +1,5 @@
 import type { LibraryMovieStatus } from "@/lib/movies/types";
-import { LIBRARY_MOVIE_STATUSES } from "@/lib/movies/types";
+import { SELECTABLE_LIBRARY_MOVIE_STATUSES } from "@/lib/movies/types";
 import {
   DEFAULT_USER_PREFERENCES,
   LIBRARY_VIEWS,
@@ -10,6 +10,7 @@ import {
 export const MAX_LIBRARY_SEARCH_LENGTH = 100;
 export const MAX_LIBRARY_GENRE_LENGTH = 100;
 export const MAX_LIBRARY_DIRECTOR_LENGTH = 150;
+export const MAX_LIBRARY_ACTOR_LENGTH = 150;
 export const MIN_LIBRARY_RELEASE_YEAR = 1888;
 
 export const LIBRARY_WATCHED_FILTERS = [
@@ -19,14 +20,6 @@ export const LIBRARY_WATCHED_FILTERS = [
 ] as const;
 export type LibraryWatchedFilter =
   (typeof LIBRARY_WATCHED_FILTERS)[number];
-
-export const LIBRARY_FAVOURITE_FILTERS = [
-  "all",
-  "favourites",
-  "not-favourites",
-] as const;
-export type LibraryFavouriteFilter =
-  (typeof LIBRARY_FAVOURITE_FILTERS)[number];
 
 export const LIBRARY_SORTS = [
   "title_asc",
@@ -136,14 +129,10 @@ export type LibraryQueryState = {
   q: string;
   status: LibraryMovieStatus | "all";
   watched: LibraryWatchedFilter;
-  favourite: LibraryFavouriteFilter;
   genre: string | null;
   director: string | null;
+  actor: string | null;
   year: number | null;
-  yearFrom: number | null;
-  yearTo: number | null;
-  ratingMin: number | null;
-  ratingMax: number | null;
   sort: LibrarySort;
   view: LibraryView;
   page: number;
@@ -240,22 +229,6 @@ function releaseYear(
     : null;
 }
 
-function rating(value: string | string[] | undefined) {
-  const candidate = firstValue(value)?.trim();
-
-  if (
-    !candidate ||
-    !/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(candidate)
-  ) {
-    return null;
-  }
-
-  const parsed = Number(candidate);
-  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 10
-    ? parsed
-    : null;
-}
-
 function preferredPageSize(
   value: number | undefined,
 ): (typeof MOVIES_PER_PAGE_OPTIONS)[number] {
@@ -299,27 +272,15 @@ export function parseLibrarySearchParams(
     );
   }
 
+  const rawActor = firstValue(raw.actor)?.trim() ?? "";
+  const actor = trimmedValue(raw.actor, MAX_LIBRARY_ACTOR_LENGTH) || null;
+  if (rawActor.length > MAX_LIBRARY_ACTOR_LENGTH) {
+    warnings.push(
+      `Actor is limited to ${MAX_LIBRARY_ACTOR_LENGTH} characters.`,
+    );
+  }
+
   const exactYear = releaseYear(raw.year, maximumYear);
-  let yearFrom = exactYear ? null : releaseYear(raw.yearFrom, maximumYear);
-  let yearTo = exactYear ? null : releaseYear(raw.yearTo, maximumYear);
-
-  if (yearFrom !== null && yearTo !== null && yearFrom > yearTo) {
-    yearFrom = null;
-    yearTo = null;
-    warnings.push("The release-year range was ignored because it is invalid.");
-  }
-
-  let ratingMin = rating(raw.ratingMin);
-  let ratingMax = rating(raw.ratingMax);
-  if (
-    ratingMin !== null &&
-    ratingMax !== null &&
-    ratingMin > ratingMax
-  ) {
-    ratingMin = null;
-    ratingMax = null;
-    warnings.push("The personal-rating range was ignored because it is invalid.");
-  }
 
   const legacyWatched = enumValue(
     raw.filter,
@@ -342,23 +303,19 @@ export function parseLibrarySearchParams(
   return {
     state: {
       q,
-      status: enumValue(raw.status, ["all", ...LIBRARY_MOVIE_STATUSES], "all"),
+      status: enumValue(
+        raw.status,
+        ["all", ...SELECTABLE_LIBRARY_MOVIE_STATUSES],
+        "all",
+      ),
       watched:
         firstValue(raw.watched) === undefined
           ? legacyWatched
           : enumValue(raw.watched, LIBRARY_WATCHED_FILTERS, "all"),
-      favourite: enumValue(
-        raw.favourite,
-        LIBRARY_FAVOURITE_FILTERS,
-        "all",
-      ),
       genre,
       director,
+      actor,
       year: exactYear,
-      yearFrom,
-      yearTo,
-      ratingMin,
-      ratingMax,
       sort: enumValue(raw.sort, LIBRARY_SORTS, DEFAULT_LIBRARY_SORT),
       view: enumValue(raw.view, LIBRARY_VIEWS, defaultView),
       page: positiveInteger(raw.page, 1),
@@ -376,20 +333,10 @@ export function libraryStateToSearchParams(state: LibraryQueryState) {
   if (state.q) params.set("q", state.q);
   if (state.status !== "all") params.set("status", state.status);
   if (state.watched !== "all") params.set("watched", state.watched);
-  if (state.favourite !== "all") {
-    params.set("favourite", state.favourite);
-  }
   if (state.genre) params.set("genre", state.genre);
   if (state.director) params.set("director", state.director);
+  if (state.actor) params.set("actor", state.actor);
   if (state.year !== null) params.set("year", String(state.year));
-  if (state.yearFrom !== null) params.set("yearFrom", String(state.yearFrom));
-  if (state.yearTo !== null) params.set("yearTo", String(state.yearTo));
-  if (state.ratingMin !== null) {
-    params.set("ratingMin", String(state.ratingMin));
-  }
-  if (state.ratingMax !== null) {
-    params.set("ratingMax", String(state.ratingMax));
-  }
   if (state.sort !== DEFAULT_LIBRARY_SORT) params.set("sort", state.sort);
   params.set("view", state.view);
   params.set("perPage", String(state.perPage));
@@ -418,14 +365,10 @@ export function buildClearLibraryFiltersUrl(state: LibraryQueryState) {
     {
       status: "all",
       watched: "all",
-      favourite: "all",
       genre: null,
       director: null,
+      actor: null,
       year: null,
-      yearFrom: null,
-      yearTo: null,
-      ratingMin: null,
-      ratingMax: null,
     },
     { resetPage: true },
   );
@@ -435,11 +378,10 @@ export function countActiveLibraryFilters(state: LibraryQueryState) {
   return [
     state.status !== "all",
     state.watched !== "all",
-    state.favourite !== "all",
     Boolean(state.genre),
     Boolean(state.director),
-    state.year !== null || state.yearFrom !== null || state.yearTo !== null,
-    state.ratingMin !== null || state.ratingMax !== null,
+    Boolean(state.actor),
+    state.year !== null,
   ].filter(Boolean).length;
 }
 

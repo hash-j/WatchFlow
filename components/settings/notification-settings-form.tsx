@@ -6,6 +6,7 @@ import { Save } from "lucide-react";
 import { updateNotificationPreferencesAction } from "@/app/(app)/settings/actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
   INITIAL_SETTINGS_ACTION_STATE,
   REMINDER_OFFSET_OPTIONS,
@@ -75,18 +76,17 @@ export function NotificationSettingsForm({
 
       <div className="max-w-sm space-y-2">
         <Label htmlFor="reminder-offset">Reminder time</Label>
-        <select
+        <Select
           id="reminder-offset"
           name="reminderOffsetMinutes"
           defaultValue={String(preferences.reminderOffsetMinutes)}
-          className="flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {REMINDER_OFFSET_OPTIONS.map((offset) => (
             <option key={offset} value={offset}>
               {reminderLabels[offset]}
             </option>
           ))}
-        </select>
+        </Select>
         <FieldError
           errors={state.fieldErrors.reminderOffsetMinutes}
           id="reminder-offset-error"

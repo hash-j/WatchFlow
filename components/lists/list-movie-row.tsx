@@ -24,20 +24,20 @@ export function ListMovieRow({
     (item.movie.releaseDate ? item.movie.releaseDate.slice(0, 4) : null);
 
   return (
-    <li className="grid min-w-0 gap-4 rounded-xl border bg-card p-4 shadow-sm md:grid-cols-[3rem_5rem_minmax(0,1fr)] lg:grid-cols-[3rem_5rem_minmax(0,1fr)_auto] lg:items-center">
-      <div className="flex items-center gap-3 sm:block">
+    <li className="grid min-w-0 grid-cols-[4.5rem_minmax(0,1fr)] gap-3 rounded-xl border bg-card p-3 shadow-sm sm:grid-cols-[5rem_minmax(0,1fr)] sm:gap-4 sm:p-4 md:grid-cols-[3rem_5rem_minmax(0,1fr)] lg:grid-cols-[3rem_5rem_minmax(0,1fr)_auto] lg:items-center">
+      <div className="hidden items-center gap-3 md:flex md:flex-col md:items-start">
         <span
           className="grid size-10 shrink-0 place-items-center rounded-full bg-muted text-sm font-semibold"
           aria-label={`Position ${item.position}`}
         >
           {item.position}
         </span>
-        <span className="text-sm font-medium sm:sr-only">
+        <span className="sr-only">
           Position {item.position}
         </span>
       </div>
 
-      <div className="w-20">
+      <div className="col-start-1 row-start-1 w-full md:col-start-2 md:w-20">
         <MoviePoster
           path={item.movie.posterPath}
           title={item.movie.title}
@@ -45,7 +45,10 @@ export function ListMovieRow({
         />
       </div>
 
-      <div className="min-w-0">
+      <div className="col-start-2 row-start-1 min-w-0 md:col-start-3">
+        <p className="mb-1 text-xs font-medium text-muted-foreground md:hidden">
+          Position {item.position}
+        </p>
         <Link
           href={`/library/${item.movie.id}`}
           className="break-words font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

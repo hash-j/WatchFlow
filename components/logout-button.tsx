@@ -11,22 +11,28 @@ import { Button } from "@/components/ui/button";
 
 const INITIAL_STATE: LogoutActionState = { message: null };
 
-function LogoutSubmitButton() {
+function LogoutSubmitButton({ className }: { className?: string }) {
   const { pending } = useFormStatus();
 
   return (
-    <Button variant="outline" size="sm" type="submit" disabled={pending}>
+    <Button
+      variant="outline"
+      size="sm"
+      type="submit"
+      disabled={pending}
+      className={className}
+    >
       {pending ? "Signing out..." : "Sign out"}
     </Button>
   );
 }
 
-export function LogoutButton() {
+export function LogoutButton({ className }: { className?: string }) {
   const [state, action] = useActionState(logoutAction, INITIAL_STATE);
 
   return (
     <form action={action} className="flex flex-col items-start gap-1">
-      <LogoutSubmitButton />
+      <LogoutSubmitButton className={className} />
       {state.message ? (
         <p className="max-w-40 text-xs text-destructive" role="alert">
           {state.message}

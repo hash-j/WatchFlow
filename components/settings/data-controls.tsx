@@ -34,7 +34,7 @@ export function ExportControls() {
             Movie information and your personal Library details for a spreadsheet.
           </p>
           <Button asChild variant="outline" className="mt-4 min-h-11 w-full">
-            <a href="/settings/data/export/csv">
+            <a href="/settings/data/export/csv" download>
               <Download className="size-4" aria-hidden="true" />
               Export movie library as CSV
             </a>
@@ -46,7 +46,7 @@ export function ExportControls() {
             Profile, preferences, library, queue, and schedule data in JSON.
           </p>
           <Button asChild variant="outline" className="mt-4 min-h-11 w-full">
-            <a href="/settings/data/export/json">
+            <a href="/settings/data/export/json" download>
               <Download className="size-4" aria-hidden="true" />
               Export complete account data
             </a>

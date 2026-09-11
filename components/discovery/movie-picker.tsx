@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Dices, FilterX, RotateCcw } from "lucide-react";
+import { Clapperboard, Dices, FilterX, RotateCcw } from "lucide-react";
 
 import { pickMovieAction } from "@/app/(app)/actions/discovery";
 import { PickerResult } from "@/components/discovery/picker-result";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ResponsiveActions } from "@/components/ui/responsive-layout";
+import { Select } from "@/components/ui/select";
 import {
   initialPickerActionState,
 } from "@/lib/discovery/action-state";
@@ -175,16 +176,15 @@ export function MoviePicker({
               {activeFilterCount} active
             </span>
           </summary>
-          <div className="grid gap-5 border-t p-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid items-end gap-5 border-t p-4 sm:grid-cols-2 lg:grid-cols-3">
           <label className="grid gap-2 text-sm font-medium">
             Genre
-            <select
+            <Select
               name="genre"
               value={filters.genre ?? ""}
               onChange={(event) =>
                 updateFilters({ genre: event.target.value || null })
               }
-              className="min-h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">Any genre</option>
               {availableGenres.map((genre) => (
@@ -192,12 +192,12 @@ export function MoviePicker({
                   {genre}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="grid gap-2 text-sm font-medium">
             Maximum runtime
-            <select
+            <Select
               name="maxRuntime"
               value={filters.maxRuntime ?? ""}
               onChange={(event) =>
@@ -207,19 +207,18 @@ export function MoviePicker({
                     : null,
                 })
               }
-              className="min-h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">Any runtime</option>
               <option value="90">Up to 90 minutes</option>
               <option value="120">Up to 120 minutes</option>
               <option value="150">Up to 150 minutes</option>
               <option value="180">Up to 180 minutes</option>
-            </select>
+            </Select>
           </label>
 
           <label className="grid gap-2 text-sm font-medium">
             Minimum public rating
-            <select
+            <Select
               name="minRating"
               value={filters.minPublicRating ?? ""}
               onChange={(event) =>
@@ -229,7 +228,6 @@ export function MoviePicker({
                     : null,
                 })
               }
-              className="min-h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">Any public rating</option>
               {[5, 6, 7, 8, 9].map((rating) => (
@@ -237,12 +235,12 @@ export function MoviePicker({
                   {rating}+
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="grid gap-2 text-sm font-medium">
             Mood
-            <select
+            <Select
               name="mood"
               value={filters.mood}
               aria-describedby="mood-explanation"
@@ -254,7 +252,6 @@ export function MoviePicker({
                       : (event.target.value as MoodKey),
                 })
               }
-              className="min-h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="any">Any mood</option>
               {MOOD_KEYS.map((mood) => (
@@ -262,12 +259,12 @@ export function MoviePicker({
                   {MOOD_RULES[mood].label}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="grid gap-2 text-sm font-medium">
             Release period
-            <select
+            <Select
               name="period"
               value={filters.releasePeriod}
               onChange={(event) =>
@@ -275,19 +272,18 @@ export function MoviePicker({
                   releasePeriod: event.target.value as PickerReleasePeriod,
                 })
               }
-              className="min-h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {RELEASE_PERIOD_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="grid gap-2 text-sm font-medium">
             Watched state
-            <select
+            <Select
               name={filters.watchNextOnly ? undefined : "watched"}
               value={filters.watchedState}
               disabled={filters.watchNextOnly}
@@ -296,14 +292,14 @@ export function MoviePicker({
                   watchedState: event.target.value as PickerWatchedState,
                 })
               }
-              className="min-h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+              className="disabled:opacity-60"
             >
               {WATCHED_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
-            </select>
+            </Select>
             {filters.watchNextOnly ? (
               <input
                 type="hidden"
@@ -439,7 +435,10 @@ export function MoviePicker({
 
       {libraryCount === 0 ? (
         <div className="rounded-xl border border-dashed bg-card p-8 text-center">
-          <h2 className="text-xl font-semibold">Your library is empty</h2>
+          <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-rating text-rating-foreground shadow-sm">
+            <Clapperboard className="size-6" aria-hidden="true" />
+          </span>
+          <h2 className="mt-4 text-xl font-semibold">Your library is empty</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Add or import movies before asking WatchFlow to choose one.
           </p>
@@ -457,10 +456,9 @@ export function MoviePicker({
         </div>
       ) : showActionOutput && state.status === "empty" ? (
         <div className="rounded-xl border border-dashed bg-card p-6 text-center">
-          <RotateCcw
-            className="mx-auto size-9 text-muted-foreground"
-            aria-hidden="true"
-          />
+          <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-rating text-rating-foreground shadow-sm">
+            <RotateCcw className="size-5" aria-hidden="true" />
+          </span>
           <h2 className="mt-3 text-xl font-semibold">No matches found</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             No movies in your library match these filters. Clear the mood,

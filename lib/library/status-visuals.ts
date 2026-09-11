@@ -24,7 +24,7 @@ export const MOVIE_STATUS_VISUALS: Record<
   MovieStatusVisual
 > = {
   want_to_watch: {
-    label: "Want to Watch",
+    label: "Saved",
     icon: Bookmark,
     badgeClasses: "border-border bg-muted text-foreground",
     cardAccentClasses: "border-border",
@@ -64,19 +64,17 @@ export const MOVIE_STATUS_VISUALS: Record<
     description: "This movie has been watched.",
   },
   on_hold: {
-    label: "On Hold",
+    label: "On Hold (legacy)",
     icon: PauseCircle,
-    badgeClasses:
-      "border-orange-200 bg-orange-50 text-orange-900 dark:border-orange-900 dark:bg-orange-950/60 dark:text-orange-200",
-    cardAccentClasses: "border-orange-300/70 dark:border-orange-900",
-    description: "Viewing is paused for now.",
+    badgeClasses: "border-border bg-muted text-muted-foreground",
+    cardAccentClasses: "border-border",
+    description: "Legacy status retained for an existing library record.",
   },
   dropped: {
-    label: "Dropped",
+    label: "Dropped (legacy)",
     icon: XCircle,
-    badgeClasses:
-      "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/60 dark:text-red-200",
-    cardAccentClasses: "border-red-300/70 dark:border-red-900",
-    description: "No longer planning to finish this movie.",
+    badgeClasses: "border-border bg-muted text-muted-foreground",
+    cardAccentClasses: "border-border",
+    description: "Legacy status retained for an existing library record.",
   },
 };

@@ -11,13 +11,17 @@ import { initialLibraryActionState } from "@/lib/library/action-state";
 type RemoveFromLibraryFormProps = {
   userMovieId: string;
   movieId: string;
+  movieTitle: string;
   redirectAfterRemoval?: boolean;
+  compact?: boolean;
 };
 
 export function RemoveFromLibraryForm({
   userMovieId,
   movieId,
+  movieTitle,
   redirectAfterRemoval = false,
+  compact = false,
 }: RemoveFromLibraryFormProps) {
   const router = useRouter();
   const [isConfirming, setIsConfirming] = useState(false);
@@ -32,13 +36,13 @@ export function RemoveFromLibraryForm({
     }
 
     if (redirectAfterRemoval) {
-      router.replace("/library");
+      router.replace(`/library?removed=${encodeURIComponent(movieTitle)}`);
       router.refresh();
       return;
     }
 
     router.refresh();
-  }, [redirectAfterRemoval, router, state.status]);
+  }, [movieTitle, redirectAfterRemoval, router, state.status]);
 
   if (state.status === "success") {
     return (
@@ -53,11 +57,13 @@ export function RemoveFromLibraryForm({
       <Button
         type="button"
         size="sm"
-        variant="ghost"
+        variant="outline"
+        aria-label={`Remove ${movieTitle} from your library`}
+        className="border-destructive/50 text-destructive hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
         onClick={() => setIsConfirming(true)}
       >
-        <Trash2 className="mr-2 size-4" aria-hidden="true" />
-        Remove from Library
+        <Trash2 className="size-4" aria-hidden="true" />
+        {compact ? "Remove" : "Remove from Library"}
       </Button>
     );
   }
@@ -66,6 +72,7 @@ export function RemoveFromLibraryForm({
     <form action={action} className="space-y-2">
       <input type="hidden" name="userMovieId" value={userMovieId} />
       <input type="hidden" name="movieId" value={movieId} />
+      <input type="hidden" name="movieTitle" value={movieTitle} />
       <p className="text-xs font-medium">Remove this movie from your library?</p>
       <div className="flex flex-wrap gap-2">
         <Button type="submit" size="sm" variant="destructive" disabled={isPending}>

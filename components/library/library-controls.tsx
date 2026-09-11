@@ -4,18 +4,17 @@ import {
   Grid2X2,
   List,
   Search,
-  Star,
   X,
 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
   buildClearLibraryFiltersUrl,
   buildLibraryUrl,
   countActiveLibraryFilters,
-  LIBRARY_FAVOURITE_FILTERS,
   LIBRARY_SORTS,
   LIBRARY_SORT_LABELS,
   LIBRARY_WATCHED_FILTERS,
@@ -27,14 +26,11 @@ import {
   type LibraryQueryState,
 } from "@/lib/library/query";
 import {
-  LIBRARY_MOVIE_STATUSES,
   LIBRARY_MOVIE_STATUS_LABELS,
+  SELECTABLE_LIBRARY_MOVIE_STATUSES,
 } from "@/lib/movies/types";
 import { MOVIES_PER_PAGE_OPTIONS } from "@/lib/settings/types";
 import { cn } from "@/lib/utils";
-
-const fieldClassName =
-  "flex min-h-11 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function HiddenLibraryParams({
   state,
@@ -56,12 +52,6 @@ function watchedLabel(value: (typeof LIBRARY_WATCHED_FILTERS)[number]) {
   if (value === "watched") return "Watched";
   if (value === "unwatched") return "Unwatched";
   return "All watched states";
-}
-
-function favouriteLabel(value: (typeof LIBRARY_FAVOURITE_FILTERS)[number]) {
-  if (value === "favourites") return "Favourites";
-  if (value === "not-favourites") return "Not favourites";
-  return "All favourite states";
 }
 
 type FilterChip = {
@@ -87,17 +77,6 @@ function getFilterChips(state: LibraryQueryState): FilterChip[] {
       url: buildLibraryUrl(state, { watched: "all" }, { resetPage: true }),
     });
   }
-  if (state.favourite !== "all") {
-    chips.push({
-      key: "favourite",
-      label: favouriteLabel(state.favourite),
-      url: buildLibraryUrl(
-        state,
-        { favourite: "all" },
-        { resetPage: true },
-      ),
-    });
-  }
   if (state.genre) {
     chips.push({
       key: "genre",
@@ -112,32 +91,18 @@ function getFilterChips(state: LibraryQueryState): FilterChip[] {
       url: buildLibraryUrl(state, { director: null }, { resetPage: true }),
     });
   }
+  if (state.actor) {
+    chips.push({
+      key: "actor",
+      label: `Actor: ${state.actor}`,
+      url: buildLibraryUrl(state, { actor: null }, { resetPage: true }),
+    });
+  }
   if (state.year !== null) {
     chips.push({
       key: "year",
       label: `Year: ${state.year}`,
       url: buildLibraryUrl(state, { year: null }, { resetPage: true }),
-    });
-  } else if (state.yearFrom !== null || state.yearTo !== null) {
-    chips.push({
-      key: "year-range",
-      label: `Years: ${state.yearFrom ?? "any"}–${state.yearTo ?? "any"}`,
-      url: buildLibraryUrl(
-        state,
-        { yearFrom: null, yearTo: null },
-        { resetPage: true },
-      ),
-    });
-  }
-  if (state.ratingMin !== null || state.ratingMax !== null) {
-    chips.push({
-      key: "rating",
-      label: `Personal rating: ${state.ratingMin ?? "any"}–${state.ratingMax ?? "any"}`,
-      url: buildLibraryUrl(
-        state,
-        { ratingMin: null, ratingMax: null },
-        { resetPage: true },
-      ),
     });
   }
 
@@ -224,27 +189,26 @@ export function LibraryControls({
           <HiddenLibraryParams state={state} omit={["sort", "perPage"]} />
           <label className="col-span-2 space-y-1 text-sm font-medium lg:col-span-1">
             Sort
-            <select name="sort" defaultValue={state.sort} className={fieldClassName}>
+            <Select name="sort" defaultValue={state.sort}>
               {LIBRARY_SORTS.map((sort) => (
                 <option key={sort} value={sort}>
                   {LIBRARY_SORT_LABELS[sort]}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label className="space-y-1 text-sm font-medium">
             Per page
-            <select
+            <Select
               name="perPage"
               defaultValue={String(state.perPage)}
-              className={fieldClassName}
             >
               {MOVIES_PER_PAGE_OPTIONS.map((size) => (
                 <option key={size} value={size}>
                   {size}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <Button type="submit" variant="outline" className="col-span-2 lg:col-span-1">
             Apply
@@ -284,17 +248,6 @@ export function LibraryControls({
             <List className="size-4" aria-hidden="true" />
             List
           </Link>
-          <Link
-            href={buildLibraryUrl(
-              state,
-              { favourite: "favourites" },
-              { resetPage: true },
-            )}
-            className={`${buttonVariants({ variant: "outline", size: "sm" })} col-span-2 w-full min-[520px]:w-auto`}
-          >
-            <Star className="size-4" aria-hidden="true" />
-            Favourites ({facets.counts.favourites})
-          </Link>
         </div>
       </div>
 
@@ -311,39 +264,35 @@ export function LibraryControls({
         <form
           method="get"
           action="/library"
-          className="grid gap-4 border-t p-4 sm:grid-cols-2 lg:grid-cols-4"
+          className="grid gap-4 border-t p-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           <HiddenLibraryParams
             state={state}
             omit={[
               "status",
               "watched",
-              "favourite",
               "genre",
               "director",
+              "actor",
               "year",
-              "yearFrom",
-              "yearTo",
-              "ratingMin",
-              "ratingMax",
             ]}
           />
 
           <label className="space-y-1 text-sm font-medium">
             Status
-            <select name="status" defaultValue={state.status} className={fieldClassName}>
+            <Select name="status" defaultValue={state.status}>
               <option value="all">All statuses</option>
-              {LIBRARY_MOVIE_STATUSES.map((status) => (
+              {SELECTABLE_LIBRARY_MOVIE_STATUSES.map((status) => (
                 <option key={status} value={status}>
                   {LIBRARY_MOVIE_STATUS_LABELS[status]}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="space-y-1 text-sm font-medium">
             Watched state
-            <select name="watched" defaultValue={state.watched} className={fieldClassName}>
+            <Select name="watched" defaultValue={state.watched}>
               {LIBRARY_WATCHED_FILTERS.map((value) => (
                 <option key={value} value={value}>
                   {watchedLabel(value)}
@@ -354,37 +303,19 @@ export function LibraryControls({
                       : ` (${facets.counts.all})`}
                 </option>
               ))}
-            </select>
-          </label>
-
-          <label className="space-y-1 text-sm font-medium">
-            Favourite
-            <select
-              name="favourite"
-              defaultValue={state.favourite}
-              className={fieldClassName}
-            >
-              {LIBRARY_FAVOURITE_FILTERS.map((value) => (
-                <option key={value} value={value}>
-                  {favouriteLabel(value)}
-                  {value === "favourites"
-                    ? ` (${facets.counts.favourites})`
-                    : ""}
-                </option>
-              ))}
-            </select>
+            </Select>
           </label>
 
           <label className="space-y-1 text-sm font-medium">
             Genre
-            <select name="genre" defaultValue={state.genre ?? ""} className={fieldClassName}>
+            <Select name="genre" defaultValue={state.genre ?? ""}>
               <option value="">All genres</option>
               {facets.genres.map((genre) => (
                 <option key={genre} value={genre}>
                   {genre}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="space-y-1 text-sm font-medium">
@@ -401,6 +332,16 @@ export function LibraryControls({
                 <option key={director} value={director} />
               ))}
             </datalist>
+          </label>
+
+          <label className="space-y-1 text-sm font-medium">
+            Actor
+            <Input
+              name="actor"
+              maxLength={150}
+              defaultValue={state.actor ?? ""}
+              placeholder="Any actor"
+            />
           </label>
 
           <label className="space-y-1 text-sm font-medium">
@@ -422,74 +363,7 @@ export function LibraryControls({
             </datalist>
           </label>
 
-          <fieldset className="grid grid-cols-2 gap-2">
-            <legend className="mb-1 text-sm font-medium">
-              Release-year range
-            </legend>
-            <Label className="sr-only" htmlFor="library-year-from">
-              Release year from
-            </Label>
-            <Input
-              id="library-year-from"
-              name="yearFrom"
-              type="number"
-              min={MIN_LIBRARY_RELEASE_YEAR}
-              max={new Date().getUTCFullYear() + 5}
-              step="1"
-              defaultValue={state.yearFrom ?? ""}
-              placeholder="From"
-            />
-            <Label className="sr-only" htmlFor="library-year-to">
-              Release year to
-            </Label>
-            <Input
-              id="library-year-to"
-              name="yearTo"
-              type="number"
-              min={MIN_LIBRARY_RELEASE_YEAR}
-              max={new Date().getUTCFullYear() + 5}
-              step="1"
-              defaultValue={state.yearTo ?? ""}
-              placeholder="To"
-            />
-            <p className="col-span-2 text-xs text-muted-foreground">
-              Exact year takes precedence over this range.
-            </p>
-          </fieldset>
-
-          <fieldset className="grid grid-cols-2 gap-2">
-            <legend className="mb-1 text-sm font-medium">
-              Personal-rating range
-            </legend>
-            <Label className="sr-only" htmlFor="library-rating-min">
-              Minimum personal rating
-            </Label>
-            <Input
-              id="library-rating-min"
-              name="ratingMin"
-              type="number"
-              min="0"
-              max="10"
-              step="0.1"
-              defaultValue={state.ratingMin ?? ""}
-              placeholder="Min"
-            />
-            <Label className="sr-only" htmlFor="library-rating-max">
-              Maximum personal rating
-            </Label>
-            <Input
-              id="library-rating-max"
-              name="ratingMax"
-              type="number"
-              min="0"
-              max="10"
-              step="0.1"
-              defaultValue={state.ratingMax ?? ""}
-              placeholder="Max"
-            />
-          </fieldset>
-
-          <div className="grid grid-cols-1 gap-2 sm:col-span-2 sm:grid-cols-2 lg:col-span-4 lg:flex lg:flex-wrap">
+          <div className="grid grid-cols-1 gap-2 sm:col-span-2 sm:grid-cols-2 lg:col-span-3 lg:flex lg:flex-wrap">
             <Button type="submit" className="w-full lg:w-auto">Apply filters</Button>
             <Button asChild type="button" variant="outline" className="w-full lg:w-auto">
               <Link href={buildClearLibraryFiltersUrl(state)}>
@@ -522,8 +396,8 @@ export function LibraryControls({
         </summary>
         <dl className="grid gap-3 border-t p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <dt className="font-semibold">Want to Watch</dt>
-            <dd className="mt-1 text-muted-foreground">Saved for sometime later.</dd>
+            <dt className="font-semibold">Saved</dt>
+            <dd className="mt-1 text-muted-foreground">Saved for sometime later without joining Watch Next.</dd>
           </div>
           <div>
             <dt className="font-semibold">Watch Next</dt>

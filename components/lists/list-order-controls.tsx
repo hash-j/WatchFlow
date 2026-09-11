@@ -24,7 +24,7 @@ export function ListOrderControls({
   );
 
   return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
+    <form action={action} className="grid grid-cols-2 items-center gap-2 lg:flex lg:flex-wrap">
       <input type="hidden" name="listMovieId" value={listMovieId} />
       <Button
         type="submit"
@@ -32,7 +32,7 @@ export function ListOrderControls({
         value="up"
         size="sm"
         variant="outline"
-        className="min-h-11"
+        className="min-h-11 w-full lg:w-auto"
         disabled={isPending || isFirst}
         aria-label={
           isFirst
@@ -50,7 +50,7 @@ export function ListOrderControls({
         value="down"
         size="sm"
         variant="outline"
-        className="min-h-11"
+        className="min-h-11 w-full lg:w-auto"
         disabled={isPending || isLast}
         aria-label={
           isLast

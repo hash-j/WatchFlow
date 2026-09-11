@@ -13,7 +13,7 @@ export const ResponsiveDialog = React.forwardRef<
   <dialog
     ref={ref}
     className={cn(
-      "max-h-[calc(100svh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-lg overflow-y-auto overscroll-contain rounded-2xl border border-border/70 bg-card p-0 text-card-foreground shadow-2xl backdrop:bg-foreground/45 backdrop:backdrop-blur-sm sm:max-h-[calc(100svh-2rem)] sm:w-[calc(100vw-2rem)]",
+      "max-h-[calc(100svh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-lg overflow-y-auto overscroll-contain rounded-2xl border border-border bg-surface-elevated p-0 text-card-foreground shadow-2xl backdrop:bg-black/65 backdrop:backdrop-blur-sm sm:max-h-[calc(100svh-2rem)] sm:w-[calc(100vw-2rem)]",
       className,
     )}
     onClick={(event) => {
@@ -58,7 +58,7 @@ export function DialogHeader({
   return (
     <div
       className={cn(
-        "relative border-b border-border/70 bg-card px-5 py-5 pr-14 sm:px-6 sm:py-6 sm:pr-16",
+        "relative border-b border-border bg-surface-elevated px-5 py-5 pr-14 sm:px-6 sm:py-6 sm:pr-16",
         className,
       )}
       {...props}
@@ -80,7 +80,7 @@ export function DialogFooter({
   return (
     <div
       className={cn(
-        "sticky bottom-0 flex flex-col-reverse gap-2 border-t border-border/70 bg-muted/70 p-4 backdrop-blur [&>*]:w-full sm:flex-row sm:justify-end sm:px-6 sm:[&>*]:w-auto",
+        "sticky bottom-0 flex flex-col-reverse gap-2 border-t border-border bg-surface-elevated/95 p-4 backdrop-blur [&>*]:w-full sm:flex-row sm:justify-end sm:px-6 sm:[&>*]:w-auto",
         className,
       )}
       {...props}

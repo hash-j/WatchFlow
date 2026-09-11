@@ -10,6 +10,13 @@ export const DEFAULT_MOVIE_STATUSES = [
 ] as const satisfies readonly LibraryMovieStatus[];
 export type DefaultMovieStatus = (typeof DEFAULT_MOVIE_STATUSES)[number];
 
+export const SELECTABLE_DEFAULT_MOVIE_STATUSES = [
+  "want_to_watch",
+  "watch_next",
+  "currently_watching",
+  "watched",
+] as const satisfies readonly DefaultMovieStatus[];
+
 export const LIBRARY_VIEWS = ["grid", "list"] as const;
 export type LibraryView = (typeof LIBRARY_VIEWS)[number];
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useState, useTransition } from "react";
-import { Search } from "lucide-react";
+import { LoaderCircle, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -44,9 +44,18 @@ export function OnboardingMovieSearchForm({ initialQuery }: { initialQuery: stri
           maxLength={120}
           aria-describedby={error ? "onboarding-query-error" : undefined}
         />
-        <Button type="submit" disabled={isPending} className="w-full sm:w-auto sm:min-w-32">
-          <Search aria-hidden="true" />
-          {isPending ? "Searching..." : "Search"}
+        <Button
+          type="submit"
+          disabled={isPending}
+          aria-busy={isPending}
+          className="w-full sm:w-32"
+        >
+          {isPending ? (
+            <LoaderCircle className="animate-spin" aria-hidden="true" />
+          ) : (
+            <Search aria-hidden="true" />
+          )}
+          {isPending ? "Searching" : "Search"}
         </Button>
       </div>
       <div className="min-h-6 pt-1" aria-live="polite">
@@ -55,7 +64,7 @@ export function OnboardingMovieSearchForm({ initialQuery }: { initialQuery: stri
             {error}
           </p>
         ) : isPending ? (
-          <p className="text-sm text-muted-foreground">Searching for movies...</p>
+          <p className="text-sm text-muted-foreground">Searching for movies</p>
         ) : null}
       </div>
     </form>

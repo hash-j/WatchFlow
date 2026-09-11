@@ -23,6 +23,7 @@ export type MovieManagementInput = {
   priority: unknown;
   wouldWatchAgain: unknown;
   watchedDate: unknown;
+  watchedDateProvided?: unknown;
   scheduledDate: unknown;
   scheduledTime: unknown;
   timezone: unknown;
@@ -36,6 +37,7 @@ export type ValidatedMovieManagement = {
   priority: number;
   wouldWatchAgain: boolean;
   watchedAt: string | null;
+  watchedAtProvided: boolean;
   scheduledFor: string | null;
   timezone: string | null;
   scheduleNote: string | null;
@@ -238,6 +240,8 @@ export function validateMovieManagementInput(
   const status = validateLibraryMovieStatus(input.status);
   const schedule =
     status === "scheduled" ? validateScheduleInput(input) : null;
+  const watchedAtProvided =
+    status === "watched" && input.watchedDateProvided === true;
 
   return {
     status,
@@ -245,7 +249,8 @@ export function validateMovieManagementInput(
     review: validateOptionalText(input.review, MAX_REVIEW_LENGTH, "Review"),
     priority: validatePriority(input.priority),
     wouldWatchAgain: validateWouldWatchAgain(input.wouldWatchAgain),
-    watchedAt: validateWatchedAt(input.watchedDate),
+    watchedAt: watchedAtProvided ? validateWatchedAt(input.watchedDate) : null,
+    watchedAtProvided,
     scheduledFor: schedule?.scheduledFor ?? null,
     timezone: schedule?.timezone ?? null,
     scheduleNote: schedule?.scheduleNote ?? null,

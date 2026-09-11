@@ -109,7 +109,7 @@ export function AppNavigation({
           >
             <h2
               id={groupId}
-              className="px-3 pb-1 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground/80"
+              className="px-3 pb-1 text-[0.6875rem] font-semibold uppercase tracking-wider text-sidebar-muted"
             >
               {group.label}
             </h2>
@@ -126,8 +126,9 @@ export function AppNavigation({
                     aria-current={current ? "page" : undefined}
                     onClick={onNavigate}
                     className={cn(
-                      "flex min-h-11 min-w-0 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      current && "bg-accent text-accent-foreground",
+                      "flex min-h-11 min-w-0 items-center gap-3 rounded-r-lg border-l-2 border-transparent px-3 py-2 text-sm font-medium text-sidebar-muted transition-[color,background-color,border-color] hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
+                      current &&
+                        "border-sidebar-active bg-sidebar-foreground/[0.06] text-sidebar-active",
                     )}
                   >
                     <Icon className="size-4 shrink-0" aria-hidden="true" />

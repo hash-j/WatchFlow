@@ -80,10 +80,10 @@ describe("Part 15.5C page purpose and first-use help", () => {
     const lists = source("app/(app)/lists/page.tsx");
     const picker = source("app/(app)/picker/page.tsx");
 
-    for (const status of ["Want to Watch", "Watch Next", "Scheduled", "Watched"]) {
+    for (const status of ["Saved", "Watch Next", "Scheduled", "Watched"]) {
       expect(library).toContain(status);
     }
-    expect(watchNext).toContain("separate from your broader Want to Watch");
+    expect(watchNext).toContain("separate from your broader Saved");
     expect(lists).toContain("unlike the ordered Watch Next queue");
     expect(picker).toContain("pick from your own Library");
   });

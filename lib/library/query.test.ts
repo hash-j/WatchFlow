@@ -41,11 +41,16 @@ describe("library URL search-parameter parsing", () => {
     "scheduled",
     "currently_watching",
     "watched",
-    "on_hold",
-    "dropped",
   ])("accepts the exact database status %s", (status) => {
     expect(parseLibrarySearchParams({ status }).state.status).toBe(status);
   });
+
+  it.each(["on_hold", "dropped"])(
+    "does not expose legacy status %s as a new filter selection",
+    (status) => {
+      expect(parseLibrarySearchParams({ status }).state.status).toBe("all");
+    },
+  );
 
   it("accepts watched, unwatched, and legacy filter parameters", () => {
     expect(parseLibrarySearchParams({ watched: "watched" }).state.watched).toBe(
@@ -65,23 +70,23 @@ describe("library URL search-parameter parsing", () => {
     ).toBe("unwatched");
   });
 
-  it.each(["favourites", "not-favourites"])(
-    "accepts favourite filter %s",
-    (favourite) => {
-      expect(parseLibrarySearchParams({ favourite }).state.favourite).toBe(
-        favourite,
-      );
-    },
-  );
-
-  it("trims genre and director filters", () => {
+  it("trims genre, director, and actor filters", () => {
     const state = parseLibrarySearchParams({
       genre: "  Science Fiction ",
       director: "  Christopher Nolan ",
+      actor: "  Cillian Murphy ",
     }).state;
 
     expect(state.genre).toBe("Science Fiction");
     expect(state.director).toBe("Christopher Nolan");
+    expect(state.actor).toBe("Cillian Murphy");
+  });
+
+  it("caps actor length with a safe warning", () => {
+    const result = parseLibrarySearchParams({ actor: "a".repeat(180) });
+
+    expect(result.state.actor).toHaveLength(150);
+    expect(result.warnings).toContain("Actor is limited to 150 characters.");
   });
 
   it("supports an exact four-digit year", () => {
@@ -90,71 +95,13 @@ describe("library URL search-parameter parsing", () => {
     );
   });
 
-  it("gives exact year precedence over a range", () => {
-    const state = parseLibrarySearchParams(
-      { year: "1999", yearFrom: "1980", yearTo: "2010" },
-      {},
-      2026,
-    ).state;
-
-    expect(state).toMatchObject({
-      year: 1999,
-      yearFrom: null,
-      yearTo: null,
-    });
-  });
-
-  it("supports a release-year range and ignores an inverted range", () => {
-    expect(
-      parseLibrarySearchParams(
-        { yearFrom: "1980", yearTo: "1999" },
-        {},
-        2026,
-      ).state,
-    ).toMatchObject({ yearFrom: 1980, yearTo: 1999 });
-
-    const invalid = parseLibrarySearchParams(
-      { yearFrom: "2020", yearTo: "1990" },
-      {},
-      2026,
-    );
-    expect(invalid.state).toMatchObject({ yearFrom: null, yearTo: null });
-    expect(invalid.warnings[0]).toMatch(/release-year range/i);
-  });
-
   it("rejects non-four-digit and unreasonable years without throwing", () => {
     const state = parseLibrarySearchParams(
-      { year: "99", yearFrom: "1887", yearTo: "2200" },
+      { year: "99" },
       {},
       2026,
     ).state;
-    expect(state).toMatchObject({
-      year: null,
-      yearFrom: null,
-      yearTo: null,
-    });
-  });
-
-  it("supports decimal personal-rating ranges", () => {
-    expect(
-      parseLibrarySearchParams({ ratingMin: "7.5", ratingMax: "9.8" }).state,
-    ).toMatchObject({ ratingMin: 7.5, ratingMax: 9.8 });
-  });
-
-  it("ignores invalid and inverted personal-rating ranges", () => {
-    expect(
-      parseLibrarySearchParams({ ratingMin: "-1", ratingMax: "11" }).state,
-    ).toMatchObject({ ratingMin: null, ratingMax: null });
-
-    const inverted = parseLibrarySearchParams({
-      ratingMin: "9",
-      ratingMax: "4",
-    });
-    expect(inverted.state).toMatchObject({
-      ratingMin: null,
-      ratingMax: null,
-    });
-    expect(inverted.warnings[0]).toMatch(/personal-rating range/i);
+    expect(state.year).toBeNull();
   });
 
   it("parses multiple filters together", () => {
@@ -163,25 +110,19 @@ describe("library URL search-parameter parsing", () => {
         q: "arrival",
         status: "watched",
         watched: "watched",
-        favourite: "favourites",
         genre: "Drama",
         director: "Denis Villeneuve",
-        yearFrom: "2010",
-        yearTo: "2020",
-        ratingMin: "8",
-        ratingMax: "10",
+        actor: "Amy Adams",
+        year: "2016",
       }).state,
     ).toMatchObject({
       q: "arrival",
       status: "watched",
       watched: "watched",
-      favourite: "favourites",
       genre: "Drama",
       director: "Denis Villeneuve",
-      yearFrom: 2010,
-      yearTo: 2020,
-      ratingMin: 8,
-      ratingMax: 10,
+      actor: "Amy Adams",
+      year: 2016,
     });
   });
 
@@ -190,7 +131,6 @@ describe("library URL search-parameter parsing", () => {
       {
         status: "private_other_user_status",
         watched: "yes",
-        favourite: "top-rated",
         sort: "random",
         view: "table",
         page: "-2",
@@ -202,7 +142,6 @@ describe("library URL search-parameter parsing", () => {
     expect(state).toMatchObject({
       status: "all",
       watched: "all",
-      favourite: "all",
       sort: DEFAULT_LIBRARY_SORT,
       view: "list",
       page: 1,
@@ -243,12 +182,10 @@ describe("library URL persistence and clearing", () => {
     q: "inception",
     status: "watched",
     watched: "watched",
-    favourite: "favourites",
     genre: "Science Fiction",
     director: "Christopher Nolan",
+    actor: "Leonardo DiCaprio",
     year: "2010",
-    ratingMin: "8",
-    ratingMax: "10",
     sort: "title_asc",
     view: "list",
     perPage: "48",
@@ -259,9 +196,9 @@ describe("library URL persistence and clearing", () => {
     const url = buildLibraryUrl(state, { page: 4 });
     expect(url).toContain("q=inception");
     expect(url).toContain("status=watched");
-    expect(url).toContain("favourite=favourites");
     expect(url).toContain("genre=Science+Fiction");
     expect(url).toContain("director=Christopher+Nolan");
+    expect(url).toContain("actor=Leonardo+DiCaprio");
     expect(url).toContain("sort=title_asc");
     expect(url).toContain("view=list");
     expect(url).toContain("perPage=48");
@@ -281,16 +218,15 @@ describe("library URL persistence and clearing", () => {
     expect(url).toContain("view=list");
     expect(url).toContain("perPage=48");
     expect(url).not.toContain("status=");
-    expect(url).not.toContain("favourite=");
     expect(url).not.toContain("genre=");
     expect(url).not.toContain("director=");
+    expect(url).not.toContain("actor=");
     expect(url).not.toContain("year=");
-    expect(url).not.toContain("rating");
     expect(url).not.toContain("page=");
   });
 
   it("counts distinct active filter groups", () => {
-    expect(countActiveLibraryFilters(state)).toBe(7);
+    expect(countActiveLibraryFilters(state)).toBe(6);
   });
 });
 
@@ -370,9 +306,9 @@ describe("library pagination calculation", () => {
     const state = parseLibrarySearchParams({
       q: "matrix",
       status: "watched",
-      favourite: "favourites",
       genre: "Science Fiction",
       director: "Lana Wachowski",
+      actor: "Keanu Reeves",
       sort: "title_asc",
       view: "list",
       page: "3",
@@ -384,9 +320,9 @@ describe("library pagination calculation", () => {
     expect(pagination.page).toBe(2);
     expect(url).toContain("q=matrix");
     expect(url).toContain("status=watched");
-    expect(url).toContain("favourite=favourites");
     expect(url).toContain("genre=Science+Fiction");
     expect(url).toContain("director=Lana+Wachowski");
+    expect(url).toContain("actor=Keanu+Reeves");
     expect(url).toContain("sort=title_asc");
     expect(url).toContain("view=list");
     expect(url).toContain("perPage=12");

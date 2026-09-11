@@ -29,6 +29,7 @@ import { MoviePoster } from "@/components/movies/movie-poster";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataScrollRegion, ResponsiveActions } from "@/components/ui/responsive-layout";
+import { Select } from "@/components/ui/select";
 import { escapeCsvCell } from "@/lib/csv/safety";
 import {
   CsvImportValidationError,
@@ -508,17 +509,17 @@ export function ImportWizard() {
                   <label htmlFor={`mapping-${field}`} className="text-sm font-medium">
                     {IMPORT_FIELD_LABELS[field]} {field === "title" ? <span className="text-destructive">*</span> : null}
                   </label>
-                  <select
+                  <Select
                     id={`mapping-${field}`}
                     value={mapping[field] ?? ""}
                     onChange={(event) => updateMapping(field, event.target.value)}
-                    className="mt-2 min-h-11 min-w-0 w-full max-w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    containerClassName="mt-2"
                   >
                     <option value="">Not imported</option>
                     {parsed.columns.map((column) => (
                       <option key={column.id} value={column.id}>{column.header}</option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               ))}
             </div>
@@ -608,7 +609,7 @@ export function ImportWizard() {
                     </div>
                   ) : null}
                   {row.importedStatus && row.status === null && !skippedRows[row.id] ? (
-                    <label className="mt-4 flex min-h-11 items-center gap-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"><input type="checkbox" checked={acceptedStatuses[row.id] === true} onChange={(event) => setAcceptedStatuses((current) => ({ ...current, [row.id]: event.target.checked }))} className="size-4" />Use Want to Watch instead of unrecognized status “{row.importedStatus}”.</label>
+                    <label className="mt-4 flex min-h-11 items-center gap-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"><input type="checkbox" checked={acceptedStatuses[row.id] === true} onChange={(event) => setAcceptedStatuses((current) => ({ ...current, [row.id]: event.target.checked }))} className="size-4" />Use Saved instead of unrecognized status “{row.importedStatus}”.</label>
                   ) : null}
                   <label className="mt-4 flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={skippedRows[row.id] === true} onChange={(event) => setSkippedRows((current) => ({ ...current, [row.id]: event.target.checked }))} className="size-4" />Skip this CSV row</label>
                 </CardContent>
@@ -637,11 +638,11 @@ export function ImportWizard() {
         <div className="mt-6 space-y-6">
           <Card><CardHeader><CardTitle>Import complete</CardTitle><p className="text-sm text-muted-foreground">Each row was handled independently, so successful movies remain saved if another row failed.</p></CardHeader><CardContent>
             <dl className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-              {[["Total", result.summary.total], ["Imported", result.summary.imported], ["Already in library", result.summary.alreadyInLibrary], ["Skipped", result.summary.skipped], ["Invalid", result.summary.invalid], ["Unmatched", result.summary.unmatched], ["Failed", result.summary.failed]].map(([label, value]) => <div key={label} className="rounded-lg bg-muted p-3"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 text-xl font-bold">{value}</dd></div>)}
+              {[["Total", result.summary.total], ["Imported", result.summary.imported], ["Already in library", result.summary.alreadyInLibrary], ["Skipped", result.summary.skipped], ["Invalid", result.summary.invalid], ["Unmatched", result.summary.unmatched], ["Failed", result.summary.failed]].map(([label, value]) => <div key={label} className="min-w-0 rounded-lg bg-muted p-3"><dt className="whitespace-nowrap text-xs text-muted-foreground">{label}</dt><dd className="mt-1 text-xl font-bold">{value}</dd></div>)}
             </dl>
             {result.warnings.map((warning) => <p key={warning} className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-950">{warning}</p>)}
           </CardContent></Card>
-          <DataScrollRegion label="Import result rows" className="bg-card"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-muted/60 text-xs uppercase text-muted-foreground"><tr><th className="px-4 py-3">CSV row</th><th className="px-4 py-3">Imported title</th><th className="px-4 py-3">TMDB title</th><th className="px-4 py-3">Result</th><th className="px-4 py-3">Message</th></tr></thead><tbody className="divide-y">{result.rows.map((row) => <tr key={`${row.rowId}-${row.rowNumber}`}><td className="px-4 py-3">{row.rowNumber}</td><td className="px-4 py-3 font-medium">{row.importedTitle}</td><td className="px-4 py-3">{row.matchedTitle ?? "—"}</td><td className="px-4 py-3">{row.status.replaceAll("_", " ")}</td><td className="px-4 py-3 text-muted-foreground">{row.message}</td></tr>)}</tbody></table></DataScrollRegion>
+          <DataScrollRegion label="Import result rows" className="bg-card"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-muted/60 text-xs uppercase text-muted-foreground"><tr><th className="px-4 py-3">CSV row</th><th className="px-4 py-3">Imported title</th><th className="px-4 py-3">TMDB title</th><th className="min-w-24 whitespace-nowrap px-4 py-3">Result</th><th className="px-4 py-3">Message</th></tr></thead><tbody className="divide-y">{result.rows.map((row) => <tr key={`${row.rowId}-${row.rowNumber}`}><td className="px-4 py-3">{row.rowNumber}</td><td className="px-4 py-3 font-medium">{row.importedTitle}</td><td className="px-4 py-3">{row.matchedTitle ?? "—"}</td><td className="min-w-24 whitespace-nowrap px-4 py-3 capitalize">{row.status.replaceAll("_", " ")}</td><td className="px-4 py-3 text-muted-foreground">{row.message}</td></tr>)}</tbody></table></DataScrollRegion>
           <ResponsiveActions><Button asChild><Link href="/library"><Library aria-hidden="true" />Open library</Link></Button><Button type="button" variant="outline" onClick={downloadFailureReport}><Download aria-hidden="true" />Download failure report</Button><Button type="button" variant="outline" onClick={copyFailureReport}><Copy aria-hidden="true" />Copy failure report</Button>{result.summary.unmatched + result.summary.failed > 0 ? <Button type="button" variant="outline" onClick={retryUnmatched}><RotateCcw aria-hidden="true" />Retry unmatched rows</Button> : null}<Button type="button" variant="ghost" onClick={resetImport}>Start another import</Button></ResponsiveActions>
         </div>
       ) : null}

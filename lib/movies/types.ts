@@ -44,14 +44,38 @@ export const LIBRARY_MOVIE_STATUSES = [
 
 export type LibraryMovieStatus = (typeof LIBRARY_MOVIE_STATUSES)[number];
 
+export const SELECTABLE_LIBRARY_MOVIE_STATUSES = [
+  "want_to_watch",
+  "watch_next",
+  "scheduled",
+  "currently_watching",
+  "watched",
+] as const satisfies readonly LibraryMovieStatus[];
+
+export const LEGACY_LIBRARY_MOVIE_STATUSES = [
+  "on_hold",
+  "dropped",
+] as const satisfies readonly LibraryMovieStatus[];
+
+export type LegacyLibraryMovieStatus =
+  (typeof LEGACY_LIBRARY_MOVIE_STATUSES)[number];
+
+export function isLegacyLibraryMovieStatus(
+  status: LibraryMovieStatus,
+): status is LegacyLibraryMovieStatus {
+  return (LEGACY_LIBRARY_MOVIE_STATUSES as readonly LibraryMovieStatus[]).includes(
+    status,
+  );
+}
+
 export const LIBRARY_MOVIE_STATUS_LABELS: Record<LibraryMovieStatus, string> = {
-  want_to_watch: "Want to Watch",
+  want_to_watch: "Saved",
   watch_next: "Watch Next",
   scheduled: "Scheduled",
   currently_watching: "Currently Watching",
   watched: "Watched",
-  on_hold: "On Hold",
-  dropped: "Dropped",
+  on_hold: "On Hold (legacy)",
+  dropped: "Dropped (legacy)",
 };
 
 export type LibraryMovie = {

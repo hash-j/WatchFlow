@@ -93,13 +93,6 @@ function WelcomeStep() {
   );
 }
 
-function progressMessage(count: number) {
-  if (count === 0) return "Add a few movies to make WatchFlow yours.";
-  if (count === 1) return "Nice start.";
-  if (count >= 3) return "Your library is taking shape.";
-  return "Two movies saved. Add another if you like.";
-}
-
 async function FirstMoviesStep({
   query,
   client,
@@ -135,20 +128,17 @@ async function FirstMoviesStep({
 
   return (
     <section className="rounded-2xl border bg-card p-4 shadow-sm sm:p-6 lg:p-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div>
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Build your first library</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             Search for a few movies you love, have watched, or want to watch. Three is a useful start, never a requirement.
           </p>
         </div>
-        <div className="shrink-0 rounded-lg bg-muted px-3 py-2 text-sm" role="status" aria-live="polite">
-          <span className="font-semibold">{libraryCount}</span> saved
-          <span className="block text-xs text-muted-foreground">Suggested: 3</span>
-        </div>
       </div>
-
-      <p className="mt-4 text-sm font-medium" role="status">{progressMessage(libraryCount)}</p>
+      <p className="sr-only" role="status" aria-live="polite">
+        {libraryCount} {libraryCount === 1 ? "movie" : "movies"} saved to your library
+      </p>
       <OnboardingMovieSearchForm initialQuery={query ?? ""} />
 
       {searchError ? (

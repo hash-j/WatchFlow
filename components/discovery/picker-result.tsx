@@ -122,7 +122,7 @@ export function PickerResult({
             </ul>
           </section>
 
-          <ResponsiveActions className="mt-6 items-start">
+          <ResponsiveActions className="mt-6 items-stretch [&>a]:min-h-11 [&>form]:flex [&>form]:min-w-0 [&>form]:flex-col [&>form>button]:w-full min-[420px]:items-start min-[420px]:[&>form]:w-auto min-[420px]:[&>form>button]:w-auto">
             <Link
               href={`/library/${movie.movieId}`}
               className={buttonVariants({

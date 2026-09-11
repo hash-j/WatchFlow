@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { FolderHeart } from "lucide-react";
+import { Clapperboard } from "lucide-react";
 import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
 import { redirect } from "next/navigation";
 
@@ -79,10 +79,9 @@ async function ListsContent({ searchParams }: ListsPageProps) {
 
       {lists.length === 0 ? (
         <div className="rounded-xl border border-dashed bg-card p-8 text-center sm:p-10">
-          <FolderHeart
-            className="mx-auto size-10 text-muted-foreground"
-            aria-hidden="true"
-          />
+          <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-rating text-rating-foreground shadow-sm">
+            <Clapperboard className="size-6" aria-hidden="true" />
+          </span>
           <h2 className="mt-4 text-xl font-semibold">
             You have not created any Lists yet.
           </h2>

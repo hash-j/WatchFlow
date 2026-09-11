@@ -1,58 +1,353 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-09
+Last updated: 2026-09-11
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Existing-account signup UX implemented for native Supabase errors; deployed `watchflow-dev` remains blocked by an obfuscated success response
-Current branch: `fix/signup-existing-account` at `a840cae` (`wip: implement WatchFlow cinema theme foundation`)
-Local status: the signup UX, auth regressions, guarded browser expectation, and this handoff update are uncommitted; no dependency, migration, policy, schema, hosted configuration, deployment, service-role lookup, or admin account lookup changed
-
+Current phase: Part 16F final local UI/UX acceptance is complete. All requested PDF UI/UX changes have been implemented and manually verified.
+Current branch: `ui-final-polish`.
+Current status: Part 16E Preview Acceptance remains PASS. Part 16F local acceptance is now PASS after final manual review of the requested UI/UX changes. The latest Add Movies dialog alignment issue was also corrected and verified. No database, migration, RLS, policy, schema, Auth, or hosted Supabase data changes were introduced by the final UI corrections.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
 
-## 2026-09-09 Existing-account signup UX
+## 2026-09-11 Part 16F final local UI/UX acceptance (PASS)
 
-- Implemented the requested native-error path for an already-confirmed signup.
-  Supabase Auth codes `user_already_exists` and `email_exists` are checked before
-  the compatibility-only message fallback (`User already registered` / already
+- Final result: **PART 16F LOCAL ACCEPTANCE PASS**.
+- All 34 PDF-audited outcomes were reviewed against the current implementation.
+- 32 implemented outcomes pass.
+- The two previously reported CSV/JSON 404 issues are not reproducible in the current implementation; both authenticated export endpoints return successfully.
+- The user manually reviewed the final affected UI across the requested WatchFlow surfaces and confirmed that all requested PDF changes are complete.
+- Final responsive and visual review covered the requested mobile, tablet, and desktop layouts together with light and dark themes.
+- The final Add Movies dialog alignment correction was completed and manually verified: field labels are left aligned, and movie titles and release years are left aligned consistently.
+- Previously accepted Actor filtering, status behavior, Watched Date persistence, Watched/Saved transitions, Library behavior, Watch Next, scheduling, custom lists, picker, onboarding, import, Settings, and export behavior remain preserved.
+- No database schema, migration, RPC, RLS, policy, grant, Auth flow, hosted Supabase configuration, or user-data change was introduced by the final UI acceptance work.
+- Part 16F local UI/UX work is complete. The next release step is to checkpoint the accepted local state and deploy the finalized changes to the isolated Preview environment for final Preview acceptance before Part 17.
+
+## 2026-09-11 Part 16F-B Batch 4 Settings, exports, and final cross-app polish
+
+- Removed the visible Preferred TMDB Language control from Settings Preferences
+  only. Onboarding retains its language selector and search behavior. The
+  authenticated preferences action reads the existing stored preference and
+  supplies that value to the existing full preference upsert, so a Settings
+  save cannot blank or reset the language field.
+- CSV and JSON export investigation found correctly grouped App Router GET
+  handlers, matching direct anchor targets, and both routes in the production
+  app-path manifest. Authenticated browser clicks returned `200` for both
+  download endpoints with no navigation to a 404. The PDF failure is therefore
+  not reproducible from the current route tree; the download attribute makes
+  the browser-download intent explicit without replacing the private,
+  no-store attachment architecture.
+- Expanded export response regression coverage and added Batch 4 Settings
+  source contracts. Focused Settings/export plus protected Batch 1-3 coverage
+  passed (12 files/102 tests); full Vitest passed (79 files/786 tests). Lint,
+  direct TypeScript, `git diff --check`, production build (37 routes, including
+  both dynamic export routes), and client-secret scan passed.
+- The in-app browser does not expose a saved-download file path for inspection,
+  so a real browser-download-file existence/size check remains a pre-production
+  manual QA item. The exact 1366x768 dark Settings viewport and full three-size
+  Settings matrix also remain manual QA items. No database schema, migration,
+  RPC, RLS, Auth, hosted Supabase configuration, deployment, or user data was
+  changed. Batch 4 remains an uncommitted review diff.
+
+## 2026-09-11 Part 16F-B Batch 3 onboarding, import, queue, schedule, lists, and picker polish
+
+- Onboarding no longer renders visible numeric step counters, duration copy,
+  TMDB canonical-language helper copy, or library saved/suggested summaries.
+  Existing progress and result counts remain available to assistive technology.
+  Movie search has an icon-led, disabled, stable-width `Searching` state.
+- Import result status cells are kept on one line within the existing
+  scrollable table region. Watch Next, list rows, ordering controls, removal
+  action, the Add Movies filters, and picker filters/results now use the
+  requested mobile-first layout contracts while retaining their existing data
+  and mutation behavior. The shared schedule `Select` controls were preserved.
+- Added source-contract regression coverage for the Batch 3 visual and
+  responsive requirements. No database schema, migration, RPC, RLS, Auth,
+  Supabase configuration, dependency, hosted deployment, or user data was
+  changed. Batch 3 remains an uncommitted review diff; Batch 4 has not begun.
+- Validation: `git diff --check`, lint, direct TypeScript, the focused 14-file
+  159-test selection, full Vitest (78 files/783 tests), production build (37
+  routes), and the client-secret scan (507 browser artifacts) passed.
+  Authenticated visual inspection covered Watch Next, Schedule, Lists, Add
+  Movies, and Picker at 390x844 and 820x1180 in both themes, plus 1366x768 in
+  light mode (dark desktop was inspected at the native 1280x720 viewport).
+  The completed QA account could not be returned to onboarding, and generating
+  an import-results state would mutate user data; those two states are covered
+  by source contracts and automated tests rather than a live mutation.
+
+## 2026-09-11 Part 16F-B Batch 2B Library and movie-detail polish
+
+- The Library grid now becomes a compact two-column layout from 360px while
+  retaining poster, title, year, rating, status, favourite, and removal
+  controls. Titles clamp to two lines, secondary spacing is reduced, actions
+  keep a consistent full-width 44px minimum target, and long content cannot
+  force horizontal overflow.
+- The mobile List view now uses a poster-left/content-right row with its
+  actions in the content column; Priority is hidden only on narrow screens.
+  Tablet and desktop retain the spacious three-column row architecture.
+- Removed the duplicated green Watched overlay from posters. Status remains
+  available through the existing text-and-icon badge below the movie metadata.
+  Both grid cards and list rows use the shared status accent contract; Watched
+  is the only green border treatment, while other statuses keep their existing
+  distinct or neutral accents.
+- Favourite and removal controls now share stable sizing/alignment. The
+  initial removal action is a clearly destructive red outline with a
+  movie-specific accessible label; the destructive confirmation remains
+  unchanged.
+- Selection mode has a contained responsive header, visibly bordered Clear
+  Selection and Exit Selection controls, and an aligned status/action toolbar
+  that stacks at mobile, balances into two columns at tablet, and aligns into
+  one row at wide desktop. Current-page selection, confirmation, and bulk
+  mutation behavior are unchanged.
+- The movie-detail Custom Lists header now owns explicit minimum-width and
+  wrapping constraints. Create New List is full-width on narrow screens and
+  intrinsic-width from `sm`, preventing the control and long list content from
+  escaping the card.
+- Single-movie deletion now carries the server-rendered title through the
+  existing action, normalizes control characters/whitespace, caps it at 160
+  characters, and returns `<title> was removed from your library.` Detail
+  removal preserves its `/library` redirect and adds a sanitized success
+  notice there. Empty or invalid titles use a generic safe fallback.
+- Persistent regression coverage adds 11 tests for removal-message
+  normalization and the Batch 2B grid/list/status/action/selection/custom-list
+  contracts, while retaining Batch 2A Actor, selectable-status, watched-date,
+  owner-scoping, and queue coverage. Focused tests passed 3 files/32 tests;
+  the combined Batch 2B/Watched Date regression selection passed 6 files/66
+  tests; the full suite passed 77 files/774 tests.
+- Browser QA rendered the production components in Chromium for grid, list,
+  detail custom lists, and selected-state toolbar at 390x844, 820x1180, and
+  1366x768 in light and dark. All 24 cases passed horizontal-overflow and
+  control-visibility/border checks, and every capture was visually inspected.
+  The named success notice was also inspected on the real authenticated local
+  Library without deleting or altering user data.
+  The temporary public fixture, spec, captures, and test results were removed
+  or moved out of the repository after inspection.
+- Final validation passes: `git diff --check`; `npm run lint`;
+  `npx tsc --noEmit`; focused Vitest; `npx vitest run` with 77 files/774 tests;
+  `npm run build` with all 37 routes; and `npm run scan:client-secrets` across
+  507 browser artifacts. The sandboxed build could not fetch Geist; the
+  permitted network-enabled rerun passed.
+- No database schema, migration, RPC, RLS, grant, Auth/Supabase configuration,
+  filter semantics, status storage, queue behavior, watched-date semantics,
+  dependency, hosted deployment, Batch 3/4, commit, or push change was made.
+  Batch 2B remains an uncommitted review diff on `ui-final-polish`.
+
+## 2026-09-11 Part 16F-B Batch 2A Watched Date persistence regression
+
+- Authenticated localhost reproduction on an existing Watched movie confirmed
+  that the owner-scoped v2 RPC stored the submitted calendar date correctly.
+  The fresh server payload contained
+  `watchedAt: "2026-09-08T00:00:00+00:00"`, and a hard reload rendered
+  `2026-09-08`; the write, row mapping, and PostgreSQL preservation semantics
+  were therefore not the failure.
+- Root cause: `MovieManagementForm` initialized controlled status and
+  watched-date state from server props only once. After a successful Server
+  Action refresh, the component instance retained its prior local values, and
+  Next's client route cache restored that stale instance when revisiting the
+  movie. On a first date save this appeared as a blank field even though
+  `watched_at` was populated.
+- The action state now remains in a stable outer component while a keyed inner
+  fields component remounts whenever the persisted row version/status/date
+  changes. This reconciles controlled form values after save without
+  effect-driven state writes and keeps the success announcement visible.
+- Added `getWatchedDateInput` to validate and extract the stored calendar-date
+  prefix for native `<input type="date">` values. It preserves the intended
+  calendar day without timezone conversion and rejects localized, impossible,
+  or malformed values.
+- Manual localhost QA passed: date save remained visible after success;
+  Library navigation and client-side reopen restored the date; Watched → Saved
+  hid the field without clearing the stored date; Saved → Watched restored it;
+  and an explicit empty Watched save wrote `NULL`. The test movie was restored
+  to its original Watched/blank-date state.
+- Regression coverage now locks the full stored-timestamp read path, date-input
+  normalization, v2 RPC watched-date arguments, refreshed-form key, explicit
+  clearing, non-Watched/unrelated preservation, owner scoping, Actor behavior,
+  and existing status contracts.
+- Validation passes: `git diff --check`; `npm run lint`; `npx tsc --noEmit`;
+  focused watched-date/management coverage with 6 files and 59 tests;
+  `npx vitest run` with 76 files and 763 tests; `npm run build` with all 37
+  routes; and `npm run scan:client-secrets` across 507 browser artifacts. The
+  sandboxed build could not fetch Geist; the permitted network-enabled rerun
+  passed.
+- No migration, RLS, grant, Auth, Actor-filter, queue, status-domain, hosted
+  Preview/Production, deployment, dependency, commit, push, or Batch 2B change
+  was made. The regression fix remains uncommitted on `ui-final-polish`.
+
+## 2026-09-10 Part 16F-B Batch 2A Library data and status behavior
+
+- Added forward-only migration
+  `supabase/migrations/202609100001_part_16fb_library_actor_status.sql`.
+  `watchflow_library_rows_v2` is a separate security-invoker RPC, avoiding
+  PostgREST overload ambiguity. It normalizes `p_actor`, matches normalized
+  string and object-name entries in `movies.main_cast`, and applies the actor
+  predicate inside the `auth.uid()`-owned relation before PostgREST exact
+  count, stable ordering, and range pagination. Existing query, status,
+  watched, genre, director, and exact-year filters remain combinable.
+- The visible Library filter set no longer includes Favourite, personal-rating
+  range, or release-year range. Actor is now a dedicated filter rather than an
+  alias for general search. Exact release year and the other useful filters
+  remain, with the filter grid rebalanced responsively. Favourite data and
+  favourite-first sorting are unchanged.
+- The stored status domain is unchanged. New selectors expose **Saved**
+  (`want_to_watch`), Watch Next, Scheduled where supported, Currently Watching,
+  and Watched; bulk and Settings controls retain their previously narrower
+  valid subsets. Saved does not enqueue a movie. `on_hold` and `dropped` remain
+  accepted by compatibility mappings, statistics, exports, and the database,
+  but cannot be newly selected. Existing legacy values remain readable without
+  rewrite and use neutral muted labels/treatment.
+- Watched Date is rendered only while the movie-management status is Watched.
+  Its controlled local value survives switching away and back. The action now
+  distinguishes an omitted field from an explicit empty Watched field, and the
+  new owner-scoped `watchflow_update_library_movie_v2` preserves `watched_at`
+  for non-Watched and unrelated edits while allowing an explicit clear when
+  Watched. Existing schedule validation, queue locking/normalization, and
+  `auth.uid()` ownership checks are preserved.
+- Added/updated regression coverage for actor parsing/RPC arguments, exact
+  count and pagination contracts, owner isolation, combined filters, removed
+  fields, Saved compatibility, legacy selection/read/export behavior,
+  conditional/restored/cleared Watched Date handling, and Saved queue safety.
+  A local-only PostgreSQL behavior script at
+  `supabase/testing/part16fb_library_actor_status.sql` verifies real actor
+  results, stable pages, cross-user isolation, legacy-row readability,
+  watched-date preservation/clearing, and non-queued Saved state.
+- Validation passes: `git diff --check`; `npm run lint`; `npx tsc --noEmit`;
+  focused Library/query/management tests with 10 files and 164 tests;
+  `npx vitest run` with 76 files and 759 tests; `npm run build`; and
+  `npm run scan:client-secrets` across 507 browser artifacts. A disposable
+  PostgreSQL 18 cluster also passed the repository bootstrap, all migrations
+  from zero in filename order, development readiness, production security
+  audit, and the Batch 2A behavior smoke; the cluster and fixtures were then
+  removed.
+- No hosted Preview/Production configuration or data was changed. No Library
+  card/list/mobile visual redesign, onboarding work, Batch 2B, Batch 3, Batch
+  4, commit, push, deployment, schema-domain deletion, legacy-row rewrite, or
+  RLS/grant weakening was performed. The remaining PDF work stays assigned to
+  Batches 2B, 3, and 4.
+
+## 2026-09-10 Part 16F-B Batch 1 shared controls and cross-app UI fixes
+
+- Added `components/ui/select.tsx` as the canonical native Select. It preserves
+  browser semantics and consumer-controlled labels while providing a roughly
+  44px minimum target, deliberate left/right padding, a vertically centered
+  pointer-events-none chevron, semantic surface/text colors, responsive type,
+  and shared focus-visible, disabled, and invalid states.
+- Migrated all 29 user-facing native selects across 10 consumers: onboarding,
+  Library filters and bulk actions, movie management, scheduling, CSV import,
+  Add Movies, Movie Picker, and Settings preferences/notifications. Existing
+  names, values, default values, change handlers, options, and behavior were
+  preserved; no page-specific select class treatment remains in those
+  consumers.
+- Native option menus now receive semantic surface/foreground colors and an
+  explicit light/dark `color-scheme`. The closed control and its options no
+  longer depend on page-specific hard-coded colors. Because an authenticated
+  local session was unavailable, opened Windows Chrome option menus still need
+  authenticated manual inspection before visual acceptance can be claimed.
+- Removed the forced foreground color from the global `::selection` rule while
+  retaining its visible primary-tint background. Native Ctrl+A remains
+  untouched. A real Chromium regression passed in light and dark themes at
+  390x844, 820x1180, and 1366x768 for normal page selection, input selection,
+  and horizontal-overflow safety.
+- Focused Select/theme coverage validates native semantics, forwarded form
+  attributes, chevron spacing/alignment, shared focus/disabled/invalid styles,
+  the ten migrated consumers, light/dark option tokens, and the corrected
+  global selection rule. The full Vitest suite passes with 75 files and 751
+  tests; the additional Playwright selection suite passes 6 tests.
+- Repository validation passes: `git diff --check`, `npm run lint`,
+  `npx tsc --noEmit`, focused Select/theme tests, `npx vitest run`,
+  `npm run build` with all 37 routes, and `npm run scan:client-secrets` across
+  507 browser artifacts. The sandboxed build could not fetch the Geist font;
+  its permitted network-enabled rerun passed.
+- The protected responsive browser sweep was attempted at all three requested
+  viewports but stopped during login because the guarded QA account returned
+  **Confirm your email before signing in**. It never reached protected routes,
+  so dropdown opening, arrow placement in live forms, and protected-route
+  console/network health are not recorded as passing. No auth gate was bypassed
+  and no hosted Supabase state was changed.
+- No route, database, migration, RLS, policy, schema, hosted configuration,
+  authentication behavior, business logic, or user data changed. The approved
+  actor RPC, status presentation/selection work, Library redesign, export
+  investigation, Settings language removal, and every other page-specific PDF
+  item remain deferred to Batches 2-4. No commit, push, deploy, or Batch 2 work
+  was performed.
+
+## 2026-09-08 Part 16F-A theme foundation and core-component polish
+
+- Implemented the cinema-inspired visual foundation as an uncommitted,
+  visual-only change on `ui-theme-polish`. Shared semantic CSS variables and
+  Tailwind mappings now own the light/dark page, surface, border, text, primary,
+  sidebar, and rating colors. Light mode uses the requested `#FAFAFA` page,
+  `#141414` sidebar/primary action, white cards, `#E5E7EB` borders, `#111827`
+  body text, and `#6B7280` secondary text. Dark mode uses the requested
+  `#121212` page, black sidebar, `#1E1E1E` cards, `#2C2C2C` borders,
+  `#F5F5F5`/`#A0A0A0` text, and `#F5C518` primary action. Existing green,
+  amber, and red semantic status treatments remain distinct.
+- Polished shared buttons, cards, inputs, checkboxes, dialogs, responsive
+  surfaces, and empty states without changing their behavior or public APIs.
+  Default actions are near-black in light mode and cinema yellow with dark text
+  in dark mode; outlines remain neutral. Empty states use a compact yellow
+  cinema icon tile instead of a large decorative color block.
+- Desktop and mobile navigation retain their existing information architecture
+  but now use near-black/black chrome, restrained muted labels, a yellow brand
+  accent, and a thin yellow left rail for the active destination. Focus styling
+  remains visible against the dark sidebar.
+- The reusable movie-rating treatment is now a compact yellow star pill with
+  dark text and an accessible rating label. Search, library, recommendations,
+  detail, and picker consumers continue to use the shared component. Poster-card
+  redesign remains explicitly deferred.
+- Public browser QA passed in both light and dark themes for `/`,
+  `/auth/login`, and `/auth/sign-up` at 390x844, 820x1180, and 1366x768. Every
+  case rendered the expected theme palette with no horizontal overflow; visual
+  inspection of the home and login surfaces passed, the UI theme control
+  switched and persisted correctly, `/auth/sign-up` rendered rather than 404,
+  and browser warning/error logs were empty.
+- Authenticated local visual QA across the protected-route matrix remains
+  pending. The repository has no local-only authenticated fixture or mock-auth
+  mode, and this milestone explicitly forbids touching hosted Supabase data.
+  The deployed Preview cannot validate these uncommitted styles. Protected
+  source contracts and focused UI tests pass, but that is not represented as a
+  substitute for browser coverage; Part 16F-A is therefore not marked fully
+  accepted yet.
+- Repository validation passed: `npm run lint`; `npx tsc --noEmit`;
+  `npx vitest run` with 74 files/734 tests; `npm run build` with all 37 routes;
+  `npm run scan:client-secrets` across 507 browser artifacts; and
+  `git diff --check`. The focused theme/auth/discovery/library/lists/statistics
+  suite also passed with 7 files/85 tests.
+- No database, authentication flow, authorization, business logic, server
+  action, route, dependency, migration, policy, schema, hosted configuration,
+  or deployment changed. Tag `part-16e-preview-acceptance-pass` remains on
+  `f985a99` and was not moved. No commit or push was created, and Part 16F-B and
+  Part 17 have not begun.
+
+## 2026-09-09 Existing-account signup and login feedback finalization
+
+- The existing-account signup UX preserves native Supabase Auth error handling:
+  `user_already_exists` and `email_exists` are handled before the
+  compatibility-only message fallback (`User already registered` / already
   exists). The Server Action returns a typed `account_exists` result before
-  pending-verification state is written and before the verification redirect.
-- The signup page now renders the shared destructive `Feedback` pattern with
-  the accessible alert title **Account already exists**, the safe message
-  **An account with this email already exists.**, and visible **Sign in instead**
-  and **Forgot password?** actions. Generic provider failures remain safely
-  mapped and raw provider details are not exposed.
-- New-signup success still writes only the pending email state and redirects to
-  `/auth/verify-email`. Verification, resend/countdown, onboarding, login,
-  recovery, and session implementations were not changed. No account lookup,
-  service-role/admin Auth call, database migration, dependency, or hosted Auth
-  setting was added or changed.
-- Automated coverage now locks both native codes, the legacy fallback, safe
+  pending-verification state is written and before any verification redirect.
+- Existing confirmed-account signup now shows the explicit **Account already
+  exists** feedback path, with the safe message **An account with this email
+  already exists.**, instead of navigating to verification. The UI retains the
+  visible **Sign in instead** and **Forgot password?** actions; generic provider
+  failures remain safely mapped and raw provider details are not exposed.
+- Invalid login credentials now use the professional, privacy-safe **We couldnt
+  sign you in** feedback state. This does not introduce a service-role or admin
+  lookup, an account-enumeration endpoint, or client-side inference from an
+  obfuscated Auth response.
+- New-signup success still writes only the pending-email state and redirects to
+  `/auth/verify-email`. OTP verification, resend/countdown, recovery, session,
+  onboarding, and established login behavior remain preserved.
+- Automated regression coverage locks the native codes, legacy fallback, safe
   generic failures, absence of pending state/redirect on existing-user errors,
-  the prominent error UI/actions, and preservation of the successful signup
-  verification path. Focused Auth Vitest passed 6 files/59 tests; the full suite
-  passed 73 files/738 tests; ESLint and direct TypeScript passed; the production
-  build passed with all 37 routes; the client-secret scan passed across 507
-  browser artifacts; and `git diff --check` passed.
-- Live `watchflow-dev` confirmed-account QA is **BLOCKED by hosted behavior**,
-  not passed. The guarded signup navigated to `/auth/verify-email`. A direct
-  public-client probe returned exactly `error: null`, a user object, no session,
-  and zero identities—the Supabase obfuscated/fake signup response—instead of
-  `user_already_exists` or `email_exists`. The strict browser regression
-  therefore failed as intended. No client-only inference from the identities
-  shape and no account-existence lookup was added; the hosted project must
-  actually return the native error for the new UI path to execute.
-- A new live email/OTP account and an existing-unconfirmed account were not
-  created during this change, so those two manual email-delivery journeys are
-  not newly claimed. Their implementation was left unchanged and the existing
-  OTP/recovery automated regressions pass. Re-run the guarded existing-user
-  browser case after correcting/verifying the hosted Supabase Auth behavior,
-  then complete the new-user and unconfirmed-user email QA.
-- Changes remain uncommitted and unpushed. The `ui-theme-polish` branch was not
-  checked out, modified, or merged.
+  prominent existing-account and invalid-login feedback, and the successful
+  signup verification path.
+- Earlier live QA observed Supabase's obfuscated/fake signup success response
+  rather than the native existing-user errors. Live authentication QA was later
+  resolved by correcting the Supabase Auth phone-confirmation configuration and
+  deploying the finalized signup/login feedback changes. The finalized
+  authentication changes were merged into `master`, pushed, deployed to
+  Preview, and verified before returning to `ui-theme-polish`.
 
 ## 2026-09-08 Part 16E password-recovery persistence investigation
 

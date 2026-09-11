@@ -3,13 +3,13 @@ import Link from "next/link";
 
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-svh bg-muted/30 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(440px,0.8fr)]">
-      <section className="hidden min-h-svh overflow-hidden bg-primary p-10 text-primary-foreground lg:flex lg:flex-col lg:justify-between xl:p-14">
+    <main className="min-h-svh bg-background lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(440px,0.8fr)]">
+      <section className="hidden min-h-svh overflow-hidden bg-sidebar p-10 text-sidebar-foreground lg:flex lg:flex-col lg:justify-between xl:p-14">
         <Link
           href="/"
-          className="inline-flex w-fit items-center gap-3 rounded-md text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-background"
+          className="inline-flex w-fit items-center gap-3 rounded-md text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active"
         >
-            <span className="grid size-10 place-items-center rounded-xl bg-primary-foreground/10">
+          <span className="grid size-10 place-items-center rounded-xl bg-sidebar-active text-rating-foreground">
             <Film aria-hidden="true" className="size-5" />
           </span>
           WatchFlow
@@ -17,20 +17,20 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
 
         <div className="max-w-xl space-y-8">
           <div className="space-y-4">
-            <p className="inline-flex items-center gap-2 text-sm font-medium text-primary-foreground/75">
-              <Sparkles aria-hidden="true" className="size-4" />
+            <p className="inline-flex items-center gap-2 text-sm font-medium text-sidebar-muted">
+              <Sparkles aria-hidden="true" className="size-4 text-sidebar-active" />
               Your movie life, organized
             </p>
             <h2 className="text-balance text-4xl font-semibold leading-tight xl:text-5xl">
               Spend less time choosing. Enjoy more great movies.
             </h2>
-            <p className="max-w-lg text-base leading-7 text-primary-foreground/75">
+            <p className="max-w-lg text-base leading-7 text-sidebar-muted">
               Keep a private library, shape your Watch Next queue, and plan the
               perfect movie night in one calm place.
             </p>
           </div>
 
-          <ul className="grid gap-4 text-sm text-primary-foreground/85 sm:grid-cols-2">
+          <ul className="grid gap-4 text-sm text-sidebar-foreground/85 sm:grid-cols-2">
             <li className="flex items-center gap-3">
               <ListVideo aria-hidden="true" className="size-5" />
               One private movie library
@@ -42,7 +42,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           </ul>
         </div>
 
-        <p className="text-xs text-primary-foreground/60">Private by design. Built for movie lovers.</p>
+        <p className="text-xs text-sidebar-muted">Private by design. Built for movie lovers.</p>
       </section>
 
       <section className="flex min-h-svh min-w-0 flex-col px-4 py-6 sm:px-6 sm:py-8 lg:justify-center lg:px-10">

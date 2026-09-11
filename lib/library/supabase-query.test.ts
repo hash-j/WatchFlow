@@ -71,12 +71,10 @@ describe("private Supabase library page query", () => {
       q: "  50%_,(film)\\ ",
       status: "watched",
       watched: "watched",
-      favourite: "favourites",
       genre: "Drama",
       director: "Director",
+      actor: "Actor Name",
       year: "2010",
-      ratingMin: "8.5",
-      ratingMax: "10",
       page: "2",
       perPage: "12",
     }).state;
@@ -84,19 +82,15 @@ describe("private Supabase library page query", () => {
     await queryOwnedLibraryPage(client, state);
 
     expect(rpc).toHaveBeenCalledWith(
-      "watchflow_library_rows",
+      "watchflow_library_rows_v2",
       {
         p_query: "50%_,(film)\\",
         p_status: "watched",
         p_watched: true,
-        p_favourite: true,
         p_genre: "Drama",
         p_director: "Director",
+        p_actor: "Actor Name",
         p_year: 2010,
-        p_year_from: null,
-        p_year_to: null,
-        p_rating_min: 8.5,
-        p_rating_max: 10,
       },
       { count: "exact" },
     );
@@ -206,7 +200,7 @@ describe("library query session and preference reuse", () => {
       error: null,
     });
     const rpc = vi.fn((name: string) =>
-      name === "watchflow_library_rows"
+      name === "watchflow_library_rows_v2"
         ? rows
         : Promise.resolve({
             data: {
@@ -236,4 +230,3 @@ describe("library query session and preference reuse", () => {
     expect(result.pagination.totalItems).toBe(1);
   });
 });
-

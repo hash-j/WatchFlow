@@ -18,6 +18,7 @@ import {
   bulkUpdateStatusAction,
 } from "@/app/(app)/actions/library";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import {
   DialogBody,
   DialogCloseButton,
@@ -134,6 +135,7 @@ function ConfirmationDialog({
         ref={triggerRef}
         type="button"
         variant={destructive ? "destructive" : "default"}
+        className="w-full xl:w-auto"
         onClick={() => dialogRef.current?.showModal()}
       >
         {destructive ? (
@@ -245,22 +247,21 @@ function BulkActions({
   }, [onResult, removeState]);
 
   return (
-    <MobileToolbar className="grid gap-3 sm:rounded-lg sm:border sm:bg-muted/30 sm:p-3 lg:grid-cols-[minmax(12rem,1fr)_auto_auto] lg:items-end">
-      <label className="space-y-1 text-sm font-medium">
+    <MobileToolbar className="grid items-end gap-3 sm:grid-cols-2 sm:rounded-lg sm:border sm:bg-muted/30 sm:p-3 xl:grid-cols-[minmax(15rem,1fr)_auto_auto]">
+      <label className="min-w-0 space-y-1 text-sm font-medium sm:col-span-2 xl:col-span-1">
         Change status
-        <select
+        <Select
           value={targetStatus}
           onChange={(event) =>
             setTargetStatus(event.target.value as BulkLibraryStatus)
           }
-          className="flex min-h-11 min-w-0 w-full max-w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {BULK_LIBRARY_STATUSES.map((status) => (
             <option key={status} value={status}>
               {LIBRARY_MOVIE_STATUS_LABELS[status]}
             </option>
           ))}
-        </select>
+        </Select>
         <span className="block text-xs font-normal text-muted-foreground">
           Scheduled is unavailable in bulk because every schedule needs a date
           and time.
@@ -372,7 +373,13 @@ function LibrarySelectionWorkspaceState({
   return (
     <SelectionContext.Provider value={context}>
       <div className="mb-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          className={
+            isSelecting
+              ? "flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3 shadow-sm"
+              : "flex flex-wrap items-center gap-2"
+          }
+        >
           {!isSelecting ? (
             <Button type="button" variant="outline" onClick={() => setIsSelecting(true)}>
               <CheckSquare2 className="size-4" aria-hidden="true" />
@@ -406,7 +413,7 @@ function LibrarySelectionWorkspaceState({
               <Button
                 type="button"
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 disabled={orderedSelectedIds.length === 0}
                 onClick={() => setSelectedIds(new Set())}
               >
@@ -415,7 +422,7 @@ function LibrarySelectionWorkspaceState({
               <Button
                 type="button"
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 onClick={() => {
                   setSelectedIds(new Set());
                   setIsSelecting(false);

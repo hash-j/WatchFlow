@@ -14,13 +14,12 @@ export function LibraryMovieCard({ item }: { item: LibraryMovieSummary }) {
   const { movie } = item;
   const year = getMovieReleaseYear(movie.releaseDate);
   const statusVisual = MOVIE_STATUS_VISUALS[item.status];
-  const StatusIcon = statusVisual.icon;
 
   return (
     <article
       data-tmdb-id={movie.tmdbId}
       className={cn(
-        "flex min-w-0 flex-col rounded-xl border bg-card p-2.5 shadow-sm sm:p-3",
+        "flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card p-2 shadow-sm sm:p-3",
         statusVisual.cardAccentClasses,
       )}
     >
@@ -30,38 +29,29 @@ export function LibraryMovieCard({ item }: { item: LibraryMovieSummary }) {
       >
         <div className="relative">
           <MoviePoster path={movie.posterPath} title={movie.title} />
-          {item.status === "watched" ? (
-            <span
-              className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50/95 px-2 py-1 text-xs font-semibold text-emerald-800 shadow-sm dark:border-emerald-900 dark:bg-emerald-950/95 dark:text-emerald-200"
-              aria-label="Watched movie"
-            >
-              <StatusIcon className="size-3.5" aria-hidden="true" />
-              Watched
-            </span>
-          ) : null}
           {item.favourite ? (
-            <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full border bg-background/95 px-2 py-1 text-xs font-semibold shadow-sm">
+            <span className="absolute bottom-2 left-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-1 rounded-full border bg-background/95 px-2 py-1 text-xs font-semibold shadow-sm">
               <Star className="size-3.5 fill-current" aria-hidden="true" />
               Favourite
             </span>
           ) : null}
         </div>
-        <div className="px-1 pb-2 pt-4">
-          <h2 className="break-words text-sm font-semibold leading-tight group-hover:underline sm:text-base">
+        <div className="px-1 pb-2 pt-3 sm:pt-4">
+          <h2 className="line-clamp-2 break-words text-sm font-semibold leading-tight group-hover:underline sm:text-base">
             {movie.title}
           </h2>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm text-muted-foreground">
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1.5 sm:mt-2 sm:gap-2">
+            <span className="text-xs text-muted-foreground sm:text-sm">
               {year ?? "Date unavailable"}
             </span>
             <MovieRating rating={movie.voteAverage} />
           </div>
-          <div className="mt-3">
+          <div className="mt-2 sm:mt-3">
             <MovieStatusBadge status={item.status} />
           </div>
         </div>
       </Link>
-      <div className="mt-auto border-t px-1 pt-3">
+      <div className="mt-auto border-t px-1 pt-2.5 sm:pt-3">
         <LibraryItemActions
           userMovieId={item.libraryId}
           movieId={item.movie.id}
