@@ -3,14 +3,45 @@
 Last updated: 2026-09-11
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16F-B Batch 4 Settings, exports, and final cross-app polish is implemented and remains uncommitted on `ui-final-polish`.
+Current phase: Part 16F final local UI/UX acceptance is incomplete: the reconciliation found environment and evidence blockers, with no implementation changes made during acceptance.
 Current branch: `ui-final-polish`.
-Current status: Part 16E Preview Acceptance remains PASS. All Part 16F-B Batch 1-3 checkpoints exist through `part-16fb-batch3-verified`. Batch 4 removes the Settings-only language selector while retaining its stored value on other preference saves, and confirms the existing private CSV/JSON route handlers are valid direct-download endpoints. No hosted configuration or user data was changed.
+Current status: Part 16E Preview Acceptance remains historical PASS. Part 16F-B Batches 1-4 are committed through `4a8b911e2ca983f2d6554c25d5a0b524f9e09da2`; the final local acceptance result is recorded below. No hosted configuration or user data was changed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-11 Part 16F final local UI/UX acceptance (FAIL)
+
+- Re-rendered and reconciled the complete 27-page `WatchFlow_Changes.pdf`
+  against the committed Batch 1-4 implementation and its regression evidence.
+  The 34 PDF outcomes are accounted for in the final acceptance report; the
+  reported CSV/JSON 404s are not reproducible from the present authenticated
+  route tree, where both direct-download endpoints return `200`.
+- Fresh public browser coverage passed for native Ctrl+A selection and
+  horizontal-overflow safety at 390x844, 820x1180, and 1366x768 in both themes
+  (6/6). A serial rerun also passed the valid-login diagnostic and the 320x568
+  public responsive case. The combined public auth/protected/responsive run
+  nevertheless exposed a confirmed existing-account signup failure: the local
+  Supabase Auth response did not provide the native existing-user error required
+  for the friendly signup alert, so the protected regression gate is not met.
+- The failure is not safely repairable in the UI without changing hosted Auth
+  configuration or using an account-existence lookup, both outside this
+  acceptance task and contrary to the product security constraints. No auth,
+  migration, database, RLS, hosted configuration, deployment, or user-data
+  change was made.
+- Final acceptance is also blocked by missing fresh, authenticated full
+  390x844/820x1180/1366x768 light-and-dark page coverage and by the absence of
+  inspectable saved browser-download artifacts for CSV and JSON. Historical
+  Batch checks substantiate much of this surface but do not satisfy the complete
+  current matrix. Repository history also records Preview acceptance activity,
+  so the requested assertion that Preview has not been updated cannot be
+  independently confirmed from local evidence.
+- The only Part 16F-B migration remains
+  `202609100001_part_16fb_library_actor_status.sql`; Batches 2B, 3, and 4 added
+  no migrations. Acceptance made no working-tree implementation change and no
+  commit or push.
 
 ## 2026-09-11 Part 16F-B Batch 4 Settings, exports, and final cross-app polish
 

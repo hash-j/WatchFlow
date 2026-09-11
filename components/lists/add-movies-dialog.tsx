@@ -152,7 +152,7 @@ export function AddMoviesDialog({
             className="grid items-end gap-3 rounded-xl border bg-muted/30 p-3 sm:grid-cols-2 lg:grid-cols-[minmax(14rem,1.6fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_auto]"
             >
             <input type="hidden" name="add" value="1" />
-            <div className="space-y-1 sm:col-span-2 lg:col-span-1">
+            <div className="space-y-1 text-left sm:col-span-2 lg:col-span-1">
               <Label htmlFor={`list-picker-query-${listId}`}>
                 Search your library
               </Label>
@@ -166,7 +166,7 @@ export function AddMoviesDialog({
                 className="min-h-11"
               />
             </div>
-            <label className="space-y-1 text-sm font-medium">
+            <label className="space-y-1 text-left text-sm font-medium">
               Status
               <Select
                 name="listStatus"
@@ -180,7 +180,7 @@ export function AddMoviesDialog({
                 ))}
               </Select>
             </label>
-            <label className="space-y-1 text-sm font-medium">
+            <label className="space-y-1 text-left text-sm font-medium">
               Favourite
               <Select
                 name="listFavourite"
@@ -316,7 +316,7 @@ export function AddMoviesDialog({
                             sizes="64px"
                           />
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 text-left">
                           <p className="break-words text-sm font-semibold">
                             {candidate.title}
                           </p>
