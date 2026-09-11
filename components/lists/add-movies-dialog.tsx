@@ -149,10 +149,10 @@ export function AddMoviesDialog({
             action={basePath}
             role="search"
             onSubmit={() => setSelectedIds(new Set())}
-            className="grid gap-3 rounded-xl border bg-muted/30 p-3 md:grid-cols-[minmax(12rem,1fr)_12rem_11rem_auto]"
-          >
+            className="grid items-end gap-3 rounded-xl border bg-muted/30 p-3 sm:grid-cols-2 lg:grid-cols-[minmax(14rem,1.6fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_auto]"
+            >
             <input type="hidden" name="add" value="1" />
-            <div className="space-y-1">
+            <div className="space-y-1 sm:col-span-2 lg:col-span-1">
               <Label htmlFor={`list-picker-query-${listId}`}>
                 Search your library
               </Label>
@@ -190,7 +190,10 @@ export function AddMoviesDialog({
                 <option value="favourites">Favourites only</option>
               </Select>
             </label>
-            <Button type="submit" className="self-end">
+            <Button
+              type="submit"
+              className="w-full sm:col-span-2 sm:justify-self-end lg:col-span-1 lg:w-auto"
+            >
               <Search className="size-4" aria-hidden="true" />
               Search
             </Button>

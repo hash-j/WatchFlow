@@ -176,7 +176,7 @@ export function MoviePicker({
               {activeFilterCount} active
             </span>
           </summary>
-          <div className="grid gap-5 border-t p-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid items-end gap-5 border-t p-4 sm:grid-cols-2 lg:grid-cols-3">
           <label className="grid gap-2 text-sm font-medium">
             Genre
             <Select

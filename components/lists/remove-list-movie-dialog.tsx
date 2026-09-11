@@ -44,8 +44,8 @@ export function RemoveListMovieDialog({
         ref={triggerRef}
         type="button"
         size="sm"
-        variant="ghost"
-        className="min-h-11 text-destructive hover:text-destructive"
+        variant="outline"
+        className="min-h-11 w-full border-destructive/50 text-destructive hover:border-destructive hover:bg-destructive/10 hover:text-destructive lg:w-auto"
         onClick={() => dialogRef.current?.showModal()}
         aria-label={`Remove ${title} from ${listName}`}
       >

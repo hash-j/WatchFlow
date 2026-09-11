@@ -54,19 +54,19 @@ async function WatchNextQueue() {
         {queue.map((item, index) => (
           <li
             key={item.libraryId}
-            className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)] gap-4 rounded-xl border bg-card p-4 shadow-sm md:grid-cols-[2.5rem_5rem_minmax(0,1fr)_auto] md:items-center"
+            className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] gap-3 rounded-xl border bg-card p-3 shadow-sm sm:grid-cols-[6rem_minmax(0,1fr)] sm:gap-4 sm:p-4 md:grid-cols-[2.5rem_5rem_minmax(0,1fr)_auto] md:items-center"
           >
-            <span className="grid size-10 place-items-center rounded-full bg-muted text-sm font-semibold">
+            <span className="hidden size-10 place-items-center rounded-full bg-muted text-sm font-semibold md:grid">
               {index + 1}
             </span>
-            <div className="col-start-2 row-start-1 w-full max-w-28 md:col-start-auto md:row-start-auto md:w-20">
+            <div className="col-start-1 row-span-2 row-start-1 w-full md:col-start-auto md:row-span-1 md:row-start-auto md:w-20">
               <MoviePoster
                 path={item.movie.posterPath}
                 title={item.movie.title}
                 sizes="80px"
               />
             </div>
-            <div className="col-start-2 min-w-0 md:col-start-auto">
+            <div className="col-start-2 min-w-0 self-start md:col-start-auto md:self-auto">
               <Link
                 href={`/library/${item.movie.id}`}
                 className="font-semibold hover:underline"
@@ -77,7 +77,7 @@ async function WatchNextQueue() {
                 Priority {item.priority} · Position {index + 1}
               </p>
             </div>
-            <div className="col-start-2 min-w-0 md:col-start-auto">
+            <div className="col-start-2 min-w-0 self-end md:col-start-auto md:self-auto">
               <QueueControls
                 libraryId={item.libraryId}
                 isFirst={index === 0}

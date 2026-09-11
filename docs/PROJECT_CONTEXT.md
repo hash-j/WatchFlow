@@ -3,14 +3,39 @@
 Last updated: 2026-09-11
 Last updated by: Codex  
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16F-B Batch 2B Library and movie-detail visual/responsive polish is implemented and remains uncommitted on `ui-final-polish`. Batches 3 and 4 have not started.
+Current phase: Part 16F-B Batch 3 onboarding, import, Watch Next, schedule, lists, and picker polish is implemented and remains uncommitted on `ui-final-polish`. Batch 4 has not started.
 Current branch: `ui-final-polish`.
-Current status: Part 16E Preview Acceptance remains PASS. Theme, Batch 1, and Batch 2A checkpoints exist at `part-16f-theme-verified`, `part-16fb-batch1-verified`, and `part-16fb-batch2a-verified`; the Batch 2A watched-date regression fix is committed at `6a6ea55`. Batch 2B removes duplicated poster status UI, polishes responsive grid/list/action/selection/custom-list layouts, and provides sanitized named removal feedback after the detail redirect. Automated validation and exact-size browser QA pass; no hosted environment or user data was changed.
+Current status: Part 16E Preview Acceptance remains PASS. Theme, Batch 1, and Batch 2A checkpoints exist at `part-16f-theme-verified`, `part-16fb-batch1-verified`, and `part-16fb-batch2a-verified`; the Batch 2A watched-date regression fix is committed at `6a6ea55`. Batch 3 removes the prescribed onboarding and import visual clutter, makes search/loading and responsive queue/list/picker actions clearer, and retains the shared schedule controls. Automated validation and authenticated responsive browser QA pass without hosted changes or user-data mutations.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-11 Part 16F-B Batch 3 onboarding, import, queue, schedule, lists, and picker polish
+
+- Onboarding no longer renders visible numeric step counters, duration copy,
+  TMDB canonical-language helper copy, or library saved/suggested summaries.
+  Existing progress and result counts remain available to assistive technology.
+  Movie search has an icon-led, disabled, stable-width `Searching` state.
+- Import result status cells are kept on one line within the existing
+  scrollable table region. Watch Next, list rows, ordering controls, removal
+  action, the Add Movies filters, and picker filters/results now use the
+  requested mobile-first layout contracts while retaining their existing data
+  and mutation behavior. The shared schedule `Select` controls were preserved.
+- Added source-contract regression coverage for the Batch 3 visual and
+  responsive requirements. No database schema, migration, RPC, RLS, Auth,
+  Supabase configuration, dependency, hosted deployment, or user data was
+  changed. Batch 3 remains an uncommitted review diff; Batch 4 has not begun.
+- Validation: `git diff --check`, lint, direct TypeScript, the focused 14-file
+  159-test selection, full Vitest (78 files/783 tests), production build (37
+  routes), and the client-secret scan (507 browser artifacts) passed.
+  Authenticated visual inspection covered Watch Next, Schedule, Lists, Add
+  Movies, and Picker at 390x844 and 820x1180 in both themes, plus 1366x768 in
+  light mode (dark desktop was inspected at the native 1280x720 viewport).
+  The completed QA account could not be returned to onboarding, and generating
+  an import-results state would mutate user data; those two states are covered
+  by source contracts and automated tests rather than a live mutation.
 
 ## 2026-09-11 Part 16F-B Batch 2B Library and movie-detail polish
 

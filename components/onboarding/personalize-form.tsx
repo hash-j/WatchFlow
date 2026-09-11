@@ -104,7 +104,7 @@ export function PersonalizeForm({
               name="preferredLanguage"
               defaultValue={preferences.preferredLanguage}
               aria-invalid={Boolean(state.fieldErrors.preferredLanguage)}
-              aria-describedby="onboarding-language-help onboarding-language-error"
+              aria-describedby="onboarding-language-error"
             >
               {SUPPORTED_LANGUAGES.map((language) => (
                 <option key={language} value={language}>
@@ -112,9 +112,6 @@ export function PersonalizeForm({
                 </option>
               ))}
             </Select>
-            <p id="onboarding-language-help" className="text-xs leading-5 text-muted-foreground">
-              Used when searching TMDB. Movie details stay in WatchFlow&apos;s canonical format.
-            </p>
             <FieldError errors={state.fieldErrors.preferredLanguage} id="onboarding-language-error" />
           </div>
         </div>
