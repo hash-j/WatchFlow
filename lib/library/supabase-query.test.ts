@@ -229,4 +229,67 @@ describe("library query session and preference reuse", () => {
     expect(result.state).toMatchObject({ view: "list", perPage: 48 });
     expect(result.pagination.totalItems).toBe(1);
   });
+
+  it("starts independent facets while preferences are still loading", async () => {
+    const events: string[] = [];
+    let resolvePreferences: ((value: {
+      defaultLibraryView: "grid";
+      moviesPerPage: 24;
+    }) => void) | undefined;
+    const preferences = new Promise<{
+      defaultLibraryView: "grid";
+      moviesPerPage: 24;
+    }>((resolve) => {
+      resolvePreferences = resolve;
+    });
+    const rows = createRowsBuilder({ data: [], count: 0, error: null });
+    const rpc = vi.fn((name: string) => {
+      events.push(name);
+      return name === "watchflow_library_rows_v2"
+        ? rows
+        : Promise.resolve({
+            data: {
+              genres: [],
+              directors: [],
+              years: [],
+              counts: { all: 0, watched: 0, unwatched: 0, favourites: 0 },
+            },
+            error: null,
+          });
+    });
+    createClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: "verified-user-id" } },
+          error: null,
+        }),
+      },
+      rpc,
+    });
+    readUserPreferencesMock.mockImplementation(() => {
+      events.push("preferences");
+      return preferences;
+    });
+
+    const resultPromise = getLibraryPageData({ actor: "Actor Name" });
+    await vi.waitFor(() => {
+      expect(events).toEqual([
+        "preferences",
+        "watchflow_library_filter_options",
+      ]);
+    });
+    resolvePreferences?.({ defaultLibraryView: "grid", moviesPerPage: 24 });
+    await resultPromise;
+
+    expect(events).toEqual([
+      "preferences",
+      "watchflow_library_filter_options",
+      "watchflow_library_rows_v2",
+    ]);
+    expect(rpc).toHaveBeenCalledWith(
+      "watchflow_library_rows_v2",
+      expect.objectContaining({ p_actor: "Actor Name" }),
+      { count: "exact" },
+    );
+  });
 });

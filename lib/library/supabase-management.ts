@@ -157,7 +157,7 @@ async function moveQueueMovie(
 
 export async function scheduleAuthenticatedUserMovie(
   client: SupabaseClient,
-  userId: string,
+  _userId: string,
   libraryId: string,
   input: {
     scheduledFor: string;
@@ -165,21 +165,6 @@ export async function scheduleAuthenticatedUserMovie(
     scheduleNote: string | null;
   },
 ) {
-  const { data: current, error: lookupError } = await client
-    .from("user_movies")
-    .select("id, movie_id")
-    .eq("id", libraryId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (lookupError) {
-    throwUserMovieUpdateError("scheduled movie ownership lookup failed", lookupError);
-  }
-
-  if (!current) {
-    return null;
-  }
-
   const { data, error } = await client.rpc("watchflow_schedule_movie", {
     p_library_id: libraryId,
     p_scheduled_for: input.scheduledFor,
@@ -218,13 +203,7 @@ export async function scheduleAuthenticatedUserMovie(
     return null;
   }
 
-  return {
-    movieId:
-      typeof current.movie_id === "string" ||
-      typeof current.movie_id === "number"
-        ? String(current.movie_id)
-        : "",
-  };
+  return { movieId: "" };
 }
 
 async function scheduleMovie(

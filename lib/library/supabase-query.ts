@@ -135,14 +135,16 @@ export async function getLibraryPageData(
     throw new AuthenticationRequiredError();
   }
 
-  const preferences = await readUserPreferences(client, user.id);
+  const preferencesPromise = readUserPreferences(client, user.id);
+  const facetsPromise = readOwnedLibraryFacets(client);
+  const preferences = await preferencesPromise;
   const parsed = parseLibrarySearchParams(rawSearchParams, {
     defaultLibraryView: preferences.defaultLibraryView,
     moviesPerPage: preferences.moviesPerPage,
   });
   const [page, facets] = await Promise.all([
     queryOwnedLibraryPage(client, parsed.state),
-    readOwnedLibraryFacets(client),
+    facetsPromise,
   ]);
 
   return {

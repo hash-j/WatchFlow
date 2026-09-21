@@ -4,16 +4,11 @@ import { CalendarDays, Dices, ListOrdered, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
-import { listLibraryMovies } from "@/lib/library/service";
-import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
-import {
-  compareLocalDate,
-  normalizeTimeZone,
-} from "@/lib/library/timezone";
+import { getDashboardData } from "@/lib/library/supabase-overview";
+import { normalizeTimeZone } from "@/lib/library/timezone";
 import type { LibraryMovie } from "@/lib/movies/types";
 import { getAuthContext } from "@/lib/supabase/auth";
 import { formatUserDateTime } from "@/lib/settings/formatting";
-import { getCurrentUserPreferences } from "@/lib/settings/supabase-settings";
 import { DEFAULT_USER_PREFERENCES } from "@/lib/settings/types";
 
 function DashboardLoading() {
@@ -63,47 +58,11 @@ function MovieList({
 }
 
 async function DashboardContent() {
-  const [authContext, movies, savedPreferences] = await Promise.all([
-    getAuthContext(),
-    listLibraryMovies(createSupabaseLibraryDependencies()),
-    getCurrentUserPreferences(),
-  ]);
-  const preferences = savedPreferences ?? DEFAULT_USER_PREFERENCES;
+  const authContext = await getAuthContext();
   const { user, profile, profileLoadFailed, profileName } = authContext;
   const timezone = normalizeTimeZone(profile?.timezone);
-  const queue = movies
-    .filter((item) => item.status === "watch_next")
-    .sort(
-      (left, right) =>
-        (left.queuePosition ?? Number.MAX_SAFE_INTEGER) -
-        (right.queuePosition ?? Number.MAX_SAFE_INTEGER),
-    );
-  const scheduledToday = movies
-    .filter(
-      (item) =>
-        item.status === "scheduled" &&
-        item.scheduledFor &&
-        compareLocalDate(
-          item.scheduledFor,
-          normalizeTimeZone(item.scheduleTimezone, timezone),
-        ) === 0,
-    )
-    .sort((left, right) =>
-      (left.scheduledFor ?? "").localeCompare(right.scheduledFor ?? ""),
-    );
-  const recentlyAdded = [...movies]
-    .sort((left, right) =>
-      (right.addedAt ?? "").localeCompare(left.addedAt ?? ""),
-    )
-    .slice(0, 4);
-  const recentlyWatched = movies
-    .filter((item) => item.status === "watched")
-    .sort((left, right) =>
-      (right.watchedAt ?? right.updatedAt ?? "").localeCompare(
-        left.watchedAt ?? left.updatedAt ?? "",
-      ),
-    )
-    .slice(0, 4);
+  const data = await getDashboardData(user.id, timezone);
+  const preferences = data.preferences ?? DEFAULT_USER_PREFERENCES;
 
   return (
     <div className="space-y-8">
@@ -128,13 +87,13 @@ async function DashboardContent() {
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <Button asChild className="min-h-12 justify-start">
-            <Link href={queue.length > 0 ? "/watch-next" : "/search"}>
-              {queue.length > 0 ? (
+            <Link href={data.nextMovie.length > 0 ? "/watch-next" : "/search"}>
+              {data.nextMovie.length > 0 ? (
                 <ListOrdered className="size-4" aria-hidden="true" />
               ) : (
                 <Search className="size-4" aria-hidden="true" />
               )}
-              {queue.length > 0 ? "Open Watch Next" : "Search for a Movie"}
+              {data.nextMovie.length > 0 ? "Open Watch Next" : "Search for a Movie"}
             </Link>
           </Button>
           <Button asChild variant="outline" className="min-h-12 justify-start">
@@ -159,7 +118,7 @@ async function DashboardContent() {
               Your viewing overview
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {movies.length} {movies.length === 1 ? "movie" : "movies"} in your Library
+              {data.libraryCount} {data.libraryCount === 1 ? "movie" : "movies"} in your Library
             </p>
           </div>
           <Button asChild variant="ghost" size="sm">
@@ -170,7 +129,7 @@ async function DashboardContent() {
           <article className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
             <h3 className="font-semibold">Next movie</h3>
             <MovieList
-              items={queue.slice(0, 1)}
+              items={data.nextMovie}
               emptyMessage="Nothing is in Watch Next. Add a Library movie when you plan to watch it soon."
               detail={() => "First in Watch Next"}
             />
@@ -178,7 +137,7 @@ async function DashboardContent() {
           <article className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
             <h3 className="font-semibold">Scheduled today</h3>
             <MovieList
-              items={scheduledToday}
+              items={data.scheduledToday}
               emptyMessage="Nothing is planned for today."
               detail={(item) =>
                 item.scheduledFor
@@ -195,14 +154,14 @@ async function DashboardContent() {
           <article className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
             <h3 className="font-semibold">Recently added</h3>
             <MovieList
-              items={recentlyAdded}
+              items={data.recentlyAdded}
               emptyMessage="Your Library is empty. Search for a movie to get started."
             />
           </article>
           <article className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
             <h3 className="font-semibold">Recently watched</h3>
             <MovieList
-              items={recentlyWatched}
+              items={data.recentlyWatched}
               emptyMessage="No watched movies yet. Mark a movie as Watched to build recent activity."
               detail={(item) =>
                 item.personalRating !== null

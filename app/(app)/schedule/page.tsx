@@ -5,12 +5,11 @@ import { CalendarClock } from "lucide-react";
 import { ScheduleMovieForm } from "@/components/movies/schedule-movie-form";
 import { Button } from "@/components/ui/button";
 import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
-import { listLibraryMovies } from "@/lib/library/service";
 import {
   getScheduleTimezone,
   groupScheduledMovies,
 } from "@/lib/library/schedule";
-import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
+import { getSchedulePageData } from "@/lib/library/supabase-overview";
 import {
   getLocalDateInput,
   isValidTimeZone,
@@ -19,7 +18,6 @@ import {
 import type { LibraryMovie } from "@/lib/movies/types";
 import { getAuthContext } from "@/lib/supabase/auth";
 import { formatUserDateTime } from "@/lib/settings/formatting";
-import { getCurrentUserPreferences } from "@/lib/settings/supabase-settings";
 import {
   DEFAULT_USER_PREFERENCES,
   type DateFormat,
@@ -92,12 +90,9 @@ function ScheduleSection({
 }
 
 async function ScheduleWorkspace() {
-  const [movies, authContext, savedPreferences] = await Promise.all([
-    listLibraryMovies(createSupabaseLibraryDependencies()),
-    getAuthContext(),
-    getCurrentUserPreferences(),
-  ]);
-  const preferences = savedPreferences ?? DEFAULT_USER_PREFERENCES;
+  const authContext = await getAuthContext();
+  const data = await getSchedulePageData(authContext.user.id);
+  const preferences = data.preferences ?? DEFAULT_USER_PREFERENCES;
   const profileTimezoneValue = authContext.profile?.timezone;
   const profileTimezone =
     typeof profileTimezoneValue === "string" &&
@@ -105,11 +100,14 @@ async function ScheduleWorkspace() {
       ? profileTimezoneValue
       : null;
   const timezone = normalizeTimeZone(profileTimezone);
-  const { today, upcoming, past } = groupScheduledMovies(movies, timezone);
+  const { today, upcoming, past } = groupScheduledMovies(
+    data.scheduledMovies,
+    timezone,
+  );
   const hasScheduledMovies =
     today.length + upcoming.length + past.length > 0;
 
-  if (movies.length === 0) {
+  if (data.movieOptions.length === 0) {
     return (
       <div className="mt-8 rounded-xl border bg-card px-4 py-8 text-center shadow-sm sm:p-10">
         <CalendarClock className="mx-auto size-9 text-muted-foreground" aria-hidden="true" />
@@ -130,10 +128,7 @@ async function ScheduleWorkspace() {
     <div className="mt-8 grid min-w-0 gap-8 xl:grid-cols-[22rem_minmax(0,1fr)]">
       <div>
         <ScheduleMovieForm
-          movies={movies.map((item) => ({
-            libraryId: item.libraryId,
-            title: item.movie.title,
-          }))}
+          movies={data.movieOptions}
           profileTimezone={profileTimezone}
           defaultDate={getLocalDateInput(new Date().toISOString(), timezone)}
         />

@@ -1,16 +1,68 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-12
-Last updated by: Hashim / manual Preview acceptance  
+Last updated: 2026-09-21
+Last updated by: Codex / Part 18A Batch 1 implementation
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 16F is complete. The finalized WatchFlow UI/UX polish has passed local acceptance and deployed Preview acceptance.
-Current branch: `master`.
-Current status: Part 16E Preview Acceptance remains PASS. Part 16F local and deployed Preview acceptance are now PASS. All requested PDF UI/UX changes were implemented and manually verified, the Batch 2A migration is available to the Preview application, and the finalized Preview deployment passed targeted functional, responsive, theme, Auth, Library, Watched Date, Watch Next, Schedule, Lists, Picker, Settings, and export verification. Part 17 has not begun.
+Current phase: Part 18A performance and reliability work; Batch 1 is implemented locally.
+Current branch: `part-18a-core-reliability`.
+Current status: Part 17 Production Launch remains PASS. Part 18A Batch 1 now contains only the accepted Dashboard, Schedule, Library-waterfall, and schedule-mutation query optimizations. Validation and guarded development browser QA pass; the changes remain uncommitted and unpushed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-21 Part 18A Performance Fix Batch 1
+
+- Dashboard no longer reads and joins the complete Library. After verified
+  claims provide the owner ID, it performs explicit-column reads for the exact
+  Library count, first Watch Next item, a bounded current-time schedule window,
+  four recent additions, and two four-row recently-watched candidate sets that
+  preserve the existing `watched_at`/`updated_at` fallback ordering. Preferences
+  run concurrently on the same authenticated SSR client; RLS and explicit
+  `user_id` filters remain in force.
+- Schedule now separates its data access into an all-scheduled display read and
+  a minimal selector read (`user_movies.id`, ordering timestamp, related movie
+  ID/title). It no longer transfers full personal/movie rows for every Library
+  item. Existing timezone grouping, form behavior, and schedule RPC semantics
+  are unchanged.
+- Library now starts the owner-derived facets RPC alongside the preference read
+  immediately after its single `auth.getUser()` completes. The rows RPC starts
+  after preferences determine the default view/page size, while the facets
+  request remains in flight. RPC names, Actor/filter/sort/pagination/count
+  arguments, mapping, and favourite/status behavior are unchanged.
+- The standalone Schedule mutation now performs one authenticated
+  `watchflow_schedule_movie` RPC instead of an ownership SELECT followed by the
+  RPC. The existing security-invoker RPC still derives ownership from
+  `auth.uid()`, returns false for missing/foreign rows, validates input, updates
+  the profile timezone and owned relationship, and normalizes the queue.
+- Structural performance evidence: Dashboard changes from one unrestricted
+  full-row/full-movie Library transfer to six purpose-specific `user_movies`
+  reads with minimal columns and bounded widget candidates; Schedule changes
+  from one unrestricted full-row/full-movie transfer to two purpose-specific
+  reads; Library removes the preferences-before-facets waterfall; scheduling
+  changes from two database operations to one. No millisecond improvement is
+  claimed because no repeatable before/after timing harness was introduced.
+- Regression coverage adds targeted Supabase query contracts, Dashboard widget
+  mapping/limits/current-day behavior, Schedule display/selector separation,
+  Library concurrency with Actor parameter preservation, RPC-only scheduling
+  ownership handling, and guarded browser navigation/mutation cleanup. Watched
+  Date and the existing Part 16F/17 contracts remain covered by the full suite.
+- Validation passes: `git diff --check`; ESLint; direct TypeScript; focused
+  Vitest (6 files/50 tests); full Vitest (80 files/790 tests); production build
+  (37 routes, including `/auth/sign-up`); and client-secret scan (507 browser
+  artifacts). The first sandboxed build could not fetch Geist; the permitted
+  network-enabled rerun passed.
+- Guarded browser QA against the exact development Supabase URL pin passed with
+  QA User B: Dashboard, Library, and Schedule normal navigation plus a newly
+  controlled movie scheduling mutation and confirmed cleanup (2 tests). QA
+  User A was unavailable because that account currently requires email
+  confirmation; no User A mutation ran.
+- No migration, schema, RLS, policy, grant, Auth flow, queue-normalization,
+  cache/revalidation redesign, dependency, hosted Production, deployment,
+  commit, or push change was made. Remaining Part 18 audit items, including
+  queue normalization, Picker/Recommendations, Statistics, Auth architecture,
+  caching, and CSV Import V2, were not started.
 
 ## 2026-09-12 Part 17 Production Launch Acceptance (PASS)
 

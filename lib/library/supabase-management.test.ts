@@ -36,27 +36,6 @@ const input: ValidatedMovieManagement = {
   scheduleNote: null,
 };
 
-function createBuilder(result: { data: unknown; error: unknown }) {
-  const builder = {
-    select: vi.fn(),
-    update: vi.fn(),
-    eq: vi.fn(),
-    not: vi.fn(),
-    order: vi.fn(),
-    limit: vi.fn(),
-    maybeSingle: vi.fn().mockResolvedValue(result),
-  };
-
-  builder.select.mockReturnValue(builder);
-  builder.update.mockReturnValue(builder);
-  builder.eq.mockReturnValue(builder);
-  builder.not.mockReturnValue(builder);
-  builder.order.mockReturnValue(builder);
-  builder.limit.mockReturnValue(builder);
-
-  return builder;
-}
-
 beforeEach(() => {
   createClientMock.mockReset();
 });
@@ -225,15 +204,8 @@ describe("authenticated Supabase movie updates", () => {
   });
 
   it("schedules an owned row through one atomic scheduling RPC", async () => {
-    const lookup = createBuilder({
-      data: { id: "owned-row-id", movie_id: 42 },
-      error: null,
-    });
     const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
-    const client = {
-      from: vi.fn().mockReturnValue(lookup),
-      rpc,
-    } as unknown as SupabaseClient;
+    const client = { rpc } as unknown as SupabaseClient;
 
     await expect(
       scheduleAuthenticatedUserMovie(
@@ -246,10 +218,9 @@ describe("authenticated Supabase movie updates", () => {
           scheduleNote: null,
         },
       ),
-    ).resolves.toEqual({ movieId: "42" });
+    ).resolves.toEqual({ movieId: "" });
 
-    expect(lookup.eq).toHaveBeenNthCalledWith(1, "id", "owned-row-id");
-    expect(lookup.eq).toHaveBeenNthCalledWith(2, "user_id", "verified-user-id");
+    expect(rpc).toHaveBeenCalledOnce();
     expect(rpc).toHaveBeenCalledWith("watchflow_schedule_movie", {
       p_library_id: "owned-row-id",
       p_scheduled_for: "2099-07-22T14:30:00.000Z",
@@ -259,13 +230,9 @@ describe("authenticated Supabase movie updates", () => {
     expect(rpc.mock.calls[0][1]).not.toHaveProperty("user_id");
   });
 
-  it("does not schedule another user's movie", async () => {
-    const lookup = createBuilder({ data: null, error: null });
-    const rpc = vi.fn();
-    const client = {
-      from: vi.fn().mockReturnValue(lookup),
-      rpc,
-    } as unknown as SupabaseClient;
+  it("trusts the RPC's owner check when another user's movie is requested", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: false, error: null });
+    const client = { rpc } as unknown as SupabaseClient;
 
     await expect(
       scheduleAuthenticatedUserMovie(
@@ -279,16 +246,12 @@ describe("authenticated Supabase movie updates", () => {
         },
       ),
     ).resolves.toBeNull();
-    expect(rpc).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(client).not.toHaveProperty("from");
   });
 
   it("does not report a profile permission denial as a missing scheduling RPC", async () => {
-    const lookup = createBuilder({
-      data: { id: "owned-row-id", movie_id: 42 },
-      error: null,
-    });
     const client = {
-      from: vi.fn().mockReturnValue(lookup),
       rpc: vi.fn().mockResolvedValue({
         data: null,
         error: {
@@ -314,12 +277,7 @@ describe("authenticated Supabase movie updates", () => {
   });
 
   it("reports a missing scheduling RPC explicitly", async () => {
-    const lookup = createBuilder({
-      data: { id: "owned-row-id", movie_id: 42 },
-      error: null,
-    });
     const client = {
-      from: vi.fn().mockReturnValue(lookup),
       rpc: vi.fn().mockResolvedValue({
         data: null,
         error: {
