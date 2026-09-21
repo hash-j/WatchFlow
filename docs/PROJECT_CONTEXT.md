@@ -1,16 +1,92 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-21
-Last updated by: Codex / Part 18A Batch 1 implementation
+Last updated: 2026-09-22
+Last updated by: Codex / Part 18A Batch 2.1 acceptance investigation
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18A performance and reliability work; Batch 1 is implemented locally.
+Current phase: Part 18A performance and reliability work; Batches 1 and 2 are implemented locally.
 Current branch: `part-18a-core-reliability`.
-Current status: Part 17 Production Launch remains PASS. Part 18A Batch 1 now contains only the accepted Dashboard, Schedule, Library-waterfall, and schedule-mutation query optimizations. Validation and guarded development browser QA pass; the changes remain uncommitted and unpushed.
+Current status: Part 17 Production Launch remains PASS. Part 18A Batch 2 acceptance now passes on watchflow-dev. The reported mutation stall was isolated to the Playwright harness selecting a hidden pre-rendered Status control before streamed detail navigation became visible; the Server Action and database RPC were healthy. QA User A remains unavailable for browser cross-user verification. Changes remain uncommitted and unpushed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-22 Part 18A Batch 2.1 live mutation investigation
+
+- The apparent Saved-to-Watch-Next stall occurred before form submission. Next
+  streamed navigation temporarily exposed two Status controls to the locator:
+  one hidden pre-rendered copy and one visible control. The acceptance helper
+  selected the first hidden control and Playwright waited until its overall
+  timeout; `updateMovieAction` never began in those failed runs.
+- A direct authenticated QA User B call to
+  `watchflow_update_library_movie_v2` returned `true` in 418 ms and committed
+  Saved to Watch Next. Temporary stage-only instrumentation then proved the
+  corrected browser path entered the Server Action, completed auth, returned
+  from the RPC, finished all revalidation calls, returned HTTP 200, displayed
+  success, and preserved Watch Next after reload. All diagnostic code and files
+  were removed.
+- The only retained correction is guarded acceptance coverage: it waits for the
+  visible movie-detail heading and targets the visible Status select. The live
+  test now also checks multiple additions, contiguous displayed positions,
+  adjacent reorder, reload persistence, removal compaction, transition out of
+  Watch Next, baseline restoration, and exact cleanup. No application or SQL
+  implementation changed, and no corrective migration was needed.
+- Live watchflow-dev acceptance passed in 56.1 seconds. A follow-up authenticated
+  read confirmed stored queue positions are positive, unique, and contiguous,
+  and that Inception/Arrival fixture count is zero. No unexpected browser or
+  network error occurred; only the existing non-blocking Next image LCP advice
+  was emitted. QA User A still cannot authenticate, so cross-user browser QA is
+  blocked; rollback-only PostgreSQL owner-isolation verification remains green.
+- Validation passes: focused queue/Batch 1/Watched Date tests 11 files/137
+  tests; full Vitest 82 files/798 tests; `git diff --check`; ESLint; TypeScript;
+  Next 16.2.12 production build with 37 routes; and the 507-artifact client
+  secret scan. Production was untouched; no commit, push, or deployment ran.
+
+## 2026-09-22 Part 18A Performance Fix Batch 2
+
+- Added exactly one forward-only migration,
+  `202609210001_part_18a_queue_normalization.sql`. It replaces the shared queue
+  normalizer and adjacent reorder RPC with conflict-safe, owner-scoped array
+  snapshots plus two constant-count set-based position updates (clear and
+  `unnest ... with ordinality`). Stable order remains `queue_position`, then
+  `created_at`, then `id`; priority remains display-only.
+- Replaced the Part 12 bulk-status RPC in the same migration. Watch Next bulk
+  additions now snapshot the current order once, append new selections in
+  request order, and assign the final order set-wise. This removes the previous
+  normalize-before-append plus normalize-after-update duplicate work. Statuses
+  leaving Watch Next still invoke the shared normalizer once. Authentication,
+  advisory/row locking, RLS, selection validation, response JSON, preserved
+  watched/schedule fields, and existing grants remain unchanged.
+- Added static migration contracts, pure queue-model regressions, migration
+  ordering coverage, and a rollback-only PostgreSQL behavior script covering
+  empty/single/multi-item normalization, stable ordering, priority preservation,
+  append order, adjacent reorder, removal/status compaction, watched-date
+  preservation, and cross-owner isolation. CI now executes that behavior script
+  after rebuilding every migration from zero.
+- Disposable PostgreSQL-compatible verification applied all 13 migrations from
+  zero, returned zero development-readiness failures, zero production-security
+  findings, and `PART_18A_QUEUE_BEHAVIOR=PASS`. Focused tests passed 13/13;
+  full Vitest passed 82 files/798 tests; ESLint, TypeScript, the Next 16.2.12
+  production build (37 routes including `/auth/sign-up`), and the 507-artifact
+  client-secret scan passed. The live integration project loaded but correctly
+  skipped 19 environment-gated cases.
+- Guarded browser coverage was added for open/add-two/reorder/refresh/remove and
+  unrelated-queue preservation with cleanup. After migration `202609210001`
+  was confirmed in the linked watchflow-dev migration ledger, live acceptance
+  still failed: QA User A could not complete sign-in, and QA User B's first
+  Saved-to-Watch-Next Server Action did not complete within the ten-minute
+  acceptance budget. Reorder, refresh persistence, compaction, status exit,
+  and cross-user browser assertions therefore could not run and are not claimed
+  as passed. No browser console or network error was emitted before the stall.
+  A final guarded cleanup removed only Inception (TMDB 27205) and Arrival (TMDB
+  329865) if present and verified both absent. Focused queue/Batch 1/Watched
+  Date regressions remained green at 11 files/137 tests. Production was not
+  touched.
+- No historical migration, application queue behavior, schema table/column,
+  RLS policy, Auth flow, dependency, cache architecture, Production database,
+  deployment, commit, or push was changed. Stop after Batch 2; later Part 18A
+  items remain unstarted.
 
 ## 2026-09-21 Part 18A Performance Fix Batch 1
 
