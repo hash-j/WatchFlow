@@ -10,10 +10,9 @@ import { MoviePicker } from "@/components/discovery/movie-picker";
 import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
 import { DiscoveryAuthenticationError } from "@/lib/discovery/errors";
 import {
-  getAvailableGenres,
   parsePickerSearchParams,
 } from "@/lib/discovery/picker";
-import { getDiscoveryDataset } from "@/lib/discovery/supabase-discovery";
+import { getPickerSetupData } from "@/lib/discovery/supabase-discovery";
 import type { RawPickerSearchParams } from "@/lib/discovery/types";
 
 type PickerPageProps = {
@@ -34,7 +33,7 @@ async function PickerContent({ searchParams }: PickerPageProps) {
     | {
         status: "ready";
         filters: ReturnType<typeof parsePickerSearchParams>["filters"];
-        availableGenres: ReturnType<typeof getAvailableGenres>;
+        availableGenres: string[];
         warnings: ReturnType<typeof parsePickerSearchParams>["warnings"];
         libraryCount: number;
         libraryTruncated: boolean;
@@ -42,20 +41,19 @@ async function PickerContent({ searchParams }: PickerPageProps) {
     | { status: "error"; message: string };
 
   try {
-    const [dataset, rawParams] = await Promise.all([
-      getDiscoveryDataset(),
+    const [setup, rawParams] = await Promise.all([
+      getPickerSetupData(),
       searchParams,
     ]);
-    const availableGenres = getAvailableGenres(dataset.movies);
-    const parsed = parsePickerSearchParams(rawParams, availableGenres);
+    const parsed = parsePickerSearchParams(rawParams, setup.availableGenres);
 
     content = {
       status: "ready",
       filters: parsed.filters,
-      availableGenres,
+      availableGenres: setup.availableGenres,
       warnings: parsed.warnings,
-      libraryCount: dataset.totalCount,
-      libraryTruncated: dataset.truncated,
+      libraryCount: setup.totalCount,
+      libraryTruncated: setup.truncated,
     };
   } catch (error) {
     if (error instanceof DiscoveryAuthenticationError) {

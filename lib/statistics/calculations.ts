@@ -216,20 +216,13 @@ export function calculatePersonalStatistics(
     suppliedTotal >= movies.length
       ? suppliedTotal
       : movies.length;
-  const watched = movies.filter((movie) => movie.status === "watched");
-  const ratings = movies.flatMap((movie) =>
-    isValidRating(movie.personalRating) ? [movie.personalRating] : [],
-  );
-  const watchedRuntimes = watched.flatMap((movie) =>
-    isValidRuntime(movie.runtimeMinutes) ? [movie.runtimeMinutes] : [],
-  );
-  const averagePersonalRating = ratings.length
-    ? roundOne(ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length)
-    : null;
-  const totalWatchedRuntimeMinutes = watchedRuntimes.length
-    ? watchedRuntimes.reduce((sum, runtime) => sum + runtime, 0)
-    : null;
-
+  const watched: StatisticsMovieRecord[] = [];
+  const ratings: number[] = [];
+  const watchedRuntimes: number[] = [];
+  let favouriteMovies = 0;
+  let scheduledMovies = 0;
+  let watchedThisMonth = 0;
+  let watchedThisYear = 0;
   const knownStatusCounts = new Map(
     LIBRARY_MOVIE_STATUSES.map((status) => [status, 0]),
   );
@@ -244,7 +237,37 @@ export function calculatePersonalStatistics(
         (knownStatusCounts.get(movie.status) ?? 0) + 1,
       );
     }
+
+    if (movie.favourite) favouriteMovies += 1;
+    if (isValidRating(movie.personalRating)) {
+      ratings.push(movie.personalRating);
+    }
+    if (
+      movie.status === "scheduled" &&
+      isValidScheduledInstant(movie.scheduledFor)
+    ) {
+      scheduledMovies += 1;
+    }
+    if (movie.status !== "watched") continue;
+
+    watched.push(movie);
+    if (isValidRuntime(movie.runtimeMinutes)) {
+      watchedRuntimes.push(movie.runtimeMinutes);
+    }
+    if (!isValidCalendarDate(movie.watchedDate)) continue;
+    if (movie.watchedDate.slice(0, 7) === currentMonthKey) {
+      watchedThisMonth += 1;
+    }
+    if (movie.watchedDate.slice(0, 4) === String(current.year)) {
+      watchedThisYear += 1;
+    }
   }
+  const averagePersonalRating = ratings.length
+    ? roundOne(ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length)
+    : null;
+  const totalWatchedRuntimeMinutes = watchedRuntimes.length
+    ? watchedRuntimes.reduce((sum, runtime) => sum + runtime, 0)
+    : null;
 
   const statusBreakdown: StatisticsStatusBreakdown[] = LIBRARY_MOVIE_STATUSES.map((status) => ({
     status,
@@ -317,26 +340,14 @@ export function calculatePersonalStatistics(
       watchedMovies: watched.length,
       unwatchedMovies: movies.length - watched.length,
       watchNextMovies: knownStatusCounts.get("watch_next") ?? 0,
-      favouriteMovies: movies.filter((movie) => movie.favourite).length,
-      scheduledMovies: movies.filter(
-        (movie) =>
-          movie.status === "scheduled" &&
-          isValidScheduledInstant(movie.scheduledFor),
-      ).length,
+      favouriteMovies,
+      scheduledMovies,
       averagePersonalRating,
       ratedMovies: ratings.length,
       totalWatchedRuntimeMinutes,
       watchedRuntimeMovies: watchedRuntimes.length,
-      watchedThisMonth: watched.filter(
-        (movie) =>
-          isValidCalendarDate(movie.watchedDate) &&
-          movie.watchedDate.slice(0, 7) === currentMonthKey,
-      ).length,
-      watchedThisYear: watched.filter(
-        (movie) =>
-          isValidCalendarDate(movie.watchedDate) &&
-          movie.watchedDate.slice(0, 4) === String(current.year),
-      ).length,
+      watchedThisMonth,
+      watchedThisYear,
     },
     statusBreakdown,
     genres: buildGenreDistribution(movies),

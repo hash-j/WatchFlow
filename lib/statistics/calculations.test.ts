@@ -46,6 +46,26 @@ function calculate(
 }
 
 describe("personal statistics summary", () => {
+  it("limits full-library iteration to aggregation, genres, and timeline", () => {
+    let iterations = 0;
+    const records = [
+      movie({ status: "watched", watchedDate: "2026-08-01" }),
+      movie({ movieId: "43", status: "watch_next" }),
+    ];
+    const tracked = new Proxy(records, {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator) {
+          iterations += 1;
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    calculate(tracked);
+
+    expect(iterations).toBe(3);
+  });
+
   it("returns an explicit empty-library result without inventing unavailable values", () => {
     const result = calculate([]);
 

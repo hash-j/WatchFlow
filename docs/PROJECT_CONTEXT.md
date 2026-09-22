@@ -1,16 +1,76 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-22
-Last updated by: Codex / Part 18A Batch 3A authenticated request deduplication
+Last updated: 2026-09-23
+Last updated by: Codex / Part 18A Batch 3B discovery and Statistics query optimization
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18A performance and reliability work; Batches 1, 2, and 3A are implemented locally.
+Current phase: Part 18A performance and reliability work; Batches 1, 2, 3A, and 3B are implemented locally.
 Current branch: `part-18a-core-reliability`.
-Current status: Part 17 Production Launch remains PASS. Part 18A Batch 3A request-scoped Auth/data-access deduplication is complete and accepted against watchflow-dev with QA User B. QA User A remains unavailable for browser cross-user verification. Changes remain uncommitted and unpushed.
+Current status: Part 17 Production Launch remains PASS. Part 18A Batch 3B discovery and Statistics optimization is complete and accepted against watchflow-dev with QA User B. QA User A remains unavailable for browser cross-user verification. Changes remain uncommitted and unpushed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-23 Part 18A Performance Fix Batch 3B
+
+- Picker landing previously loaded and mapped the full shared discovery dataset
+  merely to derive the Library count and genre choices. It now performs one
+  exact-count, owner-filtered, stably bounded setup read whose related projection
+  is only `movies.genres`. The Picker Server Action keeps its single full-pool
+  read so uniform random selection, exclusions, filter validation, and existing
+  eligibility semantics remain unchanged, but its projection drops the unused
+  `personal_rating` column.
+- Recommendations retains one owner-filtered, stably bounded Library read and
+  all existing seed, scoring, ranking, diversity, refresh, and cold-start rules.
+  Its dedicated projection drops only unused `movies.original_title`; no TMDB
+  request, enrichment step, or extra Library load exists. Live QA exposed an
+  unrelated client-transition stall on the refresh control, so that control now
+  uses a normal same-route document navigation while preserving the refresh seed
+  and visible UI.
+- Statistics already used one exact-count Library query with an explicit minimal
+  projection, and every selected field contributes to a displayed metric or
+  list. The database request and projection therefore remain unchanged to avoid
+  altering bounded-dataset and tie semantics. Primary status, favourite,
+  scheduled, rating, watched, runtime, and current-period aggregation is now one
+  pass; full-library iteration falls structurally from seven passes to three
+  (primary aggregation, genre distribution, and timeline). Displayed metrics,
+  timezone rules, watched-date behavior, distributions, and stable list ordering
+  are unchanged.
+- Structural request evidence: Picker landing remains one read but reduces the
+  selected related movie fields from nine plus four relationship fields to the
+  single `genres` field; Picker action remains one read and drops one relationship
+  field; Recommendations remains one read and drops one related movie field;
+  Statistics remains one read with the same required columns while eliminating
+  four full-library transformations. All reads remain capped at 1,000 rows and
+  report exact coverage/truncation. No latency measurement is claimed.
+- Security remains unchanged: each query uses the request-scoped authenticated
+  cookie client, applies the verified owner ID, remains subject to RLS, accepts
+  no browser owner identifier, and introduces no admin/service-role path or
+  cross-request user cache. No database migration, schema, policy, grant, Auth,
+  dependency, or environment-variable change was made.
+- Regression coverage now asserts Picker setup/action and Recommendations
+  route-specific projections, exact counts, stable bounds, owner scoping, safe
+  errors, unchanged Picker filters/eligibility and recommendation semantics, the
+  three-pass Statistics iteration budget, and all existing metric values. The
+  focused discovery/Statistics selection passed 6 files/101 tests; the full
+  suite passed 83 files/806 tests. Batch 1 Dashboard/Schedule/Library, Batch 2
+  queue, Batch 3A Auth/request isolation, and Watched Date regressions remain
+  green in that full suite.
+- Final validation passed `git diff --check`, ESLint, direct TypeScript, the
+  Next 16.2.12 production build with 37 routes, and the 507-browser-artifact
+  client-secret scan. The initial sandboxed build could not fetch Geist; the
+  permitted network-enabled build passed.
+- Guarded built-server browser acceptance against the exact watchflow-dev pin
+  passed with QA User B: Picker load/filter/action/reload, Recommendations load/
+  seeded refresh, and Statistics load/reload all worked without stale data or
+  unexpected console/network errors. This run used one identity, so no second-
+  user browser-isolation claim is made; owner isolation remains covered by query
+  contracts and RLS. Production was untouched, and no deploy, commit, or push ran.
+- Remaining Part 18 work is intentionally unstarted: global caching/revalidation,
+  CSV Import V2, Movie Details status redesign, Search Already-in-Library,
+  Watch Next priority, custom-list ordering, and later notifications/PWA/Series
+  scopes. Batch 3C was not started.
 
 ## 2026-09-22 Part 18A Performance Fix Batch 3A
 

@@ -17,7 +17,7 @@ import {
   MAX_RECOMMENDATIONS,
   RECOMMENDATION_SCORE_WEIGHTS,
 } from "@/lib/discovery/recommendations";
-import { getDiscoveryDataset } from "@/lib/discovery/supabase-discovery";
+import { getRecommendationDataset } from "@/lib/discovery/supabase-discovery";
 
 type RecommendationsPageProps = {
   searchParams: Promise<{
@@ -122,7 +122,7 @@ async function RecommendationsContent({
   let content:
     | {
         status: "ready";
-        dataset: Awaited<ReturnType<typeof getDiscoveryDataset>>;
+        dataset: Awaited<ReturnType<typeof getRecommendationDataset>>;
         refresh: ReturnType<typeof parseRefreshSeed>;
         result: ReturnType<typeof buildRuleBasedRecommendations>;
         nextRefresh: number;
@@ -131,7 +131,7 @@ async function RecommendationsContent({
 
   try {
     const [dataset, params] = await Promise.all([
-      getDiscoveryDataset(),
+      getRecommendationDataset(),
       searchParams,
     ]);
     const refresh = parseRefreshSeed(params.refresh);
@@ -178,14 +178,14 @@ async function RecommendationsContent({
             </p>
           </div>
           {result.recommendationCount > 1 ? (
-            <Link
+            <a
               href={`/recommendations?refresh=${nextRefresh}`}
               className={buttonVariants({ variant: "outline" })}
               aria-label="Refresh recommendation presentation"
             >
               <RefreshCw aria-hidden="true" />
               Refresh suggestions
-            </Link>
+            </a>
           ) : null}
         </div>
 

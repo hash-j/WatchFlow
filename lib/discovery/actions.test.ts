@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getDiscoveryDataset: vi.fn(),
+  getPickerDataset: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("./supabase-discovery", () => ({
-  getDiscoveryDataset: mocks.getDiscoveryDataset,
+  getPickerDataset: mocks.getPickerDataset,
 }));
 
 import { pickMovieAction } from "../../app/(app)/actions/discovery";
@@ -45,7 +45,7 @@ function movie(
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.getDiscoveryDataset.mockResolvedValue({
+  mocks.getPickerDataset.mockResolvedValue({
     movies: [movie()],
     totalCount: 1,
     truncated: false,
@@ -72,13 +72,13 @@ describe("Part 14 picker Server Action", () => {
         movie: { userMovieId, title: "Private Candidate" },
       },
     });
-    expect(mocks.getDiscoveryDataset).toHaveBeenCalledWith();
-    expect(mocks.getDiscoveryDataset).toHaveBeenCalledTimes(1);
+    expect(mocks.getPickerDataset).toHaveBeenCalledWith();
+    expect(mocks.getPickerDataset).toHaveBeenCalledTimes(1);
     expect(result.result?.movie).not.toHaveProperty("personalRating");
   });
 
   it("applies combined public-rating, runtime, genre, mood, and favourite filters", async () => {
-    mocks.getDiscoveryDataset.mockResolvedValue({
+    mocks.getPickerDataset.mockResolvedValue({
       movies: [
         movie({ favourite: true }),
         movie({
@@ -158,7 +158,7 @@ describe("Part 14 picker Server Action", () => {
   });
 
   it("reports the bounded-data limitation when the private adapter is truncated", async () => {
-    mocks.getDiscoveryDataset.mockResolvedValue({
+    mocks.getPickerDataset.mockResolvedValue({
       movies: [movie()],
       totalCount: 1_200,
       truncated: true,
@@ -192,7 +192,7 @@ describe("Part 14 picker Server Action", () => {
       "Your movie library could not be loaded. Please try again.",
     ],
   ])("maps private-query failures to specific safe copy", async (error, message) => {
-    mocks.getDiscoveryDataset.mockRejectedValue(error);
+    mocks.getPickerDataset.mockRejectedValue(error);
 
     const result = await pickMovieAction(
       initialPickerActionState,

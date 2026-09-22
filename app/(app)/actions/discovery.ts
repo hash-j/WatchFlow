@@ -16,7 +16,7 @@ import {
   pickRandomMovie,
   parsePickerSearchParams,
 } from "@/lib/discovery/picker";
-import { getDiscoveryDataset } from "@/lib/discovery/supabase-discovery";
+import { getPickerDataset } from "@/lib/discovery/supabase-discovery";
 import type { RawPickerSearchParams } from "@/lib/discovery/types";
 
 function stringValue(formData: FormData, name: string) {
@@ -72,7 +72,7 @@ export async function pickMovieAction(
   const requestId = previousState.requestId + 1;
 
   try {
-    const dataset = await getDiscoveryDataset();
+    const dataset = await getPickerDataset();
     const genres = getAvailableGenres(dataset.movies);
     const { filters, warnings } = parsePickerSearchParams(
       pickerFormParams(formData),

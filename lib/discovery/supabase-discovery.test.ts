@@ -23,10 +23,16 @@ import {
   DiscoverySchemaError,
 } from "./errors";
 import {
-  DISCOVERY_LIBRARY_SELECT,
-  getDiscoveryDataset,
+  getPickerDataset,
+  getPickerSetupData,
+  getRecommendationDataset,
   MAX_DISCOVERY_LIBRARY_ROWS,
-  queryOwnedDiscoveryDataset,
+  PICKER_LIBRARY_SELECT,
+  PICKER_SETUP_SELECT,
+  queryOwnedPickerDataset,
+  queryOwnedPickerSetup,
+  queryOwnedRecommendationDataset,
+  RECOMMENDATION_LIBRARY_SELECT,
 } from "./supabase-discovery";
 
 const row = {
@@ -76,24 +82,25 @@ beforeEach(() => {
   logSupabaseErrorMock.mockReset();
 });
 
-describe("private discovery dataset query", () => {
-  it("uses an exact-column, exact-count, owner-filtered, stably bounded query", async () => {
+describe("private discovery dataset queries", () => {
+  it("uses a minimal Picker projection with exact owner-scoped coverage", async () => {
     const { client, from, builder } = createQueryClient({
       data: [row],
       count: 1,
       error: null,
     });
 
-    await queryOwnedDiscoveryDataset(client, "verified-user-id");
+    await queryOwnedPickerDataset(client, "verified-user-id");
 
     expect(from).toHaveBeenCalledWith("user_movies");
-    expect(builder.select).toHaveBeenCalledWith(DISCOVERY_LIBRARY_SELECT, {
+    expect(builder.select).toHaveBeenCalledWith(PICKER_LIBRARY_SELECT, {
       count: "exact",
     });
-    expect(DISCOVERY_LIBRARY_SELECT).toBe(
-      "id,status,favourite,personal_rating,movies!inner(id,title,original_title,poster_path,release_year,runtime_minutes,genres,director,public_rating)",
+    expect(PICKER_LIBRARY_SELECT).toBe(
+      "id,status,favourite,movies!inner(id,title,original_title,poster_path,release_year,runtime_minutes,genres,director,public_rating)",
     );
-    expect(DISCOVERY_LIBRARY_SELECT).not.toMatch(/(^|[,(\s])user_id([,)\s]|$)/);
+    expect(PICKER_LIBRARY_SELECT).not.toContain("personal_rating");
+    expect(PICKER_LIBRARY_SELECT).not.toMatch(/(^|[,(\s])user_id([,)\s]|$)/);
     expect(builder.eq).toHaveBeenCalledWith("user_id", "verified-user-id");
     expect(builder.order).toHaveBeenNthCalledWith(1, "created_at", {
       ascending: false,
@@ -107,6 +114,54 @@ describe("private discovery dataset query", () => {
     );
   });
 
+  it("uses a minimal Recommendations projection without changing its bounded query", async () => {
+    const { client, builder } = createQueryClient({
+      data: [row],
+      count: 1,
+      error: null,
+    });
+
+    await queryOwnedRecommendationDataset(client, "verified-user-id");
+
+    expect(builder.select).toHaveBeenCalledWith(
+      RECOMMENDATION_LIBRARY_SELECT,
+      { count: "exact" },
+    );
+    expect(RECOMMENDATION_LIBRARY_SELECT).toBe(
+      "id,status,favourite,personal_rating,movies!inner(id,title,poster_path,release_year,runtime_minutes,genres,director,public_rating)",
+    );
+    expect(RECOMMENDATION_LIBRARY_SELECT).not.toContain("original_title");
+    expect(builder.eq).toHaveBeenCalledWith("user_id", "verified-user-id");
+    expect(builder.range).toHaveBeenCalledWith(
+      0,
+      MAX_DISCOVERY_LIBRARY_ROWS - 1,
+    );
+  });
+
+  it("loads Picker setup with only related genres and normalizes them", async () => {
+    const { client, builder } = createQueryClient({
+      data: [
+        { movies: { genres: [" Thriller ", "Drama"] } },
+        { movies: { genres: ["thriller", "Comedy"] } },
+      ],
+      count: 2,
+      error: null,
+    });
+
+    await expect(
+      queryOwnedPickerSetup(client, "verified-user-id"),
+    ).resolves.toEqual({
+      availableGenres: ["Comedy", "Drama", "Thriller"],
+      totalCount: 2,
+      truncated: false,
+    });
+    expect(builder.select).toHaveBeenCalledWith(PICKER_SETUP_SELECT, {
+      count: "exact",
+    });
+    expect(PICKER_SETUP_SELECT).toBe("movies!inner(genres)");
+    expect(builder.eq).toHaveBeenCalledWith("user_id", "verified-user-id");
+  });
+
   it("returns the exact total and reports a bounded dataset honestly", async () => {
     const { client } = createQueryClient({
       data: [row],
@@ -115,7 +170,7 @@ describe("private discovery dataset query", () => {
     });
 
     await expect(
-      queryOwnedDiscoveryDataset(client, "verified-user-id"),
+      queryOwnedPickerDataset(client, "verified-user-id"),
     ).resolves.toMatchObject({
       movies: [expect.objectContaining({ userMovieId: row.id })],
       totalCount: 1007,
@@ -131,7 +186,7 @@ describe("private discovery dataset query", () => {
     });
 
     await expect(
-      queryOwnedDiscoveryDataset(client, "verified-user-id"),
+      queryOwnedPickerDataset(client, "verified-user-id"),
     ).resolves.toMatchObject({
       totalCount: 1,
       truncated: false,
@@ -158,7 +213,7 @@ describe("private discovery dataset query", () => {
     });
 
     await expect(
-      queryOwnedDiscoveryDataset(client, "verified-user-id"),
+      queryOwnedPickerDataset(client, "verified-user-id"),
     ).rejects.toBeInstanceOf(ErrorType);
     expect(logSupabaseErrorMock).toHaveBeenCalledWith(
       "private discovery library query failed",
@@ -174,7 +229,9 @@ describe("discovery authentication boundary", () => {
       "utf8",
     );
 
-    expect(getDiscoveryDataset).toHaveLength(0);
+    expect(getPickerSetupData).toHaveLength(0);
+    expect(getPickerDataset).toHaveLength(0);
+    expect(getRecommendationDataset).toHaveLength(0);
     expect(source).not.toContain("createAdminClient");
     expect(source).not.toContain("FormData");
     expect(source).not.toContain("p_user_id");
@@ -191,7 +248,7 @@ describe("discovery authentication boundary", () => {
       user: { id: "request-auth-user-id" },
     });
 
-    await expect(getDiscoveryDataset()).resolves.toMatchObject({
+    await expect(getPickerDataset()).resolves.toMatchObject({
       totalCount: 1,
     });
 
@@ -202,7 +259,7 @@ describe("discovery authentication boundary", () => {
   it("rejects a missing or expired session before querying private rows", async () => {
     getAuthContextMock.mockRejectedValue(new DiscoveryAuthenticationError());
 
-    await expect(getDiscoveryDataset()).rejects.toBeInstanceOf(
+    await expect(getRecommendationDataset()).rejects.toBeInstanceOf(
       DiscoveryAuthenticationError,
     );
     expect(getAuthContextMock).toHaveBeenCalledOnce();
