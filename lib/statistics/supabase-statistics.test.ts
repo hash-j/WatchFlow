@@ -2,13 +2,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createClientMock, logSupabaseErrorMock } = vi.hoisted(() => ({
-  createClientMock: vi.fn(),
+const { getAuthContextMock, logSupabaseErrorMock } = vi.hoisted(() => ({
+  getAuthContextMock: vi.fn(),
   logSupabaseErrorMock: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/server", () => ({ createClient: createClientMock }));
+vi.mock("@/lib/supabase/auth", () => ({
+  getAuthContext: getAuthContextMock,
+}));
 vi.mock("@/lib/supabase/error-logging", () => ({
   logSupabaseError: logSupabaseErrorMock,
 }));
@@ -76,7 +78,7 @@ function createTimezoneBuilder(result: { data: unknown; error: unknown }) {
 }
 
 beforeEach(() => {
-  createClientMock.mockReset();
+  getAuthContextMock.mockReset();
   logSupabaseErrorMock.mockReset();
 });
 
@@ -173,56 +175,32 @@ describe("owned Statistics query contract", () => {
 });
 
 describe("Statistics authentication and user isolation", () => {
-  it("accepts no owner input, verifies getUser once, and applies that identity to both private queries", async () => {
+  it("accepts no owner input and applies the request identity to private rows", async () => {
     const dataset = createDatasetBuilder({ data: [row], count: 1, error: null });
-    const profile = createTimezoneBuilder({
-      data: { timezone: "UTC" },
-      error: null,
+    const from = vi.fn().mockReturnValue(dataset);
+    getAuthContextMock.mockResolvedValue({
+      client: { from },
+      profile: { timezone: "UTC" },
+      user: { id: "request-auth-user-id" },
     });
-    const from = vi.fn((table: string) =>
-      table === "user_movies" ? dataset : profile,
-    );
-    const getUser = vi.fn().mockResolvedValue({
-      data: { user: { id: "fresh-auth-user-id" } },
-      error: null,
-    });
-    createClientMock.mockResolvedValue({ auth: { getUser }, from });
 
     expect(getPersonalStatistics).toHaveLength(0);
     await expect(getPersonalStatistics()).resolves.toMatchObject({
       summary: { totalMovies: 1, watchedMovies: 1 },
     });
 
-    expect(getUser).toHaveBeenCalledOnce();
-    expect(dataset.eq).toHaveBeenCalledWith("user_id", "fresh-auth-user-id");
-    expect(profile.eq).toHaveBeenCalledWith("id", "fresh-auth-user-id");
-    expect(from).toHaveBeenCalledTimes(2);
+    expect(getAuthContextMock).toHaveBeenCalledOnce();
+    expect(dataset.eq).toHaveBeenCalledWith("user_id", "request-auth-user-id");
+    expect(from).toHaveBeenCalledTimes(1);
   });
 
   it("rejects a missing or expired session before any private table query", async () => {
-    const from = vi.fn();
-    const authenticationError = {
-      code: "bad_jwt",
-      message: "raw private provider message",
-    };
-    createClientMock.mockResolvedValue({
-      auth: {
-        getUser: vi.fn().mockResolvedValue({
-          data: { user: null },
-          error: authenticationError,
-        }),
-      },
-      from,
-    });
+    getAuthContextMock.mockRejectedValue(new StatisticsAuthenticationError());
 
     await expect(getPersonalStatistics()).rejects.toBeInstanceOf(
       StatisticsAuthenticationError,
     );
-    expect(from).not.toHaveBeenCalled();
-    expect(logSupabaseErrorMock).toHaveBeenCalledWith(
-      "statistics authentication failed",
-      authenticationError,
-    );
+    expect(getAuthContextMock).toHaveBeenCalledOnce();
   });
 
   it("contains no browser owner argument, admin client, or global private cache", () => {

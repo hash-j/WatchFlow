@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LibraryMovie } from "@/lib/movies/types";
 import { readUserPreferences } from "@/lib/settings/supabase-settings";
 import { logSupabaseError } from "@/lib/supabase/error-logging";
-import { createClient } from "@/lib/supabase/server";
+import { getRequestSupabaseClient } from "@/lib/supabase/request";
 
 import { LibraryPersistenceError } from "./errors";
 import { mapLibraryMovieRow } from "./mapping";
@@ -201,7 +201,7 @@ export async function getDashboardData(
   fallbackTimezone: string,
 ) {
   return readDashboardData(
-    await createClient(),
+    await getRequestSupabaseClient(),
     userId,
     fallbackTimezone,
   );
@@ -248,5 +248,5 @@ export async function readSchedulePageData(
 }
 
 export async function getSchedulePageData(userId: string) {
-  return readSchedulePageData(await createClient(), userId);
+  return readSchedulePageData(await getRequestSupabaseClient(), userId);
 }

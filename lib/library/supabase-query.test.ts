@@ -1,13 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createClientMock, readUserPreferencesMock } = vi.hoisted(() => ({
-  createClientMock: vi.fn(),
+const { getAuthContextMock, readUserPreferencesMock } = vi.hoisted(() => ({
+  getAuthContextMock: vi.fn(),
   readUserPreferencesMock: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("../supabase/server", () => ({ createClient: createClientMock }));
+vi.mock("../supabase/auth", () => ({ getAuthContext: getAuthContextMock }));
 vi.mock("../supabase/error-logging", () => ({
   logSupabaseError: vi.fn(),
 }));
@@ -58,7 +58,7 @@ const row = {
 };
 
 beforeEach(() => {
-  createClientMock.mockReset();
+  getAuthContextMock.mockReset();
   readUserPreferencesMock.mockReset();
 });
 
@@ -193,12 +193,8 @@ describe("private Supabase library page query", () => {
 });
 
 describe("library query session and preference reuse", () => {
-  it("authenticates once and reads preferences through the same client", async () => {
+  it("reuses the request identity and client for owner-scoped preferences", async () => {
     const rows = createRowsBuilder({ data: [row], count: 1, error: null });
-    const getUser = vi.fn().mockResolvedValue({
-      data: { user: { id: "verified-user-id" } },
-      error: null,
-    });
     const rpc = vi.fn((name: string) =>
       name === "watchflow_library_rows_v2"
         ? rows
@@ -212,8 +208,11 @@ describe("library query session and preference reuse", () => {
             error: null,
           }),
     );
-    const client = { auth: { getUser }, rpc };
-    createClientMock.mockResolvedValue(client);
+    const client = { rpc };
+    getAuthContextMock.mockResolvedValue({
+      client,
+      user: { id: "verified-user-id" },
+    });
     readUserPreferencesMock.mockResolvedValue({
       defaultLibraryView: "list",
       moviesPerPage: 48,
@@ -221,7 +220,7 @@ describe("library query session and preference reuse", () => {
 
     const result = await getLibraryPageData({});
 
-    expect(getUser).toHaveBeenCalledOnce();
+    expect(getAuthContextMock).toHaveBeenCalledOnce();
     expect(readUserPreferencesMock).toHaveBeenCalledWith(
       client,
       "verified-user-id",
@@ -257,14 +256,9 @@ describe("library query session and preference reuse", () => {
             error: null,
           });
     });
-    createClientMock.mockResolvedValue({
-      auth: {
-        getUser: vi.fn().mockResolvedValue({
-          data: { user: { id: "verified-user-id" } },
-          error: null,
-        }),
-      },
-      rpc,
+    getAuthContextMock.mockResolvedValue({
+      user: { id: "verified-user-id" },
+      client: { rpc },
     });
     readUserPreferencesMock.mockImplementation(() => {
       events.push("preferences");

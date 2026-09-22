@@ -1,11 +1,10 @@
 import "server-only";
 
-import { AuthenticationRequiredError } from "@/lib/library/errors";
 import { enforceTmdbRateLimit } from "@/lib/movies/rate-limit";
 import { tmdbMovieProvider } from "@/lib/movies/tmdb-provider";
 import { validateMovieSearchQuery } from "@/lib/movies/validation";
 import { readUserPreferences } from "@/lib/settings/supabase-settings";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/supabase/auth";
 
 const inFlightSearches = new Map<
   string,
@@ -14,15 +13,7 @@ const inFlightSearches = new Map<
 
 export async function searchTmdbMoviesForCurrentUser(query: string) {
   const normalizedQuery = validateMovieSearchQuery(query);
-  const client = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await client.auth.getUser();
-
-  if (error || !user) {
-    throw new AuthenticationRequiredError();
-  }
+  const { client, user } = await getAuthContext();
 
   const preferences = await readUserPreferences(client, user.id);
   const options = {

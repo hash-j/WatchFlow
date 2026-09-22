@@ -1,16 +1,68 @@
 # WatchFlow Project Context
 
 Last updated: 2026-09-22
-Last updated by: Codex / Part 18A Batch 2.1 acceptance investigation
+Last updated by: Codex / Part 18A Batch 3A authenticated request deduplication
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18A performance and reliability work; Batches 1 and 2 are implemented locally.
+Current phase: Part 18A performance and reliability work; Batches 1, 2, and 3A are implemented locally.
 Current branch: `part-18a-core-reliability`.
-Current status: Part 17 Production Launch remains PASS. Part 18A Batch 2 acceptance now passes on watchflow-dev. The reported mutation stall was isolated to the Playwright harness selecting a hidden pre-rendered Status control before streamed detail navigation became visible; the Server Action and database RPC were healthy. QA User A remains unavailable for browser cross-user verification. Changes remain uncommitted and unpushed.
+Current status: Part 17 Production Launch remains PASS. Part 18A Batch 3A request-scoped Auth/data-access deduplication is complete and accepted against watchflow-dev with QA User B. QA User A remains unavailable for browser cross-user verification. Changes remain uncommitted and unpushed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-22 Part 18A Performance Fix Batch 3A
+
+- The protected root layout already memoized claims plus the owner profile, but
+  route read adapters frequently created a second cookie-bound Supabase client
+  and independently called `auth.getUser()`. Settings additionally authenticated
+  in its nested layout and page loader and re-read the same profile; Statistics
+  re-read the profile timezone. Dashboard and Schedule did not duplicate auth,
+  but each created an equivalent second server client. No same-render duplicate
+  preference query was found: routes that need preferences still perform one
+  owner-filtered read.
+- Added a server-only React `cache(createClient)` request helper. React owns its
+  render/request lifetime, so it is neither a module-global client singleton nor
+  a cross-request identity cache. The cached Auth context now returns that same
+  cookie-bound client with verified claims and the owner-scoped profile. Protected
+  Library, Watch Next, movie-detail/List reads, Dashboard, Schedule, Settings,
+  Search, Picker/Recommendations, and Statistics reuse it. No global caching,
+  route-data caching, or revalidation redesign was introduced.
+- Representative structural counts: Dashboard and Schedule remain one auth call,
+  one profile read, and one preference read, while equivalent client creation
+  falls from two to one. Library and Watch Next fall from two auth calls/two
+  clients to one, with profile and preference counts unchanged at one where used.
+  Settings detail pages fall from three auth calls, three clients, two profile
+  reads, and one preference read to one of each applicable read/client. Movie
+  detail with List memberships falls from three auth calls/clients to one.
+  Statistics falls from two auth calls/clients and two profile reads to one auth
+  call/client/profile read. No millisecond improvement is claimed.
+- Security boundaries are unchanged: the request cache cannot outlive the React
+  server request, every user-owned query remains RLS-protected and explicitly
+  owner-filtered where applicable, and no user ID comes from browser input.
+  Server Actions, imports, library/list/settings mutations, logout, onboarding,
+  Auth callbacks, and sensitive account operations continue to create a fresh
+  client and perform their existing `getUser()` authorization in their own
+  request. No admin/service-role access was added.
+- Regression coverage adds request-cache architecture contracts, owner/isolation
+  assertions, read-adapter request identity tests, mutation fresh-auth contracts,
+  and guarded QA User B navigation/logout/re-login coverage. Focused Auth/request,
+  onboarding, Batch 1, Batch 2 queue, and Watched Date coverage passed 11 files/
+  95 tests; the full suite passed 83 files/803 tests. `git diff --check`, ESLint,
+  TypeScript, the Next 16.2.12 production build with 37 routes, and the 507-file
+  client-secret scan passed.
+- Built-server browser QA against the exact watchflow-dev pin passed Dashboard,
+  Library, Schedule, Settings, logout, protected-route redirect, and fresh QA
+  User B re-login (2 tests). No stale identity, redirect loop, or unexpected
+  console/network failure occurred; logout's expected cancellation of two
+  in-flight Dashboard RSC fetches is explicitly allowlisted. QA User A remains
+  unavailable, so a second live identity was not claimed.
+- No migration, schema, table/column, RLS policy, grant, Auth policy, dependency,
+  Production data/configuration, deployment, commit, or push changed. Remaining
+  work starts after Batch 3A and includes the separate global caching/revalidation,
+  Picker/Recommendations query, Statistics query, CSV Import V2, Movie Details,
+  Search Already-in-Library, and Part 18B priority/list-ordering scopes.
 
 ## 2026-09-22 Part 18A Batch 2.1 live mutation investigation
 

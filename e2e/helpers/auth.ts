@@ -31,9 +31,13 @@ export async function login(page: Page, credentials: QaCredentials) {
 }
 
 export async function logout(page: Page) {
+  const signOutButton = page
+    .locator("button:visible")
+    .filter({ hasText: /^Sign out$/ });
+  await expect(signOutButton).toHaveCount(1);
   await Promise.all([
     page.waitForURL(/\/auth\/login$/),
-    page.getByRole("button", { name: "Sign out" }).click(),
+    signOutButton.click(),
   ]);
   await expect(
     page.getByRole("heading", {

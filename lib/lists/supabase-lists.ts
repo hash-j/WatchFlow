@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 import { logSupabaseError } from "@/lib/supabase/error-logging";
+import { getAuthContext } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
 import {
@@ -120,6 +121,11 @@ export async function authenticateLists(): Promise<AuthenticatedListsSession> {
   return { client, user };
 }
 
+async function authenticateListsRequest() {
+  const { client, user } = await getAuthContext();
+  return { client, user };
+}
+
 async function readOwnedList(
   client: SupabaseClient,
   userId: string,
@@ -144,7 +150,7 @@ async function readOwnedList(
 }
 
 export async function getCustomListSummaries() {
-  const { client } = await authenticateLists();
+  const { client } = await authenticateListsRequest();
   const { data, error } = await client.rpc("watchflow_list_summaries");
 
   if (error) {
@@ -260,7 +266,7 @@ export async function getCustomListDetail(
   picker: ListPickerState,
   includeCandidates: boolean,
 ): Promise<ListDetailData | null> {
-  const { client, user } = await authenticateLists();
+  const { client, user } = await authenticateListsRequest();
   const list = await readOwnedList(client, user.id, listId);
 
   if (!list) {
@@ -286,7 +292,7 @@ export async function getCustomListDetail(
 export async function getMovieListMemberships(
   userMovieId: string,
 ): Promise<ListMembership[] | null> {
-  const { client, user } = await authenticateLists();
+  const { client, user } = await authenticateListsRequest();
   const { data: ownedMovie, error: ownedMovieError } = await client
     .from("user_movies")
     .select("id")

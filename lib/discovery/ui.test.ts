@@ -52,9 +52,9 @@ describe("Part 14 protected route and navigation contracts", () => {
     }
   });
 
-  it("authenticates private reads with getUser and keeps discovery out of public caches", () => {
+  it("authenticates private reads with the request context and keeps discovery out of public caches", () => {
     const adapter = source("lib/discovery/supabase-discovery.ts");
-    expect(adapter).toContain("client.auth.getUser()");
+    expect(adapter).toContain("await getAuthContext()");
     expect(adapter).toContain('.from("user_movies")');
     expect(adapter).toContain('.eq("user_id", authenticatedUserId)');
     expect(adapter).toContain("movies!inner(");

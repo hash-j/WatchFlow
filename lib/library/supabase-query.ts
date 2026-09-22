@@ -5,10 +5,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LibraryMovieSummary } from "@/lib/movies/types";
 import { readUserPreferences } from "@/lib/settings/supabase-settings";
 import { logSupabaseError } from "@/lib/supabase/error-logging";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/supabase/auth";
 
 import {
-  AuthenticationRequiredError,
   LibraryAuthorizationError,
   LibraryPersistenceError,
   LibrarySchemaError,
@@ -125,15 +124,7 @@ export async function readOwnedLibraryFacets(client: SupabaseClient) {
 export async function getLibraryPageData(
   rawSearchParams: RawLibrarySearchParams,
 ): Promise<LibraryPageData> {
-  const client = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await client.auth.getUser();
-
-  if (error || !user) {
-    throw new AuthenticationRequiredError();
-  }
+  const { client, user } = await getAuthContext();
 
   const preferencesPromise = readUserPreferences(client, user.id);
   const facetsPromise = readOwnedLibraryFacets(client);

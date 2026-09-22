@@ -12,7 +12,7 @@ import { FavouriteToggleForm } from "@/components/movies/favourite-toggle-form";
 import { RemoveFromLibraryForm } from "@/components/movies/remove-from-library-form";
 import { PageContainer } from "@/components/ui/responsive-layout";
 import { getLibraryMovie } from "@/lib/library/service";
-import { createSupabaseLibraryDependencies } from "@/lib/library/supabase-library";
+import { createSupabaseLibraryRequestDependencies } from "@/lib/library/supabase-library";
 import {
   getLocalDateInput,
   getLocalTimeInput,
@@ -133,7 +133,7 @@ async function MovieCustomLists({
 async function MovieDetail({ params }: MovieDetailPageProps) {
   const { movieId } = await params;
   const [item, authContext] = await Promise.all([
-    getLibraryMovie(movieId, createSupabaseLibraryDependencies()),
+    getLibraryMovie(movieId, createSupabaseLibraryRequestDependencies()),
     getAuthContext(),
   ]);
 

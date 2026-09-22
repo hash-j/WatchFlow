@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { normalizeTimeZone } from "@/lib/library/timezone";
 import { logSupabaseError } from "@/lib/supabase/error-logging";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/supabase/auth";
 
 import { calculatePersonalStatistics } from "./calculations";
 import {
@@ -126,24 +126,9 @@ export async function queryOwnedStatisticsTimezone(
 }
 
 export async function getPersonalStatistics() {
-  const client = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await client.auth.getUser();
-
-  if (error || !user) {
-    if (error) {
-      logSupabaseError("statistics authentication failed", error);
-    }
-
-    throw new StatisticsAuthenticationError();
-  }
-
-  const [dataset, timezone] = await Promise.all([
-    queryOwnedStatisticsDataset(client, user.id),
-    queryOwnedStatisticsTimezone(client, user.id),
-  ]);
+  const { client, profile, user } = await getAuthContext();
+  const dataset = await queryOwnedStatisticsDataset(client, user.id);
+  const timezone = normalizeTimeZone(profile?.timezone);
 
   return calculatePersonalStatistics(dataset.movies, {
     timezone,

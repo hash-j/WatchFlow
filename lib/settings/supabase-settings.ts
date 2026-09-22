@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/supabase/auth";
 import { logSupabaseError } from "@/lib/supabase/error-logging";
 import { SettingsPersistenceError } from "./errors";
 import {
@@ -81,21 +82,23 @@ export async function getCurrentUserPreferences() {
 }
 
 export async function getSettingsPageData() {
-  const session = await authenticateSettings();
+  const { client, profile: profileRow, user } = await getAuthContext();
 
-  if (!session) {
-    return null;
-  }
-
-  const [profile, preferences, libraryCount] = await Promise.all([
-    readProfileSettings(session.client, session.user.id),
-    readUserPreferences(session.client, session.user.id),
-    countUserLibrary(session.client, session.user.id),
+  const [preferences, libraryCount] = await Promise.all([
+    readUserPreferences(client, user.id),
+    countUserLibrary(client, user.id),
   ]);
 
   return {
-    user: session.user,
-    profile,
+    user: {
+      id: user.id,
+      email: user.email ?? undefined,
+      created_at:
+        typeof profileRow?.created_at === "string"
+          ? profileRow.created_at
+          : undefined,
+    },
+    profile: mapProfileSettings(profileRow),
     preferences,
     libraryCount,
   };

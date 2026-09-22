@@ -6,10 +6,10 @@ import { resolveSharedMovieMetadata } from "../movies/shared-metadata";
 import type { LibraryMovie } from "../movies/types";
 import { readUserPreferences } from "../settings/supabase-settings";
 import { logSupabaseError } from "../supabase/error-logging";
+import { getAuthContext } from "../supabase/auth";
 import { createClient } from "../supabase/server";
 import { classifyUserMovieInsert } from "./duplicate";
 import {
-  AuthenticationRequiredError,
   LibraryPersistenceError,
 } from "./errors";
 import { mapLibraryMovieRow } from "./mapping";
@@ -38,6 +38,11 @@ async function authenticate(): Promise<SupabaseLibrarySession | null> {
   }
 
   return { userId: user.id, client: supabase };
+}
+
+async function authenticateRequest(): Promise<SupabaseLibrarySession> {
+  const { client, user } = await getAuthContext();
+  return { userId: user.id, client };
 }
 
 async function insertUserMovie(
@@ -98,10 +103,7 @@ async function listUserMovies(session: AuthenticatedLibrarySession) {
 export const MAX_WATCH_NEXT_ROWS = 500;
 
 export async function getCurrentUserWatchNextMovies() {
-  const session = await authenticate();
-  if (!session) {
-    throw new AuthenticationRequiredError();
-  }
+  const session = await authenticateRequest();
 
   const { client, userId } = session;
   const { data, error } = await client
@@ -169,5 +171,12 @@ export function createSupabaseLibraryDependencies(): LibraryDependencies {
     insertUserMovie,
     listUserMovies,
     getUserMovie,
+  };
+}
+
+export function createSupabaseLibraryRequestDependencies(): LibraryDependencies {
+  return {
+    ...createSupabaseLibraryDependencies(),
+    authenticate: authenticateRequest,
   };
 }

@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { logSupabaseError } from "@/lib/supabase/error-logging";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/supabase/auth";
 
 import {
   DiscoveryAuthenticationError,
@@ -105,19 +105,7 @@ export async function queryOwnedDiscoveryDataset(
 }
 
 export async function getDiscoveryDataset(): Promise<DiscoveryDataset> {
-  const client = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await client.auth.getUser();
-
-  if (error || !user) {
-    if (error) {
-      logSupabaseError("discovery authentication failed", error);
-    }
-
-    throw new DiscoveryAuthenticationError();
-  }
+  const { client, user } = await getAuthContext();
 
   return queryOwnedDiscoveryDataset(client, user.id);
 }

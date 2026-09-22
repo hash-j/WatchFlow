@@ -1,16 +1,13 @@
-import { redirect } from "next/navigation";
-
 import { SettingsNav } from "@/components/settings/settings-nav";
 import { PageContainer, PageHeader } from "@/components/ui/responsive-layout";
-import { authenticateSettings } from "@/lib/settings/supabase-settings";
+import { getAuthContext } from "@/lib/supabase/auth";
 
 export default async function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await authenticateSettings();
-  if (!session) redirect("/auth/login");
+  await getAuthContext();
 
   return (
     <PageContainer className="max-w-6xl">

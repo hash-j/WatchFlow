@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  createClient: vi.fn(),
+  getAuthContext: vi.fn(),
   enforceTmdbRateLimit: vi.fn(),
   readUserPreferences: vi.fn(),
   searchMovies: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: mocks.createClient,
+vi.mock("@/lib/supabase/auth", () => ({
+  getAuthContext: mocks.getAuthContext,
 }));
 vi.mock("@/lib/movies/rate-limit", () => ({
   enforceTmdbRateLimit: mocks.enforceTmdbRateLimit,
@@ -26,20 +26,16 @@ vi.mock("@/lib/movies/tmdb-provider", () => ({
 import { AuthenticationRequiredError } from "@/lib/library/errors";
 import { searchTmdbMoviesForCurrentUser } from "./server-search";
 
-function authenticatedClient(userId = "verified-user") {
+function authenticatedContext(userId = "verified-user") {
   return {
-    auth: {
-      getUser: vi.fn().mockResolvedValue({
-        data: { user: { id: userId } },
-        error: null,
-      }),
-    },
+    client: {},
+    user: { id: userId },
   };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.createClient.mockResolvedValue(authenticatedClient());
+  mocks.getAuthContext.mockResolvedValue(authenticatedContext());
   mocks.readUserPreferences.mockResolvedValue({
     showAdultResults: false,
     includeUnreleasedMovies: false,
@@ -104,9 +100,9 @@ describe("authenticated server-side TMDB search", () => {
   });
 
   it("keeps separate users in separate in-flight and rate-limit scopes", async () => {
-    mocks.createClient
-      .mockResolvedValueOnce(authenticatedClient("user-a"))
-      .mockResolvedValueOnce(authenticatedClient("user-b"));
+    mocks.getAuthContext
+      .mockResolvedValueOnce(authenticatedContext("user-a"))
+      .mockResolvedValueOnce(authenticatedContext("user-b"));
 
     await Promise.all([
       searchTmdbMoviesForCurrentUser("The Matrix"),
@@ -118,14 +114,7 @@ describe("authenticated server-side TMDB search", () => {
   });
 
   it("stops before preferences, rate limiting, or TMDB when auth is absent", async () => {
-    mocks.createClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn().mockResolvedValue({
-          data: { user: null },
-          error: { code: "session_not_found" },
-        }),
-      },
-    });
+    mocks.getAuthContext.mockRejectedValue(new AuthenticationRequiredError());
 
     await expect(
       searchTmdbMoviesForCurrentUser("Arrival"),

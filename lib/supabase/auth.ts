@@ -1,7 +1,9 @@
+import "server-only";
+
 import { cache } from "react";
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
+import { getRequestSupabaseClient } from "@/lib/supabase/request";
 
 function getProfileName(profile: Record<string, unknown> | null) {
   if (!profile) {
@@ -20,7 +22,7 @@ function getProfileName(profile: Record<string, unknown> | null) {
 }
 
 export const getAuthContext = cache(async () => {
-  const supabase = await createClient();
+  const supabase = await getRequestSupabaseClient();
   const { data, error } = await supabase.auth.getClaims();
   const claims = data?.claims;
 
@@ -46,5 +48,6 @@ export const getAuthContext = cache(async () => {
     profile: profileRecord,
     profileLoadFailed: Boolean(profileError),
     profileName: getProfileName(profileRecord),
+    client: supabase,
   };
 });

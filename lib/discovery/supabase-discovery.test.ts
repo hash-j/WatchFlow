@@ -2,13 +2,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createClientMock, logSupabaseErrorMock } = vi.hoisted(() => ({
-  createClientMock: vi.fn(),
+const { getAuthContextMock, logSupabaseErrorMock } = vi.hoisted(() => ({
+  getAuthContextMock: vi.fn(),
   logSupabaseErrorMock: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/server", () => ({ createClient: createClientMock }));
+vi.mock("@/lib/supabase/auth", () => ({
+  getAuthContext: getAuthContextMock,
+}));
 vi.mock("@/lib/supabase/error-logging", () => ({
   logSupabaseError: logSupabaseErrorMock,
 }));
@@ -70,7 +72,7 @@ function createQueryClient(result: {
 }
 
 beforeEach(() => {
-  createClientMock.mockReset();
+  getAuthContextMock.mockReset();
   logSupabaseErrorMock.mockReset();
 });
 
@@ -178,53 +180,31 @@ describe("discovery authentication boundary", () => {
     expect(source).not.toContain("p_user_id");
   });
 
-  it("uses a fresh authenticated user and never accepts an owner from input", async () => {
+  it("uses the verified request user and never accepts an owner from input", async () => {
     const { client, builder } = createQueryClient({
       data: [row],
       count: 1,
       error: null,
     });
-    const getUser = vi.fn().mockResolvedValue({
-      data: { user: { id: "fresh-auth-user-id" } },
-      error: null,
+    getAuthContextMock.mockResolvedValue({
+      client,
+      user: { id: "request-auth-user-id" },
     });
-    const authenticatedClient = {
-      ...client,
-      auth: { getUser },
-    };
-    createClientMock.mockResolvedValue(authenticatedClient);
 
     await expect(getDiscoveryDataset()).resolves.toMatchObject({
       totalCount: 1,
     });
 
-    expect(getUser).toHaveBeenCalledOnce();
-    expect(builder.eq).toHaveBeenCalledWith("user_id", "fresh-auth-user-id");
+    expect(getAuthContextMock).toHaveBeenCalledOnce();
+    expect(builder.eq).toHaveBeenCalledWith("user_id", "request-auth-user-id");
   });
 
   it("rejects a missing or expired session before querying private rows", async () => {
-    const from = vi.fn();
-    const authenticationError = {
-      code: "bad_jwt",
-      message: "session expired",
-    };
-    createClientMock.mockResolvedValue({
-      auth: {
-        getUser: vi.fn().mockResolvedValue({
-          data: { user: null },
-          error: authenticationError,
-        }),
-      },
-      from,
-    });
+    getAuthContextMock.mockRejectedValue(new DiscoveryAuthenticationError());
 
     await expect(getDiscoveryDataset()).rejects.toBeInstanceOf(
       DiscoveryAuthenticationError,
     );
-    expect(from).not.toHaveBeenCalled();
-    expect(logSupabaseErrorMock).toHaveBeenCalledWith(
-      "discovery authentication failed",
-      authenticationError,
-    );
+    expect(getAuthContextMock).toHaveBeenCalledOnce();
   });
 });
