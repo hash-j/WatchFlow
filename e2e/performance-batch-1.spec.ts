@@ -67,6 +67,7 @@ function declarePerformanceBatchOneQa() {
       }
 
       expectNoUnexpectedBrowserFailures(qaUserBAudit, {
+        allowedCategories: ["next-image-lcp-advice"],
         allowedConsoleFailures: [
           {
             category: "browser-runtime",

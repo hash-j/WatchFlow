@@ -1,16 +1,37 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-23
-Last updated by: Codex / Part 18A Acceptance Blocker — Logout Repair
+Last updated: 2026-09-24
+Last updated by: Codex / Part 18A Security Acceptance Unblock
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18A performance and reliability work; CSV Import V2 and Batches 1, 2, 3A, 3B, and 3C are implemented locally.
 Current branch: `part-18a-core-reliability`.
-Current status: Part 17 Production Launch remains PASS. The scoped Part 18A feature work is complete against watchflow-dev with QA User B; final Part 18A acceptance remains pending and must be rerun serially. Changes remain uncommitted and unpushed.
+Current status: Part 17 Production Launch remains PASS. Part 18A final acceptance is PASS against watchflow-dev: the configured QA User A identity was confirmed in development and the required live two-user RLS audit now passes. The accepted Part 18A release commit is local only and unpushed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-24 Part 18A Security Acceptance Unblocked
+
+- A redacted Supabase Auth-admin inspection ran only after the configured
+  development target guard proved that the active URL exactly matched the
+  expected watchflow-dev URL. The configured QA User A account existed exactly
+  once and its email was unconfirmed.
+- The development identity was repaired with the narrow supported Auth-admin
+  update `email_confirm: true`, then read back as confirmed. No email address,
+  user ID, credential, token, project identifier, or environment value was
+  printed or recorded.
+- The focused live RLS integration suite now passes 1 file/5 tests. This
+  restores the required two-user, anonymous-denial, and authenticated shared
+  metadata evidence that was blocked during the final acceptance rerun.
+- This was an operational development-QA identity repair only. No application
+  code, Auth policy, RLS policy, schema, migration, user data beyond QA User A's
+  confirmation state, or Production resource changed. No deploy, merge, or
+  push occurred; the accepted Part 18A release commit is local only.
+- Combined with the complete serial browser matrix and deterministic gates
+  recorded in the final acceptance rerun below, Part 18A final acceptance is
+  now PASS. Part 18B remains unstarted.
 
 ## 2026-09-23 Part 18A Final Acceptance FAIL
 
@@ -86,6 +107,47 @@ Preview acceptance status. Older dated milestone sections are historical.
 - This resolves only the acceptance-test logout blocker. Do not mark overall
   Part 18A final acceptance PASS: the full guarded browser matrix still needs
   its separately authorized serial rerun.
+
+## 2026-09-24 Part 18A Final Acceptance Rerun — FAIL
+
+- Preconditions passed: branch `part-18a-core-reliability` at `0c7e836`, the
+  exact development browser guard, and the linked remote migration history
+  through `202609210001_part_18a_queue_normalization.sql`. A read-only linked
+  development database lint reported no schema errors. Production remained
+  unlinked, uncontacted, and unmodified.
+- Every guarded browser group passed serially with one worker and a fresh QA
+  User B session. Before every group, a new narrow cleanup suite verified and
+  removed only QA User B's declared `Inception` and `Arrival` fixtures. Batch 1
+  passed normal Dashboard/Library/Schedule reads plus schedule persistence and
+  cleanup; Batch 2 passed queue add/reorder/refresh/remove/compaction/status
+  exit and preservation of unrelated queue rows; Batch 3A passed request
+  freshness plus logout/login/protected-route behavior; Batch 3B passed Picker,
+  Recommendations, and Statistics; Batch 3C passed cross-route revalidation;
+  CSV Import V2 passed its 105-row duplicate/update/preservation workflow;
+  Movie Details passed its full status matrix; and Search passed owned state,
+  addability, and restoration after removal. Browser diagnostics had no
+  unexpected failures; only the categorized Next image LCP advice appeared.
+- The development-only Next toolbar interception repair remains test-only. The
+  cleanup suite and a missing Batch 1 LCP diagnostic allowance are likewise
+  test-only changes; no application implementation, database schema, migration,
+  RLS policy, Auth provider configuration, dependency, or user data outside
+  the two declared QA User B fixtures changed.
+- Static/deterministic evidence passed: focused queue/request/security contracts
+  (5 files/38 tests), full Vitest (88 files/846 tests), `git diff --check`,
+  ESLint, direct TypeScript, Next 16.2.12 production build, and the
+  261-browser-artifact client-secret scan. Migration contracts retain RLS,
+  server-only service-key boundaries, authenticated identity derivation, and no
+  browser owner-ID path; the linked development schema lint has no errors.
+- Final status is FAIL, not PASS: the explicitly required live two-user RLS
+  integration suite could not authenticate QA User A because Supabase returned
+  `email_not_confirmed`. Its five cross-user/anonymous assertions therefore
+  did not run. Do not change the QA account, Auth configuration, or Production
+  to work around this without separate authorization. Resolve or replace that
+  confirmed second development QA identity, rerun the read-only RLS suite, and
+  then rerun/record the affected final acceptance evidence.
+- No deployment, merge, Production migration/data/configuration change, commit,
+  or push occurred during this rerun. Its audit changes remain uncommitted;
+  Part 18B remains unstarted.
 
 ## 2026-09-23 Part 18A Search Already-in-Library
 
