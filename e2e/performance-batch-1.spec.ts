@@ -119,7 +119,7 @@ function declarePerformanceBatchOneQa() {
       }
 
       expectNoUnexpectedBrowserFailures(qaUserBAudit, {
-        allowedCategories: ["aborted"],
+        allowedCategories: ["aborted", "next-image-lcp-advice"],
         allowedConsoleFailures: [
           {
             category: "browser-runtime",

@@ -32,13 +32,17 @@ export async function addControlledMovie(
     throw new Error("TMDB returned a controlled QA result without a valid ID.");
   }
 
-  await clickAndWaitForMutation(
-    page,
-    result.getByRole("button", { name: "Add to Library" }),
-    {
-      success: /(?:Added to your library|already in your library)/,
-    },
-  );
+  const addButton = result.getByRole("button", { name: "Add to Library" });
+  if ((await addButton.count()) === 0) {
+    await expect(
+      result.getByRole("button", { name: "Already in your Library" }),
+    ).toBeDisabled();
+    return { title, tmdbId, addedByTest: false };
+  }
+
+  await clickAndWaitForMutation(page, addButton, {
+    success: /(?:Added to your library|already in your library)/,
+  });
 
   const message = await result.getByRole("status").innerText();
   return {

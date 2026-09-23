@@ -32,7 +32,9 @@ function declareBatch3AAcceptance() {
         await expect(qaUserBPage).toHaveURL(new RegExp(`${path}$`));
       }
 
-      expectNoUnexpectedBrowserFailures(qaUserBAudit);
+      expectNoUnexpectedBrowserFailures(qaUserBAudit, {
+        allowedCategories: ["next-image-lcp-advice"],
+      });
     });
 
     test("logout clears QA User B and a fresh login restores only that identity", async ({
@@ -43,15 +45,23 @@ function declareBatch3AAcceptance() {
       await logout(qaUserBPage);
       await qaUserBPage.goto("/dashboard");
       await expect(qaUserBPage).toHaveURL(/\/auth\/login/);
+      await qaUserBPage.reload();
+      await expect(
+        qaUserBPage.getByRole("heading", {
+          level: 1,
+          name: "Log in to WatchFlow",
+        }),
+      ).toBeVisible();
 
       await login(qaUserBPage, getQaCredentials("B"));
       await expect(
         qaUserBPage.getByRole("heading", { level: 1, name: "Dashboard" }),
       ).toBeVisible();
+      await logout(qaUserBPage);
 
       expectNoUnexpectedBrowserFailures(qaUserBAudit, {
         // Logout cancels in-flight RSC refreshes for the protected Dashboard.
-        allowedCategories: ["aborted"],
+        allowedCategories: ["aborted", "next-image-lcp-advice"],
       });
     });
   });

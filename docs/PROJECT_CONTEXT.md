@@ -1,16 +1,91 @@
 # WatchFlow Project Context
 
 Last updated: 2026-09-23
-Last updated by: Codex / Part 18A Search Already-in-Library
+Last updated by: Codex / Part 18A Acceptance Blocker — Logout Repair
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18A performance and reliability work; CSV Import V2 and Batches 1, 2, 3A, 3B, and 3C are implemented locally.
 Current branch: `part-18a-core-reliability`.
-Current status: Part 17 Production Launch remains PASS. All scoped Part 18A feature work is complete and accepted against watchflow-dev with QA User B. Changes remain uncommitted and unpushed.
+Current status: Part 17 Production Launch remains PASS. The scoped Part 18A feature work is complete against watchflow-dev with QA User B; final Part 18A acceptance remains pending and must be rerun serially. Changes remain uncommitted and unpushed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-23 Part 18A Final Acceptance FAIL
+
+- Acceptance began from a clean worktree on `part-18a-core-reliability` at
+  `0c7e836` (`part-18a-search-library-verified`). The required checkpoints for
+  Batches 1, 2, 3A, 3B, 3C, CSV Import V2, Movie Details, and Search all exist.
+  Local and linked watchflow-dev migration history align through
+  `202609210001_part_18a_queue_normalization.sql`; watchflow-production remains
+  unlinked and untouched. A read-only linked development database lint reported
+  no schema errors.
+- Static and deterministic gates passed: full Vitest 88 files/846 tests, ESLint,
+  direct TypeScript, `git diff --check`, Next 16.2.12 production build with 37
+  routes, and the 508-browser-artifact client-secret scan. Repository test
+  contracts continue to cover the queue migration, request-scoped auth reuse,
+  private-cache absence, query projections, CSV chunk/idempotency behavior,
+  Movie Details matrix/preservation, Search ownership, and core route/security
+  boundaries.
+- Guarded watchflow-dev browser acceptance did not complete. CSV Import V2,
+  Movie Details, Search Already-in-Library, and Batch 1 basic navigation passed
+  serially. The known non-blocking Next image LCP advisory is now explicitly
+  categorized in the older performance suites, and the shared controlled-movie
+  QA helper now recognizes the intentional Search owned state instead of waiting
+  forever for an absent Add button. Those are test-only corrections; no product
+  behavior, schema, Auth configuration, RLS, or deployment changed.
+- The genuine blocker is Batch 3A logout freshness. In a clean serial rerun,
+  protected navigation passed, but clicking the visible QA User B “Sign out”
+  control never navigated to `/auth/login`. After the 180-second bounded test
+  timeout, the page still displayed the authenticated Dashboard and Sign out
+  button. The Browser acceptance therefore cannot prove logout/session clearing
+  or fresh re-login. Do not begin Part 18A release/Preview QA or Part 18B until
+  this is diagnosed, fixed under explicit authorization, and the full guarded
+  browser matrix is rerun serially.
+- The first combined browser attempt was stopped because Playwright launched six
+  workers against shared QA User B fixtures. Its output is non-authoritative.
+  The following serial run also hit controlled fixtures already in the owned
+  Search state in Batch 1, Batch 2, and Batch 3C; the updated helper now reports
+  that state rather than timing out, but those mutation scenarios have not yet
+  been rerun with verified disposable absent fixtures. Batch 3B reached its
+  diagnostic assertion and was blocked only by the now-categorized known LCP
+  advisory; it also needs a clean rerun. The isolated/local-from-zero migration
+  reset and direct SQL production-security-audit scripts were not run because
+  this audit has no safe disposable local database executor; migration contracts
+  and linked development lint passed instead.
+- Production, migrations, production data/configuration, deployment, merge,
+  commit, and push were untouched by this audit. Working changes are limited to
+  the audit's test-only browser compatibility/diagnostic updates and this
+  documentation entry.
+
+## 2026-09-24 Part 18A Acceptance Blocker — Logout Repair
+
+- Diagnosis found no logout Server Action or Supabase cookie-clearing defect.
+  The local Next development toolbar's `nextjs-portal` intercepted the visible
+  Sign out button's pointer event during Playwright QA, so the browser never
+  dispatched the click and the action never ran. The observed Dashboard timeout
+  was therefore a development-browser harness blocker, not a product session
+  failure.
+- The shared guarded browser logout helper now removes that development-only
+  toolbar element before its normal visible-button click and uses a bounded
+  30-second login redirect wait. No application/session/Auth implementation,
+  schema, migration, provider configuration, RLS policy, dependency, or user
+  data changed. The Batch 3A browser case additionally proves the requested
+  logged-out refresh and a second logout after fresh login.
+- Against the exact development QA guard, QA User B passed login to Dashboard,
+  Sign out to `/auth/login`, direct `/dashboard` protection, logged-out refresh,
+  fresh login to Dashboard, and a second Sign out in 14.7 seconds. The browser
+  diagnostics had no unexpected console or network failures; the known Next
+  image LCP advice remains explicitly categorized.
+- Verification passed the focused auth route suite (20 tests), full Vitest
+  suite (88 files/846 tests), ESLint, direct TypeScript, `git diff --check`,
+  the Next 16.2.12 production build, and the 261-browser-artifact client-secret
+  scan. The development target guard remained satisfied; Production was not
+  contacted or modified. Nothing was committed, pushed, deployed, or merged.
+- This resolves only the acceptance-test logout blocker. Do not mark overall
+  Part 18A final acceptance PASS: the full guarded browser matrix still needs
+  its separately authorized serial rerun.
 
 ## 2026-09-23 Part 18A Search Already-in-Library
 

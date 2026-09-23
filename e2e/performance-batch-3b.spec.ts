@@ -87,7 +87,7 @@ function declareBatchThreeBSuite() {
       ).toBeVisible();
 
       expectNoUnexpectedBrowserFailures(qaUserBAudit, {
-        allowedCategories: ["aborted"],
+        allowedCategories: ["aborted", "next-image-lcp-advice"],
       });
     });
   });

@@ -169,7 +169,7 @@ function declareBatchThreeCSuite() {
         totalBefore,
       );
       expectNoUnexpectedBrowserFailures(qaUserBAudit, {
-        allowedCategories: ["aborted"],
+        allowedCategories: ["aborted", "next-image-lcp-advice"],
       });
     });
   });

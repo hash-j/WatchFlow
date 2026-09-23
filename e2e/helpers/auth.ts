@@ -9,6 +9,13 @@ async function clearPasswordIfVisible(page: Page) {
   }
 }
 
+async function dismissDevelopmentTools(page: Page) {
+  await page
+    .locator("nextjs-portal")
+    .evaluate((element) => element.remove())
+    .catch(() => undefined);
+}
+
 export async function login(page: Page, credentials: QaCredentials) {
   await page.goto("/auth/login");
   await page.getByLabel("Email", { exact: true }).fill(credentials.email);
@@ -35,8 +42,9 @@ export async function logout(page: Page) {
     .locator("button:visible")
     .filter({ hasText: /^Sign out$/ });
   await expect(signOutButton).toHaveCount(1);
+  await dismissDevelopmentTools(page);
   await Promise.all([
-    page.waitForURL(/\/auth\/login$/),
+    page.waitForURL(/\/auth\/login$/, { timeout: 30_000 }),
     signOutButton.click(),
   ]);
   await expect(
