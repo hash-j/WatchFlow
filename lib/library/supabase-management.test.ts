@@ -34,6 +34,9 @@ const input: ValidatedMovieManagement = {
   scheduledFor: null,
   timezone: null,
   scheduleNote: null,
+  preservePersonalRating: false,
+  preservePriority: false,
+  preserveWouldWatchAgain: false,
 };
 
 beforeEach(() => {
@@ -248,6 +251,75 @@ describe("authenticated Supabase movie updates", () => {
     ).resolves.toBeNull();
     expect(rpc).toHaveBeenCalledOnce();
     expect(client).not.toHaveProperty("from");
+  });
+
+  it("preserves hidden metadata through an authenticated owner-scoped lookup", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
+    const query = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          personal_rating: 9.2,
+          priority: 4,
+          would_watch_again: true,
+        },
+        error: null,
+      }),
+    };
+    query.select.mockReturnValue(query);
+    query.eq.mockReturnValue(query);
+    const from = vi.fn().mockReturnValue(query);
+    const client = { from, rpc } as unknown as SupabaseClient;
+
+    await expect(
+      updateAuthenticatedUserMovie(client, "verified-user-id", "owned-row-id", {
+        ...input,
+        preservePersonalRating: true,
+        preservePriority: true,
+        preserveWouldWatchAgain: true,
+      }),
+    ).resolves.toBe(true);
+
+    expect(from).toHaveBeenCalledWith("user_movies");
+    expect(query.select).toHaveBeenCalledWith(
+      "personal_rating,priority,would_watch_again",
+    );
+    expect(query.eq).toHaveBeenNthCalledWith(1, "id", "owned-row-id");
+    expect(query.eq).toHaveBeenNthCalledWith(2, "user_id", "verified-user-id");
+    expect(rpc).toHaveBeenCalledWith(
+      "watchflow_update_library_movie_v2",
+      expect.objectContaining({
+        p_personal_rating: 9.2,
+        p_priority: 4,
+        p_would_watch_again: true,
+      }),
+    );
+  });
+
+  it("does not mutate a row when the preservation lookup is not owned", async () => {
+    const rpc = vi.fn();
+    const query = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    query.select.mockReturnValue(query);
+    query.eq.mockReturnValue(query);
+    const client = {
+      from: vi.fn().mockReturnValue(query),
+      rpc,
+    } as unknown as SupabaseClient;
+
+    await expect(
+      updateAuthenticatedUserMovie(
+        client,
+        "verified-user-id",
+        "another-users-row-id",
+        { ...input, preservePriority: true },
+      ),
+    ).resolves.toBe(false);
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("does not report a profile permission denial as a missing scheduling RPC", async () => {

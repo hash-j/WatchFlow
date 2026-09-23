@@ -200,6 +200,9 @@ export async function updateOwnedMovie(
       scheduledFor: status === "scheduled" ? owned.scheduledFor : null,
       timezone: status === "scheduled" ? owned.scheduleTimezone : null,
       scheduleNote: status === "scheduled" ? owned.scheduleNote : null,
+      preservePersonalRating: false,
+      preservePriority: false,
+      preserveWouldWatchAgain: false,
     });
     if (!updated) throw new LibraryPersistenceError();
   }

@@ -52,6 +52,21 @@ export const SELECTABLE_LIBRARY_MOVIE_STATUSES = [
   "watched",
 ] as const satisfies readonly LibraryMovieStatus[];
 
+export const MOVIE_MANAGEMENT_SELECTABLE_STATUSES = [
+  "want_to_watch",
+  "watch_next",
+  "scheduled",
+  "watched",
+] as const satisfies readonly LibraryMovieStatus[];
+
+export function isMovieManagementSelectableStatus(
+  status: LibraryMovieStatus,
+) {
+  return (MOVIE_MANAGEMENT_SELECTABLE_STATUSES as readonly LibraryMovieStatus[]).includes(
+    status,
+  );
+}
+
 export const LEGACY_LIBRARY_MOVIE_STATUSES = [
   "on_hold",
   "dropped",

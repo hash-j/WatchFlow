@@ -166,10 +166,10 @@ describe("Part 12 library UI contracts", () => {
     const settings = source("components/settings/preferences-form.tsx");
     const lists = source("components/lists/add-movies-dialog.tsx");
 
-    expect(management).toContain("SELECTABLE_LIBRARY_MOVIE_STATUSES");
-    expect(management).toContain("isLegacyLibraryMovieStatus(item.status)");
+    expect(management).toContain("MOVIE_MANAGEMENT_SELECTABLE_STATUSES");
+    expect(management).toContain("isMovieManagementSelectableStatus(item.status)");
     expect(management).toContain('<option value={item.status} hidden>');
-    expect(management).toContain('status === "watched"');
+    expect(management).toContain("getMovieManagementFieldVisibility(status)");
     expect(management).toContain('name="watchedDate"');
     expect(management).toContain("getWatchedDateInput(item.watchedAt)");
     expect(management).toContain("key={formVersion}");
@@ -381,8 +381,8 @@ describe("Part 16F-B Batch 2B library polish contracts", () => {
     const management = source("components/movies/movie-management-form.tsx");
 
     expect(controls).toContain('name="actor"');
-    expect(management).toContain("SELECTABLE_LIBRARY_MOVIE_STATUSES");
-    expect(management).toContain('status === "watched"');
+    expect(management).toContain("MOVIE_MANAGEMENT_SELECTABLE_STATUSES");
+    expect(management).toContain("getMovieManagementFieldVisibility(status)");
     expect(management).toContain("getWatchedDateInput(item.watchedAt)");
     expect(management).toContain("setWatchedDate(event.target.value)");
   });

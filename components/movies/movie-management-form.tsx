@@ -14,12 +14,13 @@ import {
 } from "@/lib/library/action-state";
 import { getWatchedDateInput } from "@/lib/library/timezone";
 import {
-  isLegacyLibraryMovieStatus,
+  isMovieManagementSelectableStatus,
   LIBRARY_MOVIE_STATUS_LABELS,
-  SELECTABLE_LIBRARY_MOVIE_STATUSES,
+  MOVIE_MANAGEMENT_SELECTABLE_STATUSES,
   type LibraryMovie,
   type LibraryMovieStatus,
 } from "@/lib/movies/types";
+import { getMovieManagementFieldVisibility } from "@/lib/library/management-fields";
 
 type MovieManagementFormProps = {
   item: LibraryMovie;
@@ -44,8 +45,23 @@ function MovieManagementFields({
   isPending,
 }: MovieManagementFieldsProps) {
   const [status, setStatus] = useState<LibraryMovieStatus>(item.status);
+  const [priority, setPriority] = useState(String(item.priority));
+  const [personalRating, setPersonalRating] = useState(
+    item.personalRating === null ? "" : String(item.personalRating),
+  );
+  const [review, setReview] = useState(item.review ?? "");
   const persistedWatchedDate = getWatchedDateInput(item.watchedAt);
   const [watchedDate, setWatchedDate] = useState(persistedWatchedDate);
+  const [currentScheduledDate, setCurrentScheduledDate] =
+    useState(scheduledDate);
+  const [currentScheduledTime, setCurrentScheduledTime] =
+    useState(scheduledTime);
+  const [currentTimezone, setCurrentTimezone] = useState(timezone);
+  const [scheduleNote, setScheduleNote] = useState(item.scheduleNote ?? "");
+  const [wouldWatchAgain, setWouldWatchAgain] = useState(
+    item.wouldWatchAgain,
+  );
+  const fields = getMovieManagementFieldVisibility(status);
 
   return (
     <form action={action} className="space-y-6">
@@ -63,12 +79,12 @@ function MovieManagementFields({
               setStatus(event.target.value as LibraryMovieStatus)
             }
           >
-            {isLegacyLibraryMovieStatus(item.status) ? (
+            {!isMovieManagementSelectableStatus(item.status) ? (
               <option value={item.status} hidden>
                 {LIBRARY_MOVIE_STATUS_LABELS[item.status]}
               </option>
             ) : null}
-            {SELECTABLE_LIBRARY_MOVIE_STATUSES.map((value) => (
+            {MOVIE_MANAGEMENT_SELECTABLE_STATUSES.map((value) => (
               <option key={value} value={value}>
                 {LIBRARY_MOVIE_STATUS_LABELS[value]}
               </option>
@@ -76,37 +92,45 @@ function MovieManagementFields({
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="movie-priority">Priority</Label>
-          <Select
-            id="movie-priority"
-            name="priority"
-            defaultValue={String(item.priority)}
-          >
-            {Array.from({ length: 6 }).map((_, priority) => (
-              <option key={priority} value={priority}>
-                {priority}
-              </option>
-            ))}
-          </Select>
-          <p className="text-xs text-muted-foreground">0 is lowest; 5 is highest.</p>
-        </div>
+        {fields.priority ? (
+          <div className="space-y-2">
+            <Label htmlFor="movie-priority">Priority</Label>
+            <Select
+              id="movie-priority"
+              name="priority"
+              value={priority}
+              onChange={(event) => setPriority(event.target.value)}
+            >
+              {Array.from({ length: 6 }).map((_, priority) => (
+                <option key={priority} value={priority}>
+                  {priority}
+                </option>
+              ))}
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              0 is lowest; 5 is highest.
+            </p>
+          </div>
+        ) : null}
 
-        <div className="space-y-2">
-          <Label htmlFor="personal-rating">Personal rating</Label>
-          <Input
-            id="personal-rating"
-            name="personalRating"
-            type="number"
-            min="0"
-            max="10"
-            step="0.1"
-            defaultValue={item.personalRating ?? ""}
-            placeholder="0 to 10"
-          />
-        </div>
+        {fields.personalRating ? (
+          <div className="space-y-2">
+            <Label htmlFor="personal-rating">Personal rating</Label>
+            <Input
+              id="personal-rating"
+              name="personalRating"
+              type="number"
+              min="0"
+              max="10"
+              step="0.1"
+              value={personalRating}
+              onChange={(event) => setPersonalRating(event.target.value)}
+              placeholder="0 to 10"
+            />
+          </div>
+        ) : null}
 
-        {status === "watched" ? (
+        {fields.watchedDate ? (
           <div className="space-y-2">
             <Label htmlFor="watched-date">Watched date</Label>
             <Input
@@ -120,31 +144,7 @@ function MovieManagementFields({
         ) : null}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="movie-review">Review</Label>
-        <textarea
-          id="movie-review"
-          name="review"
-          rows={5}
-          maxLength={5000}
-          defaultValue={item.review ?? ""}
-          className="min-w-0 max-w-full w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          placeholder="Your private thoughts about this movie"
-        />
-      </div>
-
-      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3 text-sm font-medium">
-        <input
-          type="checkbox"
-          name="wouldWatchAgain"
-          value="true"
-          defaultChecked={item.wouldWatchAgain}
-          className="size-4 rounded border-input accent-foreground"
-        />
-        I would watch this movie again
-      </label>
-
-      {status === "scheduled" ? (
+      {fields.schedule ? (
         <fieldset className="space-y-4 rounded-lg border p-4">
           <legend className="px-1 text-sm font-semibold">Viewing schedule</legend>
           <div className="grid gap-4 md:grid-cols-2">
@@ -155,7 +155,8 @@ function MovieManagementFields({
                 name="scheduledDate"
                 type="date"
                 required
-                defaultValue={scheduledDate}
+                value={currentScheduledDate}
+                onChange={(event) => setCurrentScheduledDate(event.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -165,7 +166,8 @@ function MovieManagementFields({
                 name="scheduledTime"
                 type="time"
                 required
-                defaultValue={scheduledTime}
+                value={currentScheduledTime}
+                onChange={(event) => setCurrentScheduledTime(event.target.value)}
               />
             </div>
           </div>
@@ -175,7 +177,8 @@ function MovieManagementFields({
               id="movie-timezone"
               name="timezone"
               required
-              defaultValue={timezone}
+              value={currentTimezone}
+              onChange={(event) => setCurrentTimezone(event.target.value)}
               placeholder="UTC"
               autoComplete="off"
             />
@@ -190,12 +193,41 @@ function MovieManagementFields({
               name="scheduleNote"
               rows={3}
               maxLength={1000}
-              defaultValue={item.scheduleNote ?? ""}
-              className="min-w-0 max-w-full w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              value={scheduleNote}
+              onChange={(event) => setScheduleNote(event.target.value)}
+              className="w-full min-w-0 max-w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="Movie night, venue, or anything else to remember"
             />
           </div>
         </fieldset>
+      ) : null}
+
+      <div className="space-y-2">
+        <Label htmlFor="movie-review">Review</Label>
+        <textarea
+          id="movie-review"
+          name="review"
+          rows={5}
+          maxLength={5000}
+          value={review}
+          onChange={(event) => setReview(event.target.value)}
+          className="w-full min-w-0 max-w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          placeholder="Your private thoughts about this movie"
+        />
+      </div>
+
+      {fields.wouldWatchAgain ? (
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3 text-sm font-medium">
+          <input
+            type="checkbox"
+            name="wouldWatchAgain"
+            value="true"
+            checked={wouldWatchAgain}
+            onChange={(event) => setWouldWatchAgain(event.target.checked)}
+            className="size-4 rounded border-input accent-foreground"
+          />
+          I would watch this movie again
+        </label>
       ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

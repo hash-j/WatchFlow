@@ -75,15 +75,53 @@ export async function updateAuthenticatedUserMovie(
     return false;
   }
 
+  let personalRating = input.personalRating;
+  let priority = input.priority;
+  let wouldWatchAgain = input.wouldWatchAgain;
+  if (
+    input.preservePersonalRating ||
+    input.preservePriority ||
+    input.preserveWouldWatchAgain
+  ) {
+    const { data: current, error: currentError } = await client
+      .from("user_movies")
+      .select("personal_rating,priority,would_watch_again")
+      .eq("id", libraryId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (currentError) {
+      throwUserMovieUpdateError(
+        "user_movies hidden metadata preservation lookup failed",
+        currentError,
+      );
+    }
+    if (!current) return false;
+
+    if (input.preservePersonalRating) {
+      personalRating =
+        typeof current.personal_rating === "number"
+          ? current.personal_rating
+          : null;
+    }
+    if (input.preservePriority) {
+      priority =
+        typeof current.priority === "number" ? current.priority : 0;
+    }
+    if (input.preserveWouldWatchAgain) {
+      wouldWatchAgain = current.would_watch_again === true;
+    }
+  }
+
   const { data, error } = await client.rpc(
     "watchflow_update_library_movie_v2",
     {
       p_library_id: libraryId,
       p_status: input.status,
-      p_personal_rating: input.personalRating,
+      p_personal_rating: personalRating,
       p_review: input.review,
-      p_priority: input.priority,
-      p_would_watch_again: input.wouldWatchAgain,
+      p_priority: priority,
+      p_would_watch_again: wouldWatchAgain,
       p_watched_at: input.watchedAt,
       p_watched_at_provided: input.watchedAtProvided,
       p_scheduled_for: input.scheduledFor,

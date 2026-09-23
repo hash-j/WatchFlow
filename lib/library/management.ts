@@ -41,6 +41,9 @@ export type ValidatedMovieManagement = {
   scheduledFor: string | null;
   timezone: string | null;
   scheduleNote: string | null;
+  preservePersonalRating: boolean;
+  preservePriority: boolean;
+  preserveWouldWatchAgain: boolean;
 };
 
 export type ScheduleInput = {
@@ -242,18 +245,28 @@ export function validateMovieManagementInput(
     status === "scheduled" ? validateScheduleInput(input) : null;
   const watchedAtProvided =
     status === "watched" && input.watchedDateProvided === true;
+  const ratingIsVisible = status === "watched";
+  const priorityIsVisible = status === "watch_next";
+  const watchAgainIsVisible = status === "watched";
 
   return {
     status,
-    personalRating: validatePersonalRating(input.personalRating),
+    personalRating: ratingIsVisible
+      ? validatePersonalRating(input.personalRating)
+      : null,
     review: validateOptionalText(input.review, MAX_REVIEW_LENGTH, "Review"),
-    priority: validatePriority(input.priority),
-    wouldWatchAgain: validateWouldWatchAgain(input.wouldWatchAgain),
+    priority: priorityIsVisible ? validatePriority(input.priority) : 0,
+    wouldWatchAgain: watchAgainIsVisible
+      ? validateWouldWatchAgain(input.wouldWatchAgain)
+      : false,
     watchedAt: watchedAtProvided ? validateWatchedAt(input.watchedDate) : null,
     watchedAtProvided,
     scheduledFor: schedule?.scheduledFor ?? null,
     timezone: schedule?.timezone ?? null,
     scheduleNote: schedule?.scheduleNote ?? null,
+    preservePersonalRating: !ratingIsVisible,
+    preservePriority: !priorityIsVisible,
+    preserveWouldWatchAgain: !watchAgainIsVisible,
   };
 }
 

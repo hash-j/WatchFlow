@@ -1,16 +1,67 @@
 # WatchFlow Project Context
 
 Last updated: 2026-09-23
-Last updated by: Codex / Part 18A CSV Import V2
+Last updated by: Codex / Part 18A Movie Details Status-Specific Form
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18A performance and reliability work; CSV Import V2 and Batches 1, 2, 3A, 3B, and 3C are implemented locally.
 Current branch: `part-18a-core-reliability`.
-Current status: Part 17 Production Launch remains PASS. Part 18A CSV Import V2 is complete and accepted against watchflow-dev with QA User B. Changes remain uncommitted and unpushed.
+Current status: Part 17 Production Launch remains PASS. Part 18A Movie Details status-specific form is complete and accepted against watchflow-dev with QA User B. Changes remain uncommitted and unpushed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-23 Part 18A Movie Details Status-Specific Form
+
+- Movie Details now renders the requested metadata matrix: Saved shows Status
+  plus Review; Watch Next adds Priority; Scheduled adds the existing required
+  date, time, timezone, and optional schedule note controls; Watched adds
+  Watched Date, Personal Rating, and the existing watch-again checkbox. Review
+  remains available for every status. Conditional controls reflow without empty
+  columns, and Save Changes remains full-width on narrow screens.
+- The Movie Details selector offers only Saved, Watch Next, Scheduled, and
+  Watched for new edits. The database/domain value for Currently Watching is
+  unchanged. An existing Currently Watching row retains a hidden selected
+  compatibility option, remains readable with Status plus Review, and is not
+  silently rewritten merely by opening the page. Existing legacy On Hold and
+  Dropped rows retain the same compatibility mechanism.
+- Hidden inputs are not trusted or synthesized in the browser. Server validation
+  validates only metadata relevant to the submitted status, then an authenticated
+  RLS-bound, ID-and-owner-filtered `user_movies` read supplies stored rating,
+  priority, and watch-again values for fields hidden by that status before the
+  accepted atomic management RPC runs. Watched Date retains its accepted
+  provided-flag behavior: non-Watched edits preserve it, while an explicit blank
+  Watched submission writes NULL. Schedule clearing/requirements and Watch Next
+  queue normalization remain owned by the accepted RPC.
+- Live QA exposed a genuine consecutive-save regression: React's post-action
+  native form reset could restore uncontrolled values from intentionally
+  non-revalidated detail props, allowing a later status-only save to clear
+  Review or rewrite metadata. All editable fields now share the existing keyed,
+  controlled local-state reconciliation boundary used for Watched Date. The
+  active detail remains locally authoritative after a successful action, while
+  navigation/reopen receives fresh persisted props.
+- Guarded browser QA against the exact watchflow-dev pin passed with QA User B.
+  It exercised all nine required transitions (Saved/Watch Next/Scheduled/Watched),
+  immediate conditional rendering, save, reload, navigation away/reopen,
+  preserved Review/rating/priority/watch-again/Watched Date, schedule validity,
+  Watch Next presence, light and dark themes, and 390x844, 820x1180, and
+  1366x768 viewports without horizontal overflow. No unexpected console/network
+  failure occurred; only the categorized non-blocking Next image LCP advice was
+  observed. The disposable fixture was removed in the guarded cleanup.
+- Coverage adds the exact field matrix, Currently Watching selection/readability,
+  hidden-client-field rejection, hidden-value preservation and owner isolation,
+  CSV Import V2 compatibility, and live transition/reconciliation acceptance.
+  Focused coverage passed 6 files/80 tests; the full suite passed 86 files/840
+  tests. `git diff --check`, ESLint, direct TypeScript, the Next 16.2.12
+  production build with 37 routes, and the 508-browser-artifact client-secret
+  scan passed.
+- No migration, schema, historical migration, RLS policy, grant, Auth flow,
+  service-role/admin path, dependency, environment, Production data/config,
+  deployment, commit, or push changed. Remaining Part 18A work excludes this
+  completed form and CSV Import V2; Search Already-in-Library is still not
+  started. Part 18B priority sorting, custom-list ordering, notifications, PWA,
+  and Series support also remain unstarted.
 
 ## 2026-09-23 Part 18A CSV Import V2
 

@@ -137,13 +137,18 @@ function declareCsvImportV2Suite() {
         await expect(qaUserBPage.getByLabel("Personal rating", { exact: true })).toHaveValue(
           "9.1",
         );
-        await expect(qaUserBPage.getByLabel("Priority", { exact: true })).toHaveValue("4");
+        await expect(qaUserBPage.getByLabel("Priority", { exact: true })).toHaveCount(0);
         await expect(qaUserBPage.getByLabel("Review", { exact: true })).toHaveValue(
           "CSV Import V2 existing metadata update",
         );
         await expect(
           qaUserBPage.getByLabel("I would watch this movie again"),
         ).toBeChecked();
+
+        await qaUserBPage.locator('select[name="status"]:visible').selectOption("watch_next");
+        await expect(qaUserBPage.getByLabel("Priority", { exact: true })).toHaveValue("4");
+        await expect(qaUserBPage.getByLabel("Personal rating", { exact: true })).toHaveCount(0);
+        await qaUserBPage.locator('select[name="status"]:visible').selectOption("watched");
         await expect(
           qaUserBPage.getByRole("button", {
             name: `Add ${fixture!.title} to favourites`,

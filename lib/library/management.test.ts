@@ -48,7 +48,7 @@ function createDependencies(
 }
 
 describe("movie management", () => {
-  it("saves an allowed status and personal fields for the verified session", async () => {
+  it("validates only the metadata fields relevant to Watch Next", async () => {
     const updateMovieMock = vi.fn().mockResolvedValue(true);
     const dependencies = createDependencies({ updateMovie: updateMovieMock });
 
@@ -65,13 +65,79 @@ describe("movie management", () => {
       "library-item-id",
       expect.objectContaining({
         status: "watch_next",
-        personalRating: 8.5,
+        personalRating: null,
         priority: 3,
-        wouldWatchAgain: true,
+        wouldWatchAgain: false,
         watchedAt: null,
         watchedAtProvided: false,
+        preservePersonalRating: true,
+        preservePriority: false,
+        preserveWouldWatchAgain: true,
       }),
     );
+  });
+
+  it("ignores hidden client metadata and preserves its stored values", async () => {
+    const updateMovieMock = vi.fn().mockResolvedValue(true);
+    const dependencies = createDependencies({ updateMovie: updateMovieMock });
+
+    await updateLibraryMovie(
+      "library-item-id",
+      {
+        ...baseInput,
+        status: "want_to_watch",
+        personalRating: "not-a-rating",
+        priority: "not-a-priority",
+        wouldWatchAgain: true,
+      },
+      dependencies,
+    );
+
+    expect(updateMovieMock).toHaveBeenCalledWith(
+      session,
+      "library-item-id",
+      expect.objectContaining({
+        personalRating: null,
+        priority: 0,
+        wouldWatchAgain: false,
+        preservePersonalRating: true,
+        preservePriority: true,
+        preserveWouldWatchAgain: true,
+      }),
+    );
+  });
+
+  it("uses status-specific hidden-value preservation across requested transitions", async () => {
+    const updateMovieMock = vi.fn().mockResolvedValue(true);
+    const dependencies = createDependencies({ updateMovie: updateMovieMock });
+
+    for (const [status, expected] of [
+      ["want_to_watch", [true, true, true]],
+      ["watch_next", [true, false, true]],
+      ["scheduled", [true, true, true]],
+      ["watched", [false, true, false]],
+    ] as const) {
+      await updateLibraryMovie(
+        "library-item-id",
+        {
+          ...baseInput,
+          status,
+          scheduledDate: status === "scheduled" ? "2099-07-22" : "",
+          scheduledTime: status === "scheduled" ? "19:30" : "",
+          timezone: status === "scheduled" ? "Asia/Karachi" : "",
+        },
+        dependencies,
+      );
+      expect(updateMovieMock).toHaveBeenLastCalledWith(
+        session,
+        "library-item-id",
+        expect.objectContaining({
+          preservePersonalRating: expected[0],
+          preservePriority: expected[1],
+          preserveWouldWatchAgain: expected[2],
+        }),
+      );
+    }
   });
 
   it("validates personal ratings from 0 through 10", () => {
@@ -110,6 +176,9 @@ describe("movie management", () => {
         watchedAt: null,
         watchedAtProvided: true,
         review: null,
+        preservePersonalRating: false,
+        preservePriority: true,
+        preserveWouldWatchAgain: false,
       }),
     );
   });
