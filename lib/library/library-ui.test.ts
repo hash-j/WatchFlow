@@ -237,9 +237,12 @@ describe("Part 12 library UI contracts", () => {
 
     expect(adapter).toContain("MAX_WATCH_NEXT_ROWS = 500");
     expect(adapter).toContain('.eq("status", "watch_next")');
+    expect(adapter).toContain('.order("priority", { ascending: false })');
     expect(adapter).toContain(
       '.order("queue_position", { ascending: true, nullsFirst: false })',
     );
+    expect(adapter).toContain('.order("created_at", { ascending: true })');
+    expect(adapter).toContain('.order("id", { ascending: true })');
     expect(adapter).toContain(".range(0, MAX_WATCH_NEXT_ROWS)");
     expect(page).toContain("getCurrentUserWatchNextMovies");
     expect(page).not.toContain("listLibraryMovies");

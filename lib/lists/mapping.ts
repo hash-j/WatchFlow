@@ -129,9 +129,14 @@ export function mapCustomListSummaries(
     const row = record(rowValue);
     const list = mapCustomList(rowValue);
     const movieCount = nonNegativeInteger(row?.movie_count);
+    const sortPosition = positiveInteger(row?.sort_position);
     const rawPosters = row?.poster_paths;
 
-    if (movieCount === null || !Array.isArray(rawPosters)) {
+    if (
+      movieCount === null ||
+      sortPosition === null ||
+      !Array.isArray(rawPosters)
+    ) {
       throw new ListsPersistenceError(
         "The custom-list summary response was invalid. Please try again.",
       );
@@ -139,6 +144,7 @@ export function mapCustomListSummaries(
 
     return {
       ...list,
+      sortPosition,
       movieCount,
       posterPaths: rawPosters
         .filter((path): path is string => typeof path === "string")

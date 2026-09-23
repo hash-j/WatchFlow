@@ -7,6 +7,7 @@ import type { CustomListSummary } from "@/lib/lists/types";
 
 import { EditListDialog } from "./edit-list-dialog";
 import { ListPosterCollage } from "./list-poster-collage";
+import { ListSummaryOrderControls } from "./list-summary-order-controls";
 
 function formatListDate(value: string) {
   const date = new Date(value);
@@ -20,7 +21,15 @@ function formatListDate(value: string) {
   }).format(date);
 }
 
-export function ListCard({ list }: { list: CustomListSummary }) {
+export function ListCard({
+  list,
+  isFirst,
+  isLast,
+}: {
+  list: CustomListSummary;
+  isFirst: boolean;
+  isLast: boolean;
+}) {
   return (
     <article className="flex min-w-0 flex-col rounded-xl border bg-card p-4 shadow-sm">
       <ListPosterCollage
@@ -61,11 +70,17 @@ export function ListCard({ list }: { list: CustomListSummary }) {
         </dl>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-2 border-t pt-4 min-[420px]:flex min-[420px]:flex-wrap min-[420px]:items-center [&>*]:w-full min-[420px]:[&>*]:w-auto">
+      <div className="mt-5 grid grid-cols-1 gap-2 border-t pt-4">
         <Button asChild size="sm">
           <Link href={`/lists/${list.id}`}>Open List</Link>
         </Button>
         <EditListDialog list={list} compact />
+        <ListSummaryOrderControls
+          listId={list.id}
+          listName={list.name}
+          isFirst={isFirst}
+          isLast={isLast}
+        />
       </div>
     </article>
   );

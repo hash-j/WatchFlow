@@ -7,6 +7,10 @@ import {
 import { isDatabaseIdentifier } from "./mapping";
 import type { QueueDirection } from "./queue";
 import {
+  isWatchNextPriority,
+  type WatchNextPriority,
+} from "./watch-next-priority";
+import {
   isValidDateInput,
   isValidTimeZone,
   zonedDateTimeToIso,
@@ -64,6 +68,11 @@ export interface MovieManagementDependencies {
     session: AuthenticatedLibrarySession,
     libraryId: string,
     direction: QueueDirection,
+  ): Promise<boolean>;
+  setWatchNextPriority(
+    session: AuthenticatedLibrarySession,
+    libraryId: string,
+    priority: WatchNextPriority,
   ): Promise<boolean>;
   scheduleMovie(
     session: AuthenticatedLibrarySession,
@@ -128,15 +137,13 @@ export function validatePersonalRating(value: unknown) {
   return rating;
 }
 
-function validatePriority(value: unknown) {
+export function validateWatchNextPriority(value: unknown): WatchNextPriority {
   const input = asTrimmedString(value);
   const priority = Number(input);
 
   if (
     !input ||
-    !Number.isSafeInteger(priority) ||
-    priority < 0 ||
-    priority > 5
+    !isWatchNextPriority(priority)
   ) {
     throw new LibraryValidationError("Priority must be a whole number from 0 to 5.");
   }
@@ -255,7 +262,7 @@ export function validateMovieManagementInput(
       ? validatePersonalRating(input.personalRating)
       : null,
     review: validateOptionalText(input.review, MAX_REVIEW_LENGTH, "Review"),
-    priority: priorityIsVisible ? validatePriority(input.priority) : 0,
+    priority: priorityIsVisible ? validateWatchNextPriority(input.priority) : 0,
     wouldWatchAgain: watchAgainIsVisible
       ? validateWouldWatchAgain(input.wouldWatchAgain)
       : false,
@@ -297,6 +304,20 @@ export async function moveLibraryQueueMovie(
   }
 
   return dependencies.moveQueueMovie(session, libraryId, direction);
+}
+
+export async function setLibraryWatchNextPriority(
+  libraryId: string,
+  priority: unknown,
+  dependencies: MovieManagementDependencies,
+) {
+  const session = await requireSession(dependencies);
+  validateLibraryId(libraryId);
+  return dependencies.setWatchNextPriority(
+    session,
+    libraryId,
+    validateWatchNextPriority(priority),
+  );
 }
 
 export async function scheduleLibraryMovie(

@@ -1,4 +1,4 @@
-import { PART_13_MIGRATION } from "./types";
+import { PART_13_MIGRATION, PART_18B_MIGRATION } from "./types";
 
 export class ListsAuthenticationError extends Error {
   constructor(message = "Please sign in again.") {
@@ -57,7 +57,7 @@ export class ListsMissingColumnError extends Error {
 
 export class ListsMissingRpcError extends Error {
   constructor(
-    message = `Custom-list ordering is not configured yet. Apply ${PART_13_MIGRATION}.`,
+    message = `Custom-list ordering is not configured yet. Apply ${PART_18B_MIGRATION}.`,
   ) {
     super(message);
     this.name = "ListsMissingRpcError";
@@ -79,4 +79,3 @@ export class ListsPersistenceError extends Error {
     this.name = "ListsPersistenceError";
   }
 }
-

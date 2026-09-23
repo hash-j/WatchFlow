@@ -58,7 +58,8 @@ describe("Part 16F-B Batch 3 import and queue polish contracts", () => {
 
     expect(page).toContain("grid-cols-[5rem_minmax(0,1fr)]");
     expect(page).toContain("col-start-1 row-span-2 row-start-1");
-    expect(page).toContain("Priority {item.priority} · Position {index + 1}");
+    expect(page).toContain("getWatchNextPriorityLabel(priority)");
+    expect(page).toContain("QueuePriorityControl");
     expect(controls).toContain('value="up"');
     expect(controls).toContain('value="down"');
     expect(controls).toContain("Move earlier");

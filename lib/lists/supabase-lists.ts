@@ -495,6 +495,20 @@ export function moveOwnedListItem(
   );
 }
 
+export function moveOwnedCustomList(
+  listId: string,
+  direction: "up" | "down",
+) {
+  return callListRpc(
+    "custom list card movement failed",
+    "watchflow_move_custom_list",
+    {
+      p_list_id: listId,
+      p_direction: direction,
+    },
+  );
+}
+
 export function removeOwnedListMovie(listMovieId: string) {
   return callListRpc(
     "custom list movie removal failed",

@@ -113,8 +113,10 @@ export async function getCurrentUserWatchNextMovies() {
     )
     .eq("user_id", userId)
     .eq("status", "watch_next")
+    .order("priority", { ascending: false })
     .order("queue_position", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true })
+    .order("id", { ascending: true })
     .range(0, MAX_WATCH_NEXT_ROWS);
 
   if (error) {

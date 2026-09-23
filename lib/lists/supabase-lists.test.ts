@@ -29,6 +29,7 @@ import {
   authenticateLists,
   createOwnedCustomList,
   deleteOwnedCustomList,
+  moveOwnedCustomList,
   moveOwnedListItem,
   removeOwnedListMovie,
   setOwnedMovieListMemberships,
@@ -270,6 +271,7 @@ describe("custom-list RPC boundaries", () => {
       listId,
       userMovieIds: [secondUserMovieId, userMovieId],
     });
+    await moveOwnedCustomList(listId, "up");
     await moveOwnedListItem(listMovieId, "down");
     await removeOwnedListMovie(listMovieId);
     await setOwnedMovieListMemberships(userMovieId, [listId]);
@@ -278,17 +280,21 @@ describe("custom-list RPC boundaries", () => {
       p_list_id: listId,
       p_user_movie_ids: [secondUserMovieId, userMovieId],
     });
-    expect(rpc).toHaveBeenNthCalledWith(2, "watchflow_move_list_item", {
+    expect(rpc).toHaveBeenNthCalledWith(2, "watchflow_move_custom_list", {
+      p_list_id: listId,
+      p_direction: "up",
+    });
+    expect(rpc).toHaveBeenNthCalledWith(3, "watchflow_move_list_item", {
       p_list_movie_id: listMovieId,
       p_direction: "down",
     });
     expect(rpc).toHaveBeenNthCalledWith(
-      3,
+      4,
       "watchflow_remove_movie_from_list",
       { p_list_movie_id: listMovieId },
     );
     expect(rpc).toHaveBeenNthCalledWith(
-      4,
+      5,
       "watchflow_set_movie_list_memberships",
       {
         p_user_movie_id: userMovieId,

@@ -1,16 +1,85 @@
 # WatchFlow Project Context
 
 Last updated: 2026-09-24
-Last updated by: Codex / Part 18A Security Acceptance Unblock
+Last updated by: Codex / Part 18B Guarded Acceptance
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18A performance and reliability work; CSV Import V2 and Batches 1, 2, 3A, 3B, and 3C are implemented locally.
-Current branch: `part-18a-core-reliability`.
-Current status: Part 17 Production Launch remains PASS. Part 18A final acceptance is PASS against watchflow-dev: the configured QA User A identity was confirmed in development and the required live two-user RLS audit now passes. The accepted Part 18A release commit is local only and unpushed.
+Current phase: Part 18B Watch Next priorities and custom-list card ordering are implemented and accepted against watchflow-dev.
+Current branch: `codex/part-18b-priority-list-ordering`.
+Current status: Part 17 Production Launch remains PASS. Part 18A final acceptance is PASS against watchflow-dev and its accepted release is `8835f79` (`part-18a-final-release`). Part 18B migration `202609240001_part_18b_priority_and_list_ordering.sql` is installed on watchflow-dev and guarded acceptance is PASS. Part 18B application and test changes remain uncommitted and unpushed; no deployment, merge, or Production change occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-24 Part 18B Guarded Acceptance — PASS
+
+- The exact development target guard passed: the configured application URL,
+  expected QA URL, and linked Supabase project matched, and the environment was
+  explicitly marked development. Linked migration history contains matching
+  local/remote version `202609240001`; the linked development schema lint
+  reported no errors. Production was not linked, contacted, migrated, or
+  modified.
+- The guarded Part 18B browser suite passed serially with one worker. Watch Next
+  proved priority ordering, same-priority Earlier movement, priority-change
+  reordering, refresh persistence, status exit, library removal, contiguous
+  queue positions, and preservation of QA User A's queue. The only browser
+  advisory was the already-categorized Next image LCP guidance.
+- Custom-list browser acceptance created three uniquely named QA User B lists,
+  moved cards Earlier and Later, persisted order through refresh, renamed and
+  edited a card without changing its order, deleted the middle card, verified
+  compacted movement afterward, and removed every created list in cleanup.
+  The final narrow cleanup also verified and removed only the declared QA User B
+  Inception and Arrival fixtures.
+- Live QA exposed one genuine UI freshness regression: list-card movement
+  returned success while list invalidation was deferred until after the Server
+  Action response, leaving the open Lists page visually stale. A dedicated
+  synchronous `/lists` order revalidation now refreshes only the active card
+  index for that action. Focused revalidation/list-action coverage passed 2
+  files/25 tests, and the corrected browser scenario passed in 2.1 minutes.
+- The separate guarded two-user browser isolation suite passed 1/1. The live
+  Supabase RLS integration suite passed 1 file/5 tests, covering distinct QA
+  identities, cross-user profile/preferences/library/list isolation, private
+  list membership isolation, anonymous denial, and authenticated shared movie
+  reads.
+- Full regression passed: Vitest 90 files/863 tests, ESLint, direct TypeScript,
+  `git diff --check`, the 508-artifact client-secret scan, and the Next 16.2.12
+  production build with 37 routes. No commit, push, merge, or deployment
+  occurred.
+
+## 2026-09-24 Part 18B Priority and Custom List Ordering — Local Implementation
+
+- Migration `202609240001_part_18b_priority_and_list_ordering.sql` is
+  transactional and follows the installed Part 18A queue-normalization
+  migration. It reuses the existing bounded `user_movies.priority` field rather
+  than adding a second priority/rank field. The authoritative Watch Next order
+  is `priority DESC`, `queue_position ASC`, `created_at ASC`, then `id ASC`.
+  Labels are exactly 0 None, 1 Low, 2 Low, 3 Medium, 4 High, and 5 Must Watch.
+  Queue moves remain manual moves within one priority group; priority changes
+  atomically normalize the owner-scoped queue.
+- The same migration adds `lists.sort_position` only for custom-list card
+  ordering. Existing cards backfill in their prior `updated_at DESC, id ASC`
+  presentation order; new cards append automatically, owner-owned deletion
+  compacts positions, and an authenticated caller may move a card Earlier or
+  Later. `list_movies.position` and all ordering inside a list remain unchanged.
+- New security-invoker SQL contracts derive ownership from `auth.uid()`, hold
+  owner-scoped advisory locks, retain RLS, expose only authenticated movement
+  and priority RPCs, and grant only the narrow `lists.sort_position` update
+  required by the list-order functions. No service-role path, browser-supplied
+  owner ID, Auth-policy, or RLS-policy change was introduced.
+- The app now renders accessible, non-drag-and-drop Save Priority controls on
+  Watch Next and Move Earlier/Move Later controls on list cards. Server actions
+  validate form input, use the authenticated server client, and revalidate only
+  private derived views. Dashboard selection uses the same priority order.
+- Local verification passed: focused Part 18B/contracts 14 files/158 tests;
+  full Vitest 90 files/862 tests; direct TypeScript; ESLint; `git diff --check`;
+  client-secret scan; and the Next 16.2.12 production build. Local SQL fixture
+  coverage verifies priority queue normalization and list-card append/move/
+  delete compaction with owner isolation.
+- A guarded serial browser suite is present but intentionally has not run.
+  Applying this new migration to `watchflow-dev` requires separate explicit
+  authorization; no remote database, including Production, was contacted or
+  modified for Part 18B. No deploy, merge, commit, or push occurred.
 
 ## 2026-09-24 Part 18A Security Acceptance Unblocked
 

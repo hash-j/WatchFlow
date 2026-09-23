@@ -91,6 +91,9 @@ describe("Part 13 route and private navigation contracts", () => {
     expect(card).toContain("{list.movieCount}");
     expect(card).toContain("Last updated");
     expect(card).toContain("ListPosterCollage");
+    expect(card).toContain("ListSummaryOrderControls");
+    expect(page).toContain("isFirst={index === 0}");
+    expect(page).toContain("isLast={index === lists.length - 1}");
     expect(detail).toContain("Private");
     expect(detail).toContain("data.movies.length");
     expect(detail).toContain("This list is empty");
@@ -205,6 +208,19 @@ describe("Part 13 personal-library picker contracts", () => {
 });
 
 describe("Part 13 ordered list-item and movie-detail contracts", () => {
+  it("keeps saved list-card ordering distinct from existing movie ordering", () => {
+    const card = source("components/lists/list-card.tsx");
+    const controls = source("components/lists/list-summary-order-controls.tsx");
+
+    expect(card).toContain("ListSummaryOrderControls");
+    expect(controls).toContain('name="listId"');
+    expect(controls).toContain('name="direction"');
+    expect(controls).toContain("already first in your lists");
+    expect(controls).toContain("already last in your lists");
+    expect(controls).toContain("disabled={isPending || isFirst}");
+    expect(controls).toContain("disabled={isPending || isLast}");
+  });
+
   it("shows text positions, status, personal rating, favourite, and accessible boundary controls", () => {
     const row = source("components/lists/list-movie-row.tsx");
     const controls = source("components/lists/list-order-controls.tsx");

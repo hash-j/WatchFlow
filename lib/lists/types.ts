@@ -2,6 +2,8 @@ import type { LibraryMovieStatus } from "@/lib/movies/types";
 
 export const PART_13_MIGRATION =
   "supabase/migrations/202607290001_part_13_private_custom_lists.sql";
+export const PART_18B_MIGRATION =
+  "supabase/migrations/202609240001_part_18b_priority_and_list_ordering.sql";
 
 export type CustomList = {
   id: string;
@@ -13,6 +15,7 @@ export type CustomList = {
 };
 
 export type CustomListSummary = CustomList & {
+  sortPosition: number;
   movieCount: number;
   posterPaths: string[];
 };
@@ -113,4 +116,3 @@ export const initialListActionState: ListActionState = {
   fieldErrors: {},
   requestId: 0,
 };
-

@@ -35,10 +35,10 @@ export function QueueControls({
         disabled={isPending || isFirst}
         aria-label={
           isFirst
-            ? "Move movie earlier in the queue (already first)"
+            ? "Move movie earlier in the queue (already first at this priority)"
             : "Move movie earlier in the queue"
         }
-        title={isFirst ? "This movie is already first in the queue." : "Move earlier in Watch Next"}
+        title={isFirst ? "This movie is already first at this priority." : "Move earlier in Watch Next"}
         className="w-full sm:w-auto"
       >
         <ArrowUp className="size-4" aria-hidden="true" />
@@ -53,10 +53,10 @@ export function QueueControls({
         disabled={isPending || isLast}
         aria-label={
           isLast
-            ? "Move movie later in the queue (already last)"
+            ? "Move movie later in the queue (already last at this priority)"
             : "Move movie later in the queue"
         }
-        title={isLast ? "This movie is already last in the queue." : "Move later in Watch Next"}
+        title={isLast ? "This movie is already last at this priority." : "Move later in Watch Next"}
         className="w-full sm:w-auto"
       >
         <ArrowDown className="size-4" aria-hidden="true" />

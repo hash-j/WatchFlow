@@ -95,6 +95,7 @@ with expected(table_name, column_name) as (
     ('lists', 'visibility'),
     ('lists', 'created_at'),
     ('lists', 'updated_at'),
+    ('lists', 'sort_position'),
     ('list_movies', 'id'),
     ('list_movies', 'list_id'),
     ('list_movies', 'user_movie_id'),
@@ -246,6 +247,7 @@ with expected(signature) as (
     ),
     ('public.watchflow_schedule_movie(uuid,timestamptz,text,text)'),
     ('public.move_watch_queue_item(uuid,text)'),
+    ('public.watchflow_set_watch_next_priority(uuid,smallint)'),
     ('public.watchflow_add_user_movie(bigint)'),
     (
       'public.watchflow_library_rows(text,text,boolean,boolean,text,text,integer,integer,integer,numeric,numeric)'
@@ -261,6 +263,8 @@ with expected(signature) as (
     ('public.watchflow_add_movies_to_list(uuid,uuid[])'),
     ('public.watchflow_remove_movie_from_list(uuid)'),
     ('public.watchflow_set_movie_list_memberships(uuid,uuid[])'),
+    ('public.watchflow_normalize_list_order()'),
+    ('public.watchflow_move_custom_list(uuid,text)'),
     ('public.watchflow_list_summaries()'),
     ('public.watchflow_take_tmdb_rate_limit(text,integer)')
 ),
@@ -305,7 +309,9 @@ with expected(signature) as (
   values
     ('public.watchflow_set_updated_at()'),
     ('public.watchflow_create_user_preferences()'),
-    ('public.watchflow_compact_lists_after_membership_delete()')
+    ('public.watchflow_compact_lists_after_membership_delete()'),
+    ('public.watchflow_assign_list_sort_position()'),
+    ('public.watchflow_compact_lists_after_delete()')
 )
 select
   signature as object_name,
@@ -370,6 +376,8 @@ with expected(table_name, constraint_name) as (
     ('lists', 'lists_name_not_blank'),
     ('lists', 'lists_description_length'),
     ('lists', 'lists_private_visibility'),
+    ('lists', 'lists_sort_position_positive'),
+    ('lists', 'lists_user_sort_position_key'),
     ('list_movies', 'list_movies_position_positive'),
     ('list_movies', 'list_movies_list_user_movie_key'),
     ('list_movies', 'list_movies_list_position_key'),
@@ -502,6 +510,7 @@ with expected(index_name) as (
     ('user_movies_library_watched_at_idx'),
     ('lists_user_normalized_name_key'),
     ('lists_user_updated_at_idx'),
+    ('lists_user_sort_position_key'),
     ('list_movies_list_user_movie_key'),
     ('list_movies_list_position_key'),
     ('list_movies_user_movie_id_idx'),
@@ -532,6 +541,8 @@ with expected(table_schema, table_name, trigger_name) as (
     ),
     ('auth', 'users', 'watchflow_auth_user_preferences_created'),
     ('public', 'lists', 'watchflow_lists_updated_at'),
+    ('public', 'lists', 'watchflow_lists_assign_sort_position'),
+    ('public', 'lists', 'watchflow_lists_compact_after_delete'),
     ('public', 'list_movies', 'watchflow_list_movies_updated_at'),
     (
       'public',

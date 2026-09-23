@@ -156,6 +156,22 @@ describe("dashboard targeted reads", () => {
     );
 
     expect(created[1].limit).toHaveBeenCalledWith(1);
+    expect(created[1].select).toHaveBeenCalledWith(
+      "id, status, priority, queue_position, movies(id, tmdb_id, title)",
+    );
+    expect(created[1].order).toHaveBeenNthCalledWith(1, "priority", {
+      ascending: false,
+    });
+    expect(created[1].order).toHaveBeenNthCalledWith(2, "queue_position", {
+      ascending: true,
+      nullsFirst: false,
+    });
+    expect(created[1].order).toHaveBeenNthCalledWith(3, "created_at", {
+      ascending: true,
+    });
+    expect(created[1].order).toHaveBeenNthCalledWith(4, "id", {
+      ascending: true,
+    });
     expect(created[3].limit).toHaveBeenCalledWith(4);
     expect(created[4].limit).toHaveBeenCalledWith(4);
     expect(created[5].limit).toHaveBeenCalledWith(4);

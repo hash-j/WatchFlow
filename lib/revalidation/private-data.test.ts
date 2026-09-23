@@ -10,6 +10,7 @@ vi.mock("next/server", () => ({ after: (callback: () => void) => callback() }));
 import {
   revalidateApplicationPreferenceViews,
   revalidateLibraryDerivedViews,
+  revalidateListOrderViews,
   revalidateListViews,
   revalidateOnboardingPreferenceViews,
   revalidateQueueViews,
@@ -70,6 +71,12 @@ describe("private-data revalidation architecture", () => {
       ["/lists/[listId]", "page"],
       ["/library/[movieId]", "page"],
     ]);
+  });
+
+  it("refreshes list-card order in the active list index response", () => {
+    revalidateListOrderViews();
+
+    expect(revalidatePath.mock.calls).toEqual([["/lists"]]);
   });
 
   it("keeps profile/preference freshness scoped to their consumers", () => {

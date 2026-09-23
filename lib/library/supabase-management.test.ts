@@ -253,6 +253,31 @@ describe("authenticated Supabase movie updates", () => {
     expect(client).not.toHaveProperty("from");
   });
 
+  it("sets an owned Watch Next priority through its narrow RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: { success: true, priority: 5 },
+      error: null,
+    });
+    const dependencies = createSupabaseManagementDependencies();
+
+    await expect(
+      dependencies.setWatchNextPriority(
+        {
+          userId: "verified-user-id",
+          client: { rpc } as unknown as SupabaseClient,
+        },
+        "owned-row-id",
+        5,
+      ),
+    ).resolves.toBe(true);
+
+    expect(rpc).toHaveBeenCalledWith("watchflow_set_watch_next_priority", {
+      p_user_movie_id: "owned-row-id",
+      p_priority: 5,
+    });
+    expect(rpc.mock.calls[0][1]).not.toHaveProperty("user_id");
+  });
+
   it("preserves hidden metadata through an authenticated owner-scoped lookup", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
     const query = {

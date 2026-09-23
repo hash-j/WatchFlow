@@ -37,6 +37,7 @@ describe("custom-list response mapping", () => {
       mapCustomListSummaries([
         {
           ...listRow,
+          sort_position: "2",
           movie_count: "6",
           poster_paths: [
             "/one.jpg",
@@ -52,6 +53,7 @@ describe("custom-list response mapping", () => {
     ).toEqual([
       expect.objectContaining({
         id: listId,
+        sortPosition: 2,
         movieCount: 6,
         posterPaths: [
           "/one.jpg",
@@ -225,7 +227,12 @@ describe("custom-list response mapping", () => {
       () => mapCustomList({ ...listRow, visibility: "public" }),
       () =>
         mapCustomListSummaries([
-          { ...listRow, movie_count: -1, poster_paths: [] },
+          {
+            ...listRow,
+            sort_position: 0,
+            movie_count: -1,
+            poster_paths: [],
+          },
         ]),
       () =>
         mapCustomListMovies([

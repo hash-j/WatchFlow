@@ -4,9 +4,14 @@ import { ListOrdered } from "lucide-react";
 
 import { MoviePoster } from "@/components/movies/movie-poster";
 import { QueueControls } from "@/components/movies/queue-controls";
+import { QueuePriorityControl } from "@/components/movies/queue-priority-control";
 import { Button } from "@/components/ui/button";
 import { EmptyState, PageContainer, PageHeader } from "@/components/ui/responsive-layout";
 import { getCurrentUserWatchNextMovies } from "@/lib/library/supabase-library";
+import {
+  getWatchNextPriorityLabel,
+  isWatchNextPriority,
+} from "@/lib/library/watch-next-priority";
 
 function QueueLoading() {
   return (
@@ -51,7 +56,16 @@ async function WatchNextQueue() {
         </p>
       ) : null}
       <ol className={`${truncated ? "mt-4" : "mt-8"} space-y-3`}>
-        {queue.map((item, index) => (
+        {queue.map((item, index) => {
+          const priority = isWatchNextPriority(item.priority) ? item.priority : 0;
+          const isFirstInPriority =
+            index === 0 || queue[index - 1]?.priority !== item.priority;
+          const isLastInPriority =
+            index === queue.length - 1
+              ? !truncated
+              : queue[index + 1]?.priority !== item.priority;
+
+          return (
           <li
             key={item.libraryId}
             className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] gap-3 rounded-xl border bg-card p-3 shadow-sm sm:grid-cols-[6rem_minmax(0,1fr)] sm:gap-4 sm:p-4 md:grid-cols-[2.5rem_5rem_minmax(0,1fr)_auto] md:items-center"
@@ -74,18 +88,24 @@ async function WatchNextQueue() {
                 {item.movie.title}
               </Link>
               <p className="mt-1 text-sm text-muted-foreground">
-                Priority {item.priority} · Position {index + 1}
+                {getWatchNextPriorityLabel(priority)} priority · Position {index + 1}
               </p>
             </div>
             <div className="col-start-2 min-w-0 self-end md:col-start-auto md:self-auto">
               <QueueControls
                 libraryId={item.libraryId}
-                isFirst={index === 0}
-                isLast={index === queue.length - 1 && !truncated}
+                isFirst={isFirstInPriority}
+                isLast={isLastInPriority}
+              />
+              <QueuePriorityControl
+                libraryId={item.libraryId}
+                priority={priority}
+                title={item.movie.title}
               />
             </div>
           </li>
-        ))}
+          );
+        })}
       </ol>
     </>
   );

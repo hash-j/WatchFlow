@@ -38,6 +38,11 @@ describe("Part 15.5F migration provenance and order", () => {
     ).toBeGreaterThan(
       index("202609100001_part_16fb_library_actor_status.sql"),
     );
+    expect(
+      index("202609240001_part_18b_priority_and_list_ordering.sql"),
+    ).toBeGreaterThan(
+      index("202609210001_part_18a_queue_normalization.sql"),
+    );
   });
 
   it("creates the required base objects before incremental migrations", () => {

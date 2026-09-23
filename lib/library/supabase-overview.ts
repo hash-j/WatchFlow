@@ -88,11 +88,13 @@ export async function readDashboardData(
     .eq("user_id", userId);
   const nextRequest = client
     .from("user_movies")
-    .select("id, status, queue_position, movies(id, tmdb_id, title)")
+    .select("id, status, priority, queue_position, movies(id, tmdb_id, title)")
     .eq("user_id", userId)
     .eq("status", "watch_next")
+    .order("priority", { ascending: false })
     .order("queue_position", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true })
+    .order("id", { ascending: true })
     .limit(1);
   const scheduledRequest = client
     .from("user_movies")

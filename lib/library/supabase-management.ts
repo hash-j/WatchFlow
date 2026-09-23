@@ -15,6 +15,7 @@ import type {
   ValidatedMovieManagement,
 } from "./management";
 import type { QueueDirection } from "./queue";
+import type { WatchNextPriority } from "./watch-next-priority";
 import type { AuthenticatedLibrarySession } from "./service";
 
 type SupabaseManagementSession = AuthenticatedLibrarySession & {
@@ -244,6 +245,50 @@ export async function scheduleAuthenticatedUserMovie(
   return { movieId: "" };
 }
 
+async function setWatchNextPriority(
+  session: AuthenticatedLibrarySession,
+  libraryId: string,
+  priority: WatchNextPriority,
+) {
+  const { client } = getSessionClient(session);
+  const { data, error } = await client.rpc(
+    "watchflow_set_watch_next_priority",
+    {
+      p_user_movie_id: libraryId,
+      p_priority: priority,
+    },
+  );
+
+  if (error) {
+    logSupabaseError("watch_next priority update failed", error);
+
+    if (error.code === "PGRST202" || error.code === "42883") {
+      throw new LibrarySchemaError(
+        "Watch Next priorities are not configured yet. Apply the Part 18B migration.",
+      );
+    }
+
+    if (error.code === "42501") {
+      throw new LibraryAuthorizationError();
+    }
+
+    if (typeof error.code === "string" && error.code.startsWith("23")) {
+      throw new LibraryConstraintError();
+    }
+
+    throw new LibraryPersistenceError(
+      "The Watch Next priority could not be updated. Please try again.",
+    );
+  }
+
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "success" in data &&
+    data.success === true
+  );
+}
+
 async function scheduleMovie(
   session: AuthenticatedLibrarySession,
   libraryId: string,
@@ -262,6 +307,7 @@ export function createSupabaseManagementDependencies(): MovieManagementDependenc
     authenticate,
     updateMovie,
     moveQueueMovie,
+    setWatchNextPriority,
     scheduleMovie,
   };
 }

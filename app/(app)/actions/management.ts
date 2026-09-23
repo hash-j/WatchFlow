@@ -14,8 +14,10 @@ import {
 import {
   moveLibraryQueueMovie,
   scheduleLibraryMovie,
+  setLibraryWatchNextPriority,
   updateLibraryMovie,
 } from "@/lib/library/management";
+import { getWatchNextPriorityLabel } from "@/lib/library/watch-next-priority";
 import { createSupabaseManagementDependencies } from "@/lib/library/supabase-management";
 import {
   revalidateLibraryDerivedViews,
@@ -99,6 +101,35 @@ export async function moveQueueMovieAction(
 
     revalidateQueueViews();
     return { status: "success", message: "Queue order updated." };
+  } catch (error) {
+    return { status: "error", message: getActionErrorMessage(error) };
+  }
+}
+
+export async function setQueueMoviePriorityAction(
+  _previousState: LibraryActionState,
+  formData: FormData,
+): Promise<LibraryActionState> {
+  try {
+    const priority = formData.get("priority");
+    const updated = await setLibraryWatchNextPriority(
+      getString(formData, "libraryId"),
+      priority,
+      createSupabaseManagementDependencies(),
+    );
+
+    if (!updated) {
+      return {
+        status: "error",
+        message: "That movie is no longer in your Watch Next queue.",
+      };
+    }
+
+    revalidateQueueViews();
+    return {
+      status: "success",
+      message: `Priority set to ${getWatchNextPriorityLabel(Number(priority))}. Queue reordered.`,
+    };
   } catch (error) {
     return { status: "error", message: getActionErrorMessage(error) };
   }

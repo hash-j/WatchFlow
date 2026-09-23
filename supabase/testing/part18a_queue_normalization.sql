@@ -1,4 +1,5 @@
--- Local-only behavioral verification for Part 18A Performance Fix Batch 2.
+-- Local-only behavioral verification for the Part 18A queue normalizer after
+-- the Part 18B priority-aware ordering migration.
 -- Run after from_zero_bootstrap.sql and every versioned migration. This file
 -- rolls back all fixtures and must never be applied to a hosted project.
 
@@ -98,12 +99,12 @@ begin
     and status = 'watch_next';
 
   if v_ids <> array[
-      'a2000000-0000-4000-8000-000000000002'::uuid,
       'a1000000-0000-4000-8000-000000000001'::uuid,
-      'a3000000-0000-4000-8000-000000000003'::uuid
+      'a3000000-0000-4000-8000-000000000003'::uuid,
+      'a2000000-0000-4000-8000-000000000002'::uuid
     ]
     or v_positions <> array[1, 2, 3]
-    or v_priorities <> array[0, 5, 2]::smallint[] then
+    or v_priorities <> array[5, 2, 0]::smallint[] then
     raise exception 'Owner A normalization changed order, priority, or contiguity';
   end if;
 end;
@@ -178,18 +179,26 @@ begin
   where user_id = 'a0000000-0000-4000-8000-000000000001'
     and status = 'watch_next';
 
-  if v_ids[4:5] <> array[
+  if v_ids <> array[
+      'a1000000-0000-4000-8000-000000000001'::uuid,
+      'a4000000-0000-4000-8000-000000000004'::uuid,
+      'a3000000-0000-4000-8000-000000000003'::uuid,
       'a5000000-0000-4000-8000-000000000005'::uuid,
-      'a4000000-0000-4000-8000-000000000004'::uuid
+      'a2000000-0000-4000-8000-000000000002'::uuid
     ]
     or v_positions <> array[1, 2, 3, 4, 5] then
-    raise exception 'Bulk add did not append in request order';
+    raise exception 'Bulk add did not apply priority-aware queue order';
   end if;
 end;
 $$;
 
+select public.watchflow_set_watch_next_priority(
+  'a5000000-0000-4000-8000-000000000005',
+  2
+);
+
 select public.move_watch_queue_item(
-  'a4000000-0000-4000-8000-000000000004',
+  'a5000000-0000-4000-8000-000000000005',
   'up'
 );
 
@@ -198,13 +207,13 @@ begin
   if (
     select queue_position
     from public.user_movies
-    where id = 'a4000000-0000-4000-8000-000000000004'
-  ) <> 4 or (
+    where id = 'a5000000-0000-4000-8000-000000000005'
+  ) <> 3 or (
     select queue_position
     from public.user_movies
-    where id = 'a5000000-0000-4000-8000-000000000005'
-  ) <> 5 then
-    raise exception 'Adjacent queue reorder did not persist';
+    where id = 'a3000000-0000-4000-8000-000000000003'
+  ) <> 4 then
+    raise exception 'Same-priority queue reorder did not persist';
   end if;
 end;
 $$;

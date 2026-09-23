@@ -98,8 +98,13 @@ async function ListsContent({ searchParams }: ListsPageProps) {
         </div>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {lists.map((list) => (
-            <ListCard key={list.id} list={list} />
+          {lists.map((list, index) => (
+            <ListCard
+              key={list.id}
+              list={list}
+              isFirst={index === 0}
+              isLast={index === lists.length - 1}
+            />
           ))}
         </div>
       )}

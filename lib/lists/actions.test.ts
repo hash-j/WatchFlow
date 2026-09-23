@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   updateOwnedCustomList: vi.fn(),
   deleteOwnedCustomList: vi.fn(),
   addOwnedMoviesToList: vi.fn(),
+  moveOwnedCustomList: vi.fn(),
   moveOwnedListItem: vi.fn(),
   removeOwnedListMovie: vi.fn(),
   setOwnedMovieListMemberships: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock("@/lib/lists/supabase-lists", () => ({
   updateOwnedCustomList: mocks.updateOwnedCustomList,
   deleteOwnedCustomList: mocks.deleteOwnedCustomList,
   addOwnedMoviesToList: mocks.addOwnedMoviesToList,
+  moveOwnedCustomList: mocks.moveOwnedCustomList,
   moveOwnedListItem: mocks.moveOwnedListItem,
   removeOwnedListMovie: mocks.removeOwnedListMovie,
   setOwnedMovieListMemberships: mocks.setOwnedMovieListMemberships,
@@ -31,6 +33,7 @@ import {
   createListAction,
   deleteListAction,
   moveListItemAction,
+  moveCustomListAction,
   removeMovieFromListAction,
   setMovieListMembershipsAction,
   updateListAction,
@@ -82,6 +85,7 @@ beforeEach(() => {
   mocks.updateOwnedCustomList.mockResolvedValue(list);
   mocks.deleteOwnedCustomList.mockResolvedValue(true);
   mocks.addOwnedMoviesToList.mockResolvedValue(mutationResult());
+  mocks.moveOwnedCustomList.mockResolvedValue(mutationResult());
   mocks.moveOwnedListItem.mockResolvedValue(mutationResult());
   mocks.removeOwnedListMovie.mockResolvedValue(mutationResult());
   mocks.setOwnedMovieListMemberships.mockResolvedValue(mutationResult());
@@ -248,6 +252,48 @@ describe("custom-list create, edit, and delete actions", () => {
 });
 
 describe("custom-list membership actions", () => {
+  it("moves only a validated list-card identifier and revalidates list views", async () => {
+    const formData = new FormData();
+    formData.set("listId", listId);
+    formData.set("direction", "up");
+    formData.set("user_id", "browser-supplied-user");
+
+    const result = await moveCustomListAction(
+      initialListActionState,
+      formData,
+    );
+
+    expect(mocks.moveOwnedCustomList).toHaveBeenCalledWith(listId, "up");
+    expect(mocks.moveOwnedCustomList.mock.calls[0]).not.toContain(
+      "browser-supplied-user",
+    );
+    expect(result).toMatchObject({
+      status: "success",
+      message: "List order saved.",
+    });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists");
+    expect(mocks.revalidatePath).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports list-card order boundaries without treating them as failures", async () => {
+    mocks.moveOwnedCustomList.mockResolvedValue(
+      mutationResult({ moved: false, finalPosition: 1 }),
+    );
+    const formData = new FormData();
+    formData.set("listId", listId);
+    formData.set("direction", "up");
+
+    const result = await moveCustomListAction(
+      initialListActionState,
+      formData,
+    );
+
+    expect(result).toMatchObject({
+      status: "success",
+      message: "This list is already first.",
+    });
+  });
+
   it("passes ordered user_movies IDs to one batch append and reports skips", async () => {
     mocks.addOwnedMoviesToList.mockResolvedValue(
       mutationResult({ requested: 2, matched: 2, added: 1, skipped: 1 }),
@@ -409,7 +455,7 @@ describe("custom-list action error safety", () => {
       formData,
     );
     expect(missing.message).toContain(
-      "202607290001_part_13_private_custom_lists.sql",
+      "202609240001_part_18b_priority_and_list_ordering.sql",
     );
 
     mocks.moveOwnedListItem.mockRejectedValueOnce(

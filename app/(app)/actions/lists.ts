@@ -20,6 +20,7 @@ import {
   addOwnedMoviesToList,
   createOwnedCustomList,
   deleteOwnedCustomList,
+  moveOwnedCustomList,
   moveOwnedListItem,
   removeOwnedListMovie,
   setOwnedMovieListMemberships,
@@ -32,11 +33,15 @@ import {
   deleteListSchema,
   flattenListValidationErrors,
   moveListItemSchema,
+  moveCustomListSchema,
   removeListMovieSchema,
   setMovieListMembershipsSchema,
   updateListSchema,
 } from "@/lib/lists/validation";
-import { revalidateListViews } from "@/lib/revalidation/private-data";
+import {
+  revalidateListOrderViews,
+  revalidateListViews,
+} from "@/lib/revalidation/private-data";
 
 function nextState(
   previousState: ListActionState,
@@ -279,6 +284,43 @@ export async function moveListItemAction(
         : parsed.data.direction === "up"
           ? "This movie is already first."
           : "This movie is already last.",
+    );
+  } catch (error) {
+    return errorState(previousState, listErrorMessage(error));
+  }
+}
+
+export async function moveCustomListAction(
+  previousState: ListActionState,
+  formData: FormData,
+): Promise<ListActionState> {
+  const parsed = moveCustomListSchema.safeParse({
+    listId: formData.get("listId"),
+    direction: formData.get("direction"),
+  });
+
+  if (!parsed.success) {
+    return errorState(previousState, "The selected list was invalid.");
+  }
+
+  try {
+    const result = await moveOwnedCustomList(
+      parsed.data.listId,
+      parsed.data.direction,
+    );
+
+    if (!result.success) {
+      return errorState(previousState, "This list is no longer available.");
+    }
+
+    revalidateListOrderViews();
+    return successState(
+      previousState,
+      result.moved
+        ? "List order saved."
+        : parsed.data.direction === "up"
+          ? "This list is already first."
+          : "This list is already last.",
     );
   } catch (error) {
     return errorState(previousState, listErrorMessage(error));

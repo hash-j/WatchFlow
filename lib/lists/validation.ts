@@ -98,6 +98,13 @@ export const moveListItemSchema = z.object({
   }),
 });
 
+export const moveCustomListSchema = z.object({
+  listId: listUuidSchema,
+  direction: z.enum(["up", "down"], {
+    error: "Choose a valid list movement.",
+  }),
+});
+
 export const removeListMovieSchema = z.object({
   listMovieId: listMovieUuidSchema,
 });

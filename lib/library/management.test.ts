@@ -4,10 +4,12 @@ import { AuthenticationRequiredError, LibraryValidationError } from "./errors";
 import {
   moveLibraryQueueMovie,
   scheduleLibraryMovie,
+  setLibraryWatchNextPriority,
   updateLibraryMovie,
   validateLibraryMovieStatus,
   validatePersonalRating,
   validateScheduleInput,
+  validateWatchNextPriority,
   validateWouldWatchAgain,
   type MovieManagementDependencies,
   type MovieManagementInput,
@@ -42,6 +44,7 @@ function createDependencies(
     authenticate: vi.fn().mockResolvedValue(session),
     updateMovie: vi.fn().mockResolvedValue(true),
     moveQueueMovie: vi.fn().mockResolvedValue(true),
+    setWatchNextPriority: vi.fn().mockResolvedValue(true),
     scheduleMovie: vi.fn().mockResolvedValue({ movieId: "42" }),
     ...overrides,
   };
@@ -331,6 +334,38 @@ describe("movie management", () => {
       expect.anything(),
       expect.anything(),
     );
+  });
+
+  it("validates and persists a Watch Next priority through the authenticated session", async () => {
+    const setPriorityMock = vi.fn().mockResolvedValue(true);
+    const dependencies = createDependencies({
+      setWatchNextPriority: setPriorityMock,
+    });
+
+    expect(validateWatchNextPriority("0")).toBe(0);
+    expect(validateWatchNextPriority("5")).toBe(5);
+    expect(() => validateWatchNextPriority("6")).toThrow(
+      LibraryValidationError,
+    );
+
+    await expect(
+      setLibraryWatchNextPriority(userMovieId, "5", dependencies),
+    ).resolves.toBe(true);
+
+    expect(setPriorityMock).toHaveBeenCalledWith(session, userMovieId, 5);
+  });
+
+  it("rejects an unauthenticated Watch Next priority update before persistence", async () => {
+    const setPriorityMock = vi.fn();
+    const dependencies = createDependencies({
+      authenticate: vi.fn().mockResolvedValue(null),
+      setWatchNextPriority: setPriorityMock,
+    });
+
+    await expect(
+      setLibraryWatchNextPriority(userMovieId, "4", dependencies),
+    ).rejects.toBeInstanceOf(AuthenticationRequiredError);
+    expect(setPriorityMock).not.toHaveBeenCalled();
   });
 
   it("rejects unauthenticated queue reordering", async () => {
