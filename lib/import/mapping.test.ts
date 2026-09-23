@@ -26,6 +26,21 @@ describe("CSV column mapping", () => {
     expect(Object.values(suggestions)).not.toContain("column_5");
   });
 
+  it("maps WatchFlow export identity, favourite, and watch-again columns", () => {
+    const parsed = parseCsvText(
+      "Title,TMDB ID,Favourite,Would Watch Again\nInception,27205,Yes,No",
+    );
+    const mapping = suggestColumnMappings(parsed.columns);
+    const row = validateAndMapRows(parsed, mapping)[0];
+    expect(mapping).toMatchObject({
+      title: "column_1",
+      tmdbId: "column_2",
+      favourite: "column_3",
+      wouldWatchAgain: "column_4",
+    });
+    expect(row).toMatchObject({ tmdbId: 27205, favourite: true, wouldWatchAgain: false });
+  });
+
   it("requires a title mapping", () => {
     const parsed = parseCsvText("Name\nInception");
     expect(() => validateColumnMapping({}, parsed.columns)).toThrow(
@@ -83,6 +98,35 @@ describe("mapped row validation", () => {
       personalRating: "column_2",
     })[0];
     expect(row.issues[0].code).toBe("invalid_rating");
+  });
+
+  it("validates positive whole-number TMDB IDs and Yes/No metadata", () => {
+    const parsed = parseCsvText(
+      "Title,TMDB ID,Favourite,Would Watch Again\nInception,nope,maybe,sometimes",
+    );
+    const row = validateAndMapRows(parsed, {
+      title: "column_1",
+      tmdbId: "column_2",
+      favourite: "column_3",
+      wouldWatchAgain: "column_4",
+    })[0];
+    expect(row.issues.map((issue) => issue.code)).toEqual(
+      expect.arrayContaining([
+        "invalid_tmdb_id",
+        "invalid_favourite",
+        "invalid_watch_again",
+      ]),
+    );
+  });
+
+  it("retains which optional metadata columns were supplied", () => {
+    const parsed = parseCsvText("Title,Review\nInception,");
+    const row = validateAndMapRows(parsed, {
+      title: "column_1",
+      review: "column_2",
+    })[0];
+    expect(row.suppliedFields).toEqual(["title", "review"]);
+    expect(row.review).toBeNull();
   });
 
   it("does not guess an ambiguous watched date", () => {

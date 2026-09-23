@@ -98,6 +98,12 @@ function browserMessageCategory(value: string) {
   if (normalized.includes("hydration")) return "hydration";
   if (normalized.includes("failed to fetch")) return "failed-fetch";
   if (normalized.includes("unique key")) return "react-key";
+  if (
+    normalized.includes("largest contentful paint") &&
+    normalized.includes('loading="eager"')
+  ) {
+    return "next-image-lcp-advice";
+  }
   if (normalized.includes("websocket") || normalized.includes("hmr")) {
     return "development-transport";
   }

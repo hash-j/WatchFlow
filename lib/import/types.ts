@@ -8,9 +8,11 @@ export const CSV_IMPORT_MAX_ROWS = 500;
 export const CSV_IMPORT_MAX_COLUMNS = 100;
 export const CSV_IMPORT_MAX_CELL_CHARACTERS = 10_000;
 export const CSV_IMPORT_PREVIEW_ROWS = 20;
+export const CSV_IMPORT_CHUNK_SIZE = 20;
 
 export const IMPORT_FIELDS = [
   "title",
+  "tmdbId",
   "releaseYear",
   "director",
   "cast",
@@ -20,12 +22,15 @@ export const IMPORT_FIELDS = [
   "watchedDate",
   "review",
   "priority",
+  "favourite",
+  "wouldWatchAgain",
 ] as const;
 
 export type ImportField = (typeof IMPORT_FIELDS)[number];
 
 export const IMPORT_FIELD_LABELS: Record<ImportField, string> = {
   title: "Movie title",
+  tmdbId: "TMDB movie ID",
   releaseYear: "Release year",
   director: "Director",
   cast: "Cast",
@@ -35,6 +40,8 @@ export const IMPORT_FIELD_LABELS: Record<ImportField, string> = {
   watchedDate: "Watched date",
   review: "Review",
   priority: "Priority",
+  favourite: "Favourite",
+  wouldWatchAgain: "Would watch again",
 };
 
 export type CsvColumn = {
@@ -60,11 +67,14 @@ export type ColumnMapping = Partial<Record<ImportField, string>>;
 
 export type ImportRowIssueCode =
   | "missing_title"
+  | "invalid_tmdb_id"
   | "invalid_year"
   | "invalid_rating"
   | "invalid_watched_date"
   | "invalid_priority"
   | "invalid_review"
+  | "invalid_favourite"
+  | "invalid_watch_again"
   | "unknown_status"
   | "duplicate_csv_row";
 
@@ -79,6 +89,7 @@ export type ValidatedImportRow = {
   rowNumber: number;
   sourceOrder: number;
   title: string;
+  tmdbId: number | null;
   releaseYear: number | null;
   director: string | null;
   cast: string[];
@@ -90,6 +101,9 @@ export type ValidatedImportRow = {
   watchedDateInterpretation: string | null;
   review: string | null;
   priority: number;
+  favourite: boolean;
+  wouldWatchAgain: boolean;
+  suppliedFields: ImportField[];
   issues: ImportRowIssue[];
 };
 
@@ -117,11 +131,12 @@ export type ImportDecision = {
   disposition: "import" | "skip" | "unmatched";
   tmdbId: number | null;
   acceptDefaultStatus: boolean;
+  skipReason?: "user" | "duplicate";
 };
 
 export type ImportRowResultStatus =
-  | "imported"
-  | "already_in_library"
+  | "added"
+  | "updated"
   | "skipped"
   | "invalid"
   | "unmatched"
@@ -138,8 +153,8 @@ export type ImportRowResult = {
 
 export type ImportResultSummary = {
   total: number;
-  imported: number;
-  alreadyInLibrary: number;
+  added: number;
+  updated: number;
   skipped: number;
   invalid: number;
   unmatched: number;

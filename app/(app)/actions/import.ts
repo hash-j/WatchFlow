@@ -5,6 +5,7 @@ import "server-only";
 import {
   CsvImportValidationError,
   parseCsvText,
+  validateParsedCsvChunkPayload,
   validateCsvFileMetadata,
   validateParsedCsvPayload,
 } from "@/lib/import/csv";
@@ -17,6 +18,7 @@ import { importConfirmedMovies } from "@/lib/import/service";
 import { createImportMatchingDependencies, createMovieImportDependencies } from "@/lib/import/supabase-import";
 import {
   IMPORT_FIELDS,
+  CSV_IMPORT_CHUNK_SIZE,
   type ColumnMapping,
   type ImportActionResult,
   type ImportBatchResult,
@@ -72,7 +74,7 @@ function mappingFromUnknown(value: unknown): ColumnMapping {
 }
 
 function decisionsFromUnknown(value: unknown): ImportDecision[] {
-  if (!Array.isArray(value) || value.length > 500) {
+  if (!Array.isArray(value) || value.length > CSV_IMPORT_CHUNK_SIZE) {
     throw new LibraryValidationError("The import decisions are invalid.");
   }
 
@@ -98,12 +100,16 @@ function decisionsFromUnknown(value: unknown): ImportDecision[] {
       acceptDefaultStatus:
         "acceptDefaultStatus" in decision &&
         decision.acceptDefaultStatus === true,
+      skipReason:
+        "skipReason" in decision && decision.skipReason === "duplicate"
+          ? "duplicate"
+          : "user",
     };
   });
 }
 
 function rowIdsFromUnknown(value: unknown) {
-  if (!Array.isArray(value) || value.length > 500) {
+  if (!Array.isArray(value) || value.length > CSV_IMPORT_CHUNK_SIZE) {
     throw new LibraryValidationError("The selected import rows are invalid.");
   }
 
@@ -121,6 +127,15 @@ function rowIdsFromUnknown(value: unknown) {
   }
 
   return new Set(rowIds);
+}
+
+function validateChunk(parsed: ParsedCsv) {
+  if (parsed.rows.length > CSV_IMPORT_CHUNK_SIZE) {
+    throw new LibraryValidationError(
+      `Process no more than ${CSV_IMPORT_CHUNK_SIZE} CSV rows per request.`,
+    );
+  }
+  return parsed;
 }
 
 export async function parseCsvAction(
@@ -160,7 +175,7 @@ export async function matchCsvRowsAction(input: {
   }
 
   try {
-    const parsed = validateParsedCsvPayload(input.parsed);
+    const parsed = validateChunk(validateParsedCsvChunkPayload(input.parsed));
     const mapping = mappingFromUnknown(input.mapping);
     const rows = validateAndMapRows(parsed, mapping);
     const requestedRows = rowIdsFromUnknown(input.rowIds);
@@ -187,7 +202,7 @@ export async function confirmCsvImportAction(input: {
   }
 
   try {
-    const parsed = validateParsedCsvPayload(input.parsed);
+    const parsed = validateChunk(validateParsedCsvChunkPayload(input.parsed));
     const rows = validateAndMapRows(parsed, mappingFromUnknown(input.mapping));
     const result = await importConfirmedMovies(
       rows,

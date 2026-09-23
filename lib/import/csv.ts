@@ -211,7 +211,10 @@ export function parseCsvText(
   return { fileName, columns, rows, warnings };
 }
 
-export function validateParsedCsvPayload(value: unknown): ParsedCsv {
+function validateParsedCsvPayloadInternal(
+  value: unknown,
+  allowRowSubset: boolean,
+): ParsedCsv {
   if (
     typeof value !== "object" ||
     value === null ||
@@ -249,14 +252,28 @@ export function validateParsedCsvPayload(value: unknown): ParsedCsv {
     return { id: column.id, header: column.header, index };
   });
   const columnIds = new Set(columns.map((column) => column.id));
+  const seenRowIds = new Set<string>();
+  let previousRowIndex = 0;
   const rows: CsvRawRow[] = value.rows.map((row, index) => {
+    const rowId =
+      typeof row === "object" && row !== null && "id" in row
+        ? row.id
+        : null;
+    const rowIdMatch =
+      typeof rowId === "string" ? /^row_([1-9]\d{0,2})$/.exec(rowId) : null;
+    const originalRowIndex = rowIdMatch ? Number(rowIdMatch[1]) : 0;
     if (
       typeof row !== "object" ||
       row === null ||
       !("id" in row) ||
       !("rowNumber" in row) ||
       !("values" in row) ||
-      row.id !== `row_${index + 1}` ||
+      (!allowRowSubset && row.id !== `row_${index + 1}`) ||
+      (allowRowSubset &&
+        (!rowIdMatch ||
+          originalRowIndex > CSV_IMPORT_MAX_ROWS ||
+          originalRowIndex <= previousRowIndex ||
+          seenRowIds.has(row.id))) ||
       typeof row.rowNumber !== "number" ||
       !Number.isSafeInteger(row.rowNumber) ||
       typeof row.values !== "object" ||
@@ -266,6 +283,9 @@ export function validateParsedCsvPayload(value: unknown): ParsedCsv {
         "The temporary CSV rows are invalid. Upload the file again.",
       );
     }
+
+    seenRowIds.add(row.id);
+    previousRowIndex = originalRowIndex;
 
     const values = Object.fromEntries(
       [...columnIds].map((columnId) => {
@@ -299,4 +319,12 @@ export function validateParsedCsvPayload(value: unknown): ParsedCsv {
             .slice(0, 10)
         : [],
   };
+}
+
+export function validateParsedCsvPayload(value: unknown): ParsedCsv {
+  return validateParsedCsvPayloadInternal(value, false);
+}
+
+export function validateParsedCsvChunkPayload(value: unknown): ParsedCsv {
+  return validateParsedCsvPayloadInternal(value, true);
 }

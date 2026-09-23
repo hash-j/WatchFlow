@@ -209,6 +209,27 @@ export async function matchImportRows(
     eligibleRows,
     MATCH_CONCURRENCY,
     async (row): Promise<ImportRowMatch> => {
+      if (row.tmdbId !== null) {
+        return {
+          rowId: row.id,
+          classification: "exact",
+          candidates: [
+            {
+              tmdbId: row.tmdbId,
+              title: row.title,
+              originalTitle: null,
+              overview: null,
+              posterPath: null,
+              releaseDate: row.releaseYear ? `${row.releaseYear}-01-01` : null,
+              voteAverage: null,
+              score: 100,
+            },
+          ],
+          selectedTmdbId: row.tmdbId,
+          message: "Matched by TMDB movie ID.",
+        };
+      }
+
       const cacheKey = movieTitleKey(row.title);
       let lookup = lookupCache.get(cacheKey);
 

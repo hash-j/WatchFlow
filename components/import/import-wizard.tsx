@@ -32,6 +32,10 @@ import { DataScrollRegion, ResponsiveActions } from "@/components/ui/responsive-
 import { Select } from "@/components/ui/select";
 import { escapeCsvCell } from "@/lib/csv/safety";
 import {
+  chunkImportValues,
+  mergeImportBatchResults,
+} from "@/lib/import/chunks";
+import {
   CsvImportValidationError,
   validateCsvFileMetadata,
 } from "@/lib/import/csv";
@@ -79,11 +83,14 @@ function rowState(row: ValidatedImportRow) {
 
   const labels = {
     missing_title: "Missing title",
+    invalid_tmdb_id: "Invalid TMDB ID",
     invalid_year: "Invalid year",
     invalid_rating: "Invalid rating",
     invalid_watched_date: "Invalid date",
     invalid_priority: "Invalid priority",
     invalid_review: "Review too long",
+    invalid_favourite: "Invalid favourite",
+    invalid_watch_again: "Invalid watch-again value",
     unknown_status: "Needs review",
     duplicate_csv_row: "Duplicate CSV row",
   } as const;
@@ -111,7 +118,7 @@ function matchLabel(match: ImportRowMatch) {
 
 function failureReport(result: ImportBatchResult) {
   const failures = result.rows.filter(
-    (row) => !["imported", "already_in_library"].includes(row.status),
+    (row) => !["added", "updated"].includes(row.status),
   );
   return [
     ["CSV row", "Imported title", "Result", "Message"],
@@ -140,9 +147,11 @@ export function ImportWizard() {
     Record<string, boolean>
   >({});
   const [result, setResult] = useState<ImportBatchResult | null>(null);
+  const [completedBatches, setCompletedBatches] = useState<ImportBatchResult[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   function resetImport() {
     setStep(1);
@@ -154,6 +163,7 @@ export function ImportWizard() {
     setSkippedRows({});
     setAcceptedStatuses({});
     setResult(null);
+    setCompletedBatches([]);
     setMessage(null);
     setProgress(null);
   }
@@ -222,6 +232,7 @@ export function ImportWizard() {
       validateColumnMapping(mapping, parsed.columns);
       const validated = validateAndMapRows(parsed, mapping);
       setRows(validated);
+      setCompletedBatches([]);
       setMessage(null);
       setStep(3);
     } catch (error) {
@@ -231,6 +242,14 @@ export function ImportWizard() {
           : "The column mapping could not be validated.",
       );
     }
+  }
+
+  function parsedRows(rowIds: readonly string[]): ParsedCsv {
+    const selected = new Set(rowIds);
+    return {
+      ...parsed!,
+      rows: parsed!.rows.filter((row) => selected.has(row.id)),
+    };
   }
 
   function runMatching(rowIds?: string[], merge = false) {
@@ -244,45 +263,46 @@ export function ImportWizard() {
         .filter((row) => canMatchImportRow(row) && !skippedRows[row.id])
         .map((row) => row.id);
     setMessage(null);
-    setProgress("Matching movies");
+    setProgress(`Matching: Processed 0 / ${ids.length}`);
     setStep(4);
+    setIsProcessing(true);
 
-    startTransition(async () => {
-      const response = await matchCsvRowsAction({
-        parsed,
-        mapping,
-        rowIds: ids,
-      });
-      if (!response.ok) {
-        setMessage(response.message);
-        setProgress(null);
-        setStep(3);
-        return;
-      }
-
-      const nextMatches = merge
-        ? [
-            ...matches.filter(
-              (existing) =>
-                !response.data.some((item) => item.rowId === existing.rowId),
+    void (async () => {
+      const collected = merge
+        ? matches.filter((existing) => !ids.includes(existing.rowId))
+        : [];
+      let processed = 0;
+      for (const chunk of chunkImportValues(ids)) {
+        const response = await matchCsvRowsAction({
+          parsed: parsedRows(chunk),
+          mapping,
+          rowIds: chunk,
+        });
+        if (!response.ok) {
+          setMatches(collected);
+          setMessage(`${response.message} Retry matching to continue.`);
+          setProgress(null);
+          setIsProcessing(false);
+          setStep(3);
+          return;
+        }
+        collected.push(...response.data);
+        processed += chunk.length;
+        setProgress(`Matching: Processed ${processed} / ${ids.length}`);
+        setSelectedMatches((current) => ({
+          ...current,
+          ...Object.fromEntries(
+            response.data.flatMap((match) =>
+              match.selectedTmdbId ? [[match.rowId, match.selectedTmdbId]] : [],
             ),
-            ...response.data,
-          ]
-        : response.data;
-      setMatches(nextMatches);
-      setSelectedMatches((current) => ({
-        ...current,
-        ...Object.fromEntries(
-          response.data.flatMap((match) =>
-            match.selectedTmdbId
-              ? [[match.rowId, match.selectedTmdbId]]
-              : [],
           ),
-        ),
-      }));
+        }));
+      }
+      setMatches(collected);
       setProgress(null);
+      setIsProcessing(false);
       setStep(5);
-    });
+    })();
   }
 
   function canContinueToConfirm() {
@@ -303,9 +323,20 @@ export function ImportWizard() {
   }
 
   function createDecisions(): ImportDecision[] {
-    return rows.map((row) => {
+    const selectedIds = new Set<number>();
+    return rows.map((row): ImportDecision => {
       const match = matches.find((candidate) => candidate.rowId === row.id);
       const selectedTmdbId = selectedMatches[row.id] ?? null;
+
+      if (row.issues.some((issue) => issue.code === "duplicate_csv_row")) {
+        return {
+          rowId: row.id,
+          disposition: "skip",
+          tmdbId: null,
+          acceptDefaultStatus: false,
+          skipReason: "duplicate",
+        };
+      }
 
       if (skippedRows[row.id]) {
         return {
@@ -313,6 +344,7 @@ export function ImportWizard() {
           disposition: "skip",
           tmdbId: null,
           acceptDefaultStatus: false,
+          skipReason: "user",
         };
       }
 
@@ -324,6 +356,17 @@ export function ImportWizard() {
           acceptDefaultStatus: false,
         };
       }
+
+      if (selectedIds.has(selectedTmdbId)) {
+        return {
+          rowId: row.id,
+          disposition: "skip",
+          tmdbId: null,
+          acceptDefaultStatus: false,
+          skipReason: "duplicate",
+        };
+      }
+      selectedIds.add(selectedTmdbId);
 
       return {
         rowId: row.id,
@@ -340,23 +383,48 @@ export function ImportWizard() {
     }
 
     setMessage(null);
-    setProgress("Saving movies");
-    startTransition(async () => {
-      const response = await confirmCsvImportAction({
-        parsed,
-        mapping,
-        decisions: createDecisions(),
-      });
-      if (!response.ok) {
-        setMessage(response.message);
-        setProgress(null);
-        return;
+    setIsProcessing(true);
+    const existing = [...completedBatches];
+    const processedIds = new Set(existing.flatMap((batch) => batch.rows.map((row) => row.rowId)));
+    const pendingRows = rows.filter((row) => !processedIds.has(row.id));
+    const decisions = new Map(createDecisions().map((decision) => [decision.rowId, decision]));
+    const batches = [...existing];
+    const total = rows.length;
+    const reportProgress = () => {
+      const merged = mergeImportBatchResults(batches);
+      setProgress(
+        `Processed ${merged.summary.total} / ${total} · Added: ${merged.summary.added} · Updated: ${merged.summary.updated} · Skipped: ${merged.summary.skipped + merged.summary.invalid + merged.summary.unmatched} · Failed: ${merged.summary.failed}`,
+      );
+    };
+    reportProgress();
+
+    void (async () => {
+      for (const chunk of chunkImportValues(pendingRows)) {
+        const response = await confirmCsvImportAction({
+          parsed: parsedRows(chunk.map((row) => row.id)),
+          mapping,
+          decisions: chunk.map((row) => decisions.get(row.id)!),
+        });
+        if (!response.ok) {
+          setCompletedBatches(batches);
+          setMessage(`${response.message} Retry to continue with the remaining rows.`);
+          setIsProcessing(false);
+          return;
+        }
+        batches.push(response.data);
+        setCompletedBatches([...batches]);
+        reportProgress();
       }
 
-      setResult(response.data);
-      setProgress("Complete");
+      const merged = mergeImportBatchResults(batches);
+      setResult(merged);
+      setProgress(
+        `Complete · Processed ${merged.summary.total} / ${total} · Added: ${merged.summary.added} · Updated: ${merged.summary.updated} · Skipped: ${merged.summary.skipped + merged.summary.invalid + merged.summary.unmatched} · Failed: ${merged.summary.failed}`,
+      );
+      setCompletedBatches([]);
+      setIsProcessing(false);
       setStep(7);
-    });
+    })();
   }
 
   function retryUnmatched() {
@@ -434,7 +502,7 @@ export function ImportWizard() {
 
       {progress ? (
         <div className="mt-4 flex items-center gap-2 rounded-lg border bg-muted/40 px-4 py-3 text-sm" role="status" aria-live="polite">
-          {progress !== "Complete" ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="size-4 text-emerald-600" aria-hidden="true" />}
+          {!progress.startsWith("Complete") ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="size-4 text-emerald-600" aria-hidden="true" />}
           {progress}
         </div>
       ) : null}
@@ -570,7 +638,7 @@ export function ImportWizard() {
             </DataScrollRegion>
             <ResponsiveActions className="mt-6">
               <Button type="button" variant="outline" onClick={() => setStep(2)}><ArrowLeft aria-hidden="true" />Back to mapping</Button>
-              <Button type="button" disabled={isPending || rows.every((row) => !canMatchImportRow(row) || skippedRows[row.id])} onClick={() => runMatching()}>Match with TMDB<ArrowRight aria-hidden="true" /></Button>
+              <Button type="button" disabled={isPending || isProcessing || rows.every((row) => !canMatchImportRow(row) || skippedRows[row.id])} onClick={() => runMatching()}>Match with TMDB<ArrowRight aria-hidden="true" /></Button>
             </ResponsiveActions>
           </CardContent>
         </Card>
@@ -625,11 +693,11 @@ export function ImportWizard() {
 
       {step === 6 ? (
         <Card className="mt-6">
-          <CardHeader><CardTitle>Confirm import</CardTitle><p className="text-sm text-muted-foreground">Nothing has been added yet. Confirm to check each selected match one last time and add it to your private Library.</p></CardHeader>
+          <CardHeader><CardTitle>Confirm import</CardTitle><p className="text-sm text-muted-foreground">Confirm once to process the file in safe batches. New movies are added and supplied metadata updates existing Library movies.</p></CardHeader>
           <CardContent>
             <dl className="grid gap-3 sm:grid-cols-3"><div className="rounded-lg bg-muted p-4"><dt className="text-xs text-muted-foreground">CSV rows</dt><dd className="mt-1 text-2xl font-bold">{rows.length}</dd></div><div className="rounded-lg bg-muted p-4"><dt className="text-xs text-muted-foreground">Selected to import</dt><dd className="mt-1 text-2xl font-bold">{importableCount}</dd></div><div className="rounded-lg bg-muted p-4"><dt className="text-xs text-muted-foreground">Skipped, invalid, or unmatched</dt><dd className="mt-1 text-2xl font-bold">{rows.length - importableCount}</dd></div></dl>
-            <p className="mt-4 text-sm text-muted-foreground">Existing library movies will be reported without creating duplicates. Watch Next entries are appended in CSV order.</p>
-            <div className="mt-6 flex flex-wrap gap-3"><Button type="button" variant="outline" onClick={() => setStep(5)}><ArrowLeft aria-hidden="true" />Back to matches</Button><Button type="button" disabled={isPending || importableCount === 0} onClick={confirmImport}>{isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Save aria-hidden="true" />}{isPending ? "Saving movies..." : "Confirm import"}</Button></div>
+            <p className="mt-4 text-sm text-muted-foreground">Existing Library movies receive only mapped user metadata. Watch Next entries are appended in CSV order.</p>
+            <div className="mt-6 flex flex-wrap gap-3"><Button type="button" variant="outline" disabled={isProcessing} onClick={() => setStep(5)}><ArrowLeft aria-hidden="true" />Back to matches</Button><Button type="button" disabled={isPending || isProcessing || importableCount === 0} onClick={confirmImport}>{isProcessing ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Save aria-hidden="true" />}{isProcessing ? "Processing batches..." : completedBatches.length > 0 ? "Retry remaining rows" : "Confirm import"}</Button></div>
           </CardContent>
         </Card>
       ) : null}
@@ -638,7 +706,7 @@ export function ImportWizard() {
         <div className="mt-6 space-y-6">
           <Card><CardHeader><CardTitle>Import complete</CardTitle><p className="text-sm text-muted-foreground">Each row was handled independently, so successful movies remain saved if another row failed.</p></CardHeader><CardContent>
             <dl className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-              {[["Total", result.summary.total], ["Imported", result.summary.imported], ["Already in library", result.summary.alreadyInLibrary], ["Skipped", result.summary.skipped], ["Invalid", result.summary.invalid], ["Unmatched", result.summary.unmatched], ["Failed", result.summary.failed]].map(([label, value]) => <div key={label} className="min-w-0 rounded-lg bg-muted p-3"><dt className="whitespace-nowrap text-xs text-muted-foreground">{label}</dt><dd className="mt-1 text-xl font-bold">{value}</dd></div>)}
+              {[["Total", result.summary.total], ["Added", result.summary.added], ["Updated", result.summary.updated], ["Skipped", result.summary.skipped], ["Invalid", result.summary.invalid], ["Unmatched", result.summary.unmatched], ["Failed", result.summary.failed]].map(([label, value]) => <div key={label} className="min-w-0 rounded-lg bg-muted p-3"><dt className="whitespace-nowrap text-xs text-muted-foreground">{label}</dt><dd className="mt-1 text-xl font-bold">{value}</dd></div>)}
             </dl>
             {result.warnings.map((warning) => <p key={warning} className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-950">{warning}</p>)}
           </CardContent></Card>

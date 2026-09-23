@@ -4,6 +4,7 @@ import {
   CsvImportValidationError,
   parseCsvText,
   validateCsvFileMetadata,
+  validateParsedCsvChunkPayload,
   validateParsedCsvPayload,
 } from "./csv";
 import {
@@ -112,5 +113,29 @@ describe("CSV import parsing", () => {
     expect(() => validateParsedCsvPayload(parsed)).toThrow(
       "temporary CSV data is invalid",
     );
+  });
+
+  it("accepts ordered original row IDs in a bounded chunk", () => {
+    const parsed = parseCsvText(
+      ["Title", ...Array.from({ length: 25 }, (_, index) => `Movie ${index + 1}`)].join("\n"),
+    );
+    const chunk = { ...parsed, rows: parsed.rows.slice(20) };
+    expect(validateParsedCsvChunkPayload(chunk).rows.map((row) => row.id)).toEqual([
+      "row_21",
+      "row_22",
+      "row_23",
+      "row_24",
+      "row_25",
+    ]);
+  });
+
+  it("rejects duplicate or reordered IDs in a chunk", () => {
+    const parsed = parseCsvText("Title\nOne\nTwo");
+    expect(() =>
+      validateParsedCsvChunkPayload({
+        ...parsed,
+        rows: [parsed.rows[1], parsed.rows[0]],
+      }),
+    ).toThrow("temporary CSV rows are invalid");
   });
 });

@@ -1,16 +1,93 @@
 # WatchFlow Project Context
 
 Last updated: 2026-09-23
-Last updated by: Codex / Part 18A Batch 3C cache and revalidation architecture cleanup
+Last updated by: Codex / Part 18A CSV Import V2
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18A performance and reliability work; Batches 1, 2, 3A, 3B, and 3C are implemented locally.
+Current phase: Part 18A performance and reliability work; CSV Import V2 and Batches 1, 2, 3A, 3B, and 3C are implemented locally.
 Current branch: `part-18a-core-reliability`.
-Current status: Part 17 Production Launch remains PASS. Part 18A Batch 3C cache/revalidation cleanup is complete and accepted against watchflow-dev with QA User B. QA User A remains unavailable for browser cross-user verification. Changes remain uncommitted and unpushed.
+Current status: Part 17 Production Launch remains PASS. Part 18A CSV Import V2 is complete and accepted against watchflow-dev with QA User B. Changes remain uncommitted and unpushed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-23 Part 18A CSV Import V2
+
+- The previous wizard parsed up to 500 rows but sent the complete parsed file to
+  one matching Server Action and then one confirmation Server Action. Matching
+  used concurrency four inside one potentially long request, while confirmation
+  performed owner lookup, trusted metadata resolution, insert, and queue work
+  sequentially for every selected row. Existing Library matches were only
+  reported and their supplied personal metadata was ignored.
+- The browser now retains the one-file/one-workflow experience while issuing
+  ordered chunks of at most 20 rows. Every matching and confirmation request
+  creates and authenticates a fresh cookie client. General 100-row input uses at
+  most five matching plus five confirmation requests after the parse request;
+  150 rows use eight plus eight. Matching retains its bounded concurrency of
+  four inside each chunk; confirmation stays ordered inside a chunk for
+  deterministic Watch Next appends. Chunk payload validation accepts only
+  unique, increasing original `row_1` through `row_500` identities, while full
+  upload validation retains its stricter contiguous identity contract.
+- Current valid files remain compatible. Movie title remains required. Existing
+  year, director, cast, genres, personal rating, status, Watched Date, review,
+  and priority mappings and aliases retain their meanings and limits. Import now
+  also recognizes the existing WatchFlow export headers `TMDB ID`, `Favourite`,
+  and `Would Watch Again`; boolean values accept explicit Yes/No, True/False,
+  1/0, or Y/N forms. A valid positive TMDB ID is the strongest identity and
+  avoids title search. Otherwise the accepted normalized title/release-year
+  matcher applies; ambiguous results still require review and are never guessed.
+- Rows resolving to one TMDB movie are deduplicated across the complete browser
+  workflow before chunking, and the service repeats the guard inside every
+  chunk. Database uniqueness remains the final race/idempotency guard. Retrying
+  an interrupted workflow resumes after completed row results; a retry after an
+  uncertain response safely finds and updates/skips the existing owner relation
+  instead of inserting a duplicate.
+- New movies still resolve shared metadata through the authenticated, rate-
+  limited trusted TMDB path and use the RLS-bound user client for `user_movies`.
+  Existing movies are fetched with the verified owner filter, merged with only
+  mapped user-owned fields, and updated through the accepted
+  `watchflow_update_library_movie_v2` RPC. Favourite uses an explicit owner-
+  filtered RLS update. No browser owner ID or admin/service-role user-data path
+  was introduced.
+- An absent optional column preserves its stored value. A mapped blank rating or
+  review clears that nullable value, and a mapped blank priority retains the
+  existing import meaning of zero. Blank status preserves an existing status;
+  blank Watched Date never erases `watched_at`. A valid mapped Watched Date uses
+  the accepted calendar-date behavior. Scheduled rows keep their schedule when
+  status is absent, while supported explicit status changes use the atomic RPC's
+  established schedule clearing and queue normalization. Saved storage and
+  legacy status compatibility are unchanged.
+- Progress reports processed/total plus Added, Updated, Skipped, and Failed
+  counts after every chunk. Results keep row-level invalid, unmatched, skipped,
+  and failure reasons; submission controls remain disabled during processing.
+  Added and Updated are distinct final outcomes, partial request progress can be
+  resumed, and successful rows survive unrelated row failures.
+- Deterministic coverage includes 143-row chunk boundaries, a complete synthetic
+  150-row workflow (eight chunks), progress aggregation, exported-column
+  compatibility, direct TMDB identity, malformed values, intra-file duplicates,
+  partial failures, existing metadata merge/preservation, Watched Date updates,
+  favourite, review, watch-again, owner scope, queue ordering, and rate-limit
+  routing. Focused import coverage passed 6 files/57 tests; the focused Batch
+  1–3C selection passed 12 files/168 tests; the full suite passed 85 files/828
+  tests.
+- Guarded built-server browser QA against the exact watchflow-dev pin passed in
+  45.3 seconds with QA User B. A genuine 105-row upload completed in one workflow
+  as one Added and 104 duplicate Skipped rows across six confirmation chunks.
+  A subsequent small import updated status, Watched Date, rating, priority,
+  review, favourite, and watch-again on that existing movie while isolating an
+  invalid-year row. Library uniqueness, refresh persistence, Watch Next entry
+  and status-exit compaction, completion counters, row error text, and controlled
+  fixture cleanup passed. Browser diagnostics contained no unexpected failure;
+  the known non-blocking Next image LCP advice is categorized explicitly.
+- Final validation passed `git diff --check`, ESLint, direct TypeScript, the Next
+  16.2.12 production build with 37 routes, and the 508-browser-artifact secret
+  scan. No migration, schema, policy, grant, Auth, dependency, environment,
+  Production, deployment, commit, or push changed.
+- Remaining Part 18A work intentionally excludes CSV Import V2 and the completed
+  performance batches. Movie Details status redesign, Search Already-in-Library,
+  Watch Next priority, custom-list ordering, notifications, PWA, and Series
+  support were not started.
 
 ## 2026-09-23 Part 18A Performance Fix Batch 3C
 

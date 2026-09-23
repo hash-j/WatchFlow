@@ -17,6 +17,7 @@ const MAX_REVIEW_LENGTH = 5_000;
 
 const HEADER_ALIASES: Record<ImportField, readonly string[]> = {
   title: ["moviename", "movie", "title", "name", "movietitle"],
+  tmdbId: ["tmdbid", "tmdbmovieid"],
   releaseYear: ["releaseyear", "year", "released"],
   director: ["director", "directedby"],
   cast: ["cast", "actors", "actor", "starring"],
@@ -26,6 +27,8 @@ const HEADER_ALIASES: Record<ImportField, readonly string[]> = {
   watchedDate: ["watcheddate", "datewatched", "completeddate"],
   review: ["review", "notes", "note", "comments"],
   priority: ["priority"],
+  favourite: ["favourite", "favorite", "isfavourite", "isfavorite"],
+  wouldWatchAgain: ["wouldwatchagain", "watchagain", "rewatch"],
 };
 
 const STATUS_ALIASES: Record<string, LibraryMovieStatus> = {
@@ -150,6 +153,40 @@ function parseReleaseYear(value: string, issues: ImportRowIssue[]) {
   }
 
   return year;
+}
+
+function parseTmdbId(value: string, issues: ImportRowIssue[]) {
+  if (!value) return null;
+  const tmdbId = Number(value);
+  if (!Number.isSafeInteger(tmdbId) || tmdbId <= 0) {
+    issues.push({
+      code: "invalid_tmdb_id",
+      message: "TMDB movie ID must be a positive whole number.",
+      severity: "error",
+    });
+    return null;
+  }
+  return tmdbId;
+}
+
+function parseBoolean(
+  value: string,
+  field: "favourite" | "wouldWatchAgain",
+  issues: ImportRowIssue[],
+) {
+  if (!value) return false;
+  const normalized = normalizeHeader(value);
+  if (["yes", "true", "1", "y"].includes(normalized)) return true;
+  if (["no", "false", "0", "n"].includes(normalized)) return false;
+  issues.push({
+    code: field === "favourite" ? "invalid_favourite" : "invalid_watch_again",
+    message:
+      field === "favourite"
+        ? "Favourite must be Yes or No."
+        : "Would watch again must be Yes or No.",
+    severity: "error",
+  });
+  return false;
 }
 
 function parsePersonalRating(value: string, issues: ImportRowIssue[]) {
@@ -282,6 +319,10 @@ export function validateAndMapRows(
   return parsed.rows.map((row, sourceOrder) => {
     const issues: ImportRowIssue[] = [];
     const title = valueFor(parsed, mapping, sourceOrder, "title");
+    const tmdbId = parseTmdbId(
+      valueFor(parsed, mapping, sourceOrder, "tmdbId"),
+      issues,
+    );
     const releaseYear = parseReleaseYear(
       valueFor(parsed, mapping, sourceOrder, "releaseYear"),
       issues,
@@ -299,6 +340,16 @@ export function validateAndMapRows(
     const status = importedStatus ? mapImportedStatus(importedStatus) : null;
     const watchedDate = parseWatchedDate(
       valueFor(parsed, mapping, sourceOrder, "watchedDate"),
+    );
+    const favourite = parseBoolean(
+      valueFor(parsed, mapping, sourceOrder, "favourite"),
+      "favourite",
+      issues,
+    );
+    const wouldWatchAgain = parseBoolean(
+      valueFor(parsed, mapping, sourceOrder, "wouldWatchAgain"),
+      "wouldWatchAgain",
+      issues,
     );
 
     if (!title) {
@@ -325,7 +376,9 @@ export function validateAndMapRows(
       });
     }
 
-    const duplicateKey = `${movieTitleKey(title)}::${releaseYear ?? ""}`;
+    const duplicateKey = tmdbId
+      ? `tmdb::${tmdbId}`
+      : `${movieTitleKey(title)}::${releaseYear ?? ""}`;
     if (title && duplicateKeys.has(duplicateKey)) {
       issues.push({
         code: "duplicate_csv_row",
@@ -350,6 +403,7 @@ export function validateAndMapRows(
       rowNumber: row.rowNumber,
       sourceOrder,
       title,
+      tmdbId,
       releaseYear,
       director:
         valueFor(parsed, mapping, sourceOrder, "director") || null,
@@ -362,6 +416,9 @@ export function validateAndMapRows(
       watchedDateInterpretation: watchedDate.interpretation,
       review: review.slice(0, MAX_REVIEW_LENGTH) || null,
       priority,
+      favourite,
+      wouldWatchAgain,
+      suppliedFields: IMPORT_FIELDS.filter((field) => Boolean(mapping[field])),
       issues,
     };
   });

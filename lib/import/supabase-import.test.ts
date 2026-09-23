@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const enforceTmdbRateLimit = vi.hoisted(() => vi.fn());
 const searchMovies = vi.hoisted(() => vi.fn());
 const resolveSharedMovieMetadata = vi.hoisted(() => vi.fn());
+const updateAuthenticatedUserMovie = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
 vi.mock("../supabase/error-logging", () => ({ logSupabaseError: vi.fn() }));
@@ -15,14 +16,20 @@ vi.mock("../movies/rate-limit", () => ({ enforceTmdbRateLimit }));
 vi.mock("../movies/shared-metadata", () => ({
   resolveSharedMovieMetadata,
 }));
+vi.mock("../library/supabase-management", () => ({
+  updateAuthenticatedUserMovie,
+}));
 
 import {
   createImportMatchingDependencies,
   createMovieImportDependencies,
   saveImportedMovie,
+  updateOwnedMovie,
 } from "./supabase-import";
 import type { ConfirmedImportMovie } from "./service";
+import type { OwnedImportMovie } from "./service";
 import type { SharedMovieReference } from "../movies/shared-metadata";
+import type { ValidatedImportRow } from "./types";
 
 const movie: SharedMovieReference = {
   id: "42",
@@ -38,6 +45,7 @@ const imported: ConfirmedImportMovie = {
     rowNumber: 2,
     sourceOrder: 0,
     title: "Inception",
+    tmdbId: 27205,
     releaseYear: 2010,
     director: null,
     cast: [],
@@ -49,8 +57,26 @@ const imported: ConfirmedImportMovie = {
     watchedDateInterpretation: "2026-07-22 (calendar date)",
     review: "Great",
     priority: 2,
+    favourite: true,
+    wouldWatchAgain: true,
+    suppliedFields: ["title", "tmdbId", "personalRating", "status", "watchedDate", "review", "priority", "favourite", "wouldWatchAgain"],
     issues: [],
   },
+};
+
+const owned: OwnedImportMovie = {
+  id: "11111111-1111-4111-8111-111111111111",
+  matchedTitle: "Inception",
+  status: "watched",
+  favourite: false,
+  personalRating: 7,
+  review: "Existing review",
+  priority: 4,
+  watchedAt: "2024-01-02T00:00:00.000Z",
+  wouldWatchAgain: false,
+  scheduledFor: null,
+  scheduleTimezone: null,
+  scheduleNote: null,
 };
 
 function chainedLookup(data: unknown) {
@@ -68,6 +94,7 @@ beforeEach(() => {
   enforceTmdbRateLimit.mockReset();
   searchMovies.mockReset();
   resolveSharedMovieMetadata.mockReset();
+  updateAuthenticatedUserMovie.mockReset();
 });
 
 describe("CSV import TMDB rate-limit routing", () => {
@@ -125,7 +152,7 @@ describe("Supabase CSV import persistence", () => {
     };
 
     await expect(saveImportedMovie(session, movie, imported, null)).resolves.toEqual({
-      status: "imported",
+      status: "added",
       matchedTitle: "Inception",
     });
     expect(lookup.eq).toHaveBeenNthCalledWith(1, "user_id", "verified-user");
@@ -138,6 +165,8 @@ describe("Supabase CSV import persistence", () => {
       priority: 2,
       watched_at: "2026-07-22T00:00:00.000Z",
       queue_position: null,
+      favourite: true,
+      would_watch_again: true,
     });
   });
 
@@ -154,7 +183,110 @@ describe("Supabase CSV import persistence", () => {
       null,
     );
 
-    expect(result.status).toBe("already_in_library");
+    expect(result.status).toBe("skipped");
     expect(from).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves all existing metadata when no user metadata column was supplied", async () => {
+    const row = {
+      ...imported,
+      row: {
+        ...imported.row,
+        suppliedFields: ["title", "tmdbId"] as ValidatedImportRow["suppliedFields"],
+      },
+    };
+    const from = vi.fn();
+    await expect(
+      updateOwnedMovie(
+        { userId: "verified-user", client: { from } as unknown as SupabaseClient },
+        owned,
+        row,
+      ),
+    ).resolves.toMatchObject({ status: "skipped" });
+    expect(updateAuthenticatedUserMovie).not.toHaveBeenCalled();
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("updates supplied metadata while preserving an absent Watched Date", async () => {
+    updateAuthenticatedUserMovie.mockResolvedValue(true);
+    const row = {
+      ...imported,
+      row: {
+        ...imported.row,
+        review: "Replacement review",
+        watchedAt: null,
+        suppliedFields: ["title", "review"] as ValidatedImportRow["suppliedFields"],
+      },
+    };
+    await updateOwnedMovie(
+      { userId: "verified-user", client: {} as SupabaseClient },
+      owned,
+      row,
+    );
+    expect(updateAuthenticatedUserMovie).toHaveBeenCalledWith(
+      expect.anything(),
+      "verified-user",
+      owned.id,
+      expect.objectContaining({
+        review: "Replacement review",
+        watchedAt: owned.watchedAt,
+        watchedAtProvided: false,
+        personalRating: owned.personalRating,
+        priority: owned.priority,
+      }),
+    );
+  });
+
+  it("applies an explicit valid Watched Date", async () => {
+    updateAuthenticatedUserMovie.mockResolvedValue(true);
+    await updateOwnedMovie(
+      { userId: "verified-user", client: {} as SupabaseClient },
+      owned,
+      { ...imported, row: { ...imported.row, suppliedFields: ["title", "watchedDate"] } },
+    );
+    expect(updateAuthenticatedUserMovie).toHaveBeenCalledWith(
+      expect.anything(),
+      "verified-user",
+      owned.id,
+      expect.objectContaining({
+        watchedAt: imported.row.watchedAt,
+        watchedAtProvided: true,
+      }),
+    );
+  });
+
+  it("updates favourite and watch-again using the authenticated owner scope", async () => {
+    updateAuthenticatedUserMovie.mockResolvedValue(true);
+    const favouriteUpdate = {
+      update: vi.fn(),
+      eq: vi.fn(),
+      select: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { id: owned.id }, error: null }),
+    };
+    favouriteUpdate.update.mockReturnValue(favouriteUpdate);
+    favouriteUpdate.eq.mockReturnValue(favouriteUpdate);
+    favouriteUpdate.select.mockReturnValue(favouriteUpdate);
+    const from = vi.fn().mockReturnValue(favouriteUpdate);
+
+    await updateOwnedMovie(
+      { userId: "verified-user", client: { from } as unknown as SupabaseClient },
+      owned,
+      {
+        ...imported,
+        row: {
+          ...imported.row,
+          suppliedFields: ["title", "favourite", "wouldWatchAgain"],
+        },
+      },
+    );
+
+    expect(updateAuthenticatedUserMovie).toHaveBeenCalledWith(
+      expect.anything(),
+      "verified-user",
+      owned.id,
+      expect.objectContaining({ wouldWatchAgain: true }),
+    );
+    expect(favouriteUpdate.update).toHaveBeenCalledWith({ favourite: true });
+    expect(favouriteUpdate.eq).toHaveBeenCalledWith("user_id", "verified-user");
   });
 });

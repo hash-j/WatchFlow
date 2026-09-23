@@ -21,6 +21,7 @@ function row(
     rowNumber: 2,
     sourceOrder: 0,
     title: "Inception",
+    tmdbId: null,
     releaseYear: 2010,
     director: null,
     cast: [],
@@ -32,6 +33,9 @@ function row(
     watchedDateInterpretation: null,
     review: null,
     priority: 0,
+    favourite: false,
+    wouldWatchAgain: false,
+    suppliedFields: ["title", "releaseYear"],
     issues: [],
     ...overrides,
   };
@@ -71,6 +75,19 @@ describe("TMDB import matching", () => {
       classification: "exact",
       selectedTmdbId: 27205,
     });
+  });
+
+  it("uses a valid TMDB ID without a title-search request", async () => {
+    const searchMovies = vi.fn();
+    const matches = await matchImportRows(
+      [row({ tmdbId: 27205 })],
+      dependencies(searchMovies),
+    );
+    expect(matches[0]).toMatchObject({
+      classification: "exact",
+      selectedTmdbId: 27205,
+    });
+    expect(searchMovies).not.toHaveBeenCalled();
   });
 
   it("selects the correct release among movies with the same title", () => {

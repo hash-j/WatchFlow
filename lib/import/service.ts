@@ -10,6 +10,7 @@ import type {
   ValidatedImportRow,
 } from "./types";
 import type { ImportAuthentication } from "./matching";
+import { summarizeImportResults } from "./chunks";
 
 export type ConfirmedImportMovie = {
   row: ValidatedImportRow;
@@ -18,15 +19,35 @@ export type ConfirmedImportMovie = {
 };
 
 export type ImportInsertResult =
-  | { status: "imported"; matchedTitle: string }
-  | { status: "already_in_library"; matchedTitle: string };
+  | { status: "added"; matchedTitle: string }
+  | { status: "skipped"; matchedTitle: string };
+
+export type OwnedImportMovie = {
+  id: string;
+  matchedTitle: string;
+  status: NonNullable<ValidatedImportRow["status"]>;
+  favourite: boolean;
+  personalRating: number | null;
+  review: string | null;
+  priority: number;
+  watchedAt: string | null;
+  wouldWatchAgain: boolean;
+  scheduledFor: string | null;
+  scheduleTimezone: string | null;
+  scheduleNote: string | null;
+};
 
 export interface MovieImportDependencies {
   authenticate(): Promise<ImportAuthentication | null>;
   findOwnedMovie(
     session: ImportAuthentication,
     tmdbId: number,
-  ): Promise<{ matchedTitle: string } | null>;
+  ): Promise<OwnedImportMovie | null>;
+  updateOwnedMovie(
+    session: ImportAuthentication,
+    owned: OwnedImportMovie,
+    row: ConfirmedImportMovie,
+  ): Promise<{ status: "updated" | "skipped"; matchedTitle: string }>;
   resolveSharedMovie(
     session: ImportAuthentication,
     tmdbId: number,
@@ -73,15 +94,7 @@ function summarize(
 ): ImportBatchResult {
   return {
     summary: {
-      total: rows.length,
-      imported: rows.filter((row) => row.status === "imported").length,
-      alreadyInLibrary: rows.filter(
-        (row) => row.status === "already_in_library",
-      ).length,
-      skipped: rows.filter((row) => row.status === "skipped").length,
-      invalid: rows.filter((row) => row.status === "invalid").length,
-      unmatched: rows.filter((row) => row.status === "unmatched").length,
-      failed: rows.filter((row) => row.status === "failed").length,
+      ...summarizeImportResults(rows),
     },
     rows: [...rows].sort((left, right) => left.rowNumber - right.rowNumber),
     warnings: [...warnings],
@@ -101,6 +114,7 @@ export async function importConfirmedMovies(
   const byRow = decisionMap(decisions);
   const results: ImportRowResult[] = [];
   const confirmed: ConfirmedImportMovie[] = [];
+  const selectedTmdbIds = new Set<number>();
 
   for (const row of rows) {
     if (!canMatchImportRow(row)) {
@@ -119,7 +133,15 @@ export async function importConfirmedMovies(
 
     const decision = byRow.get(row.id);
     if (!decision || decision.disposition === "skip") {
-      results.push(passiveResult(row, "skipped", "Skipped by user."));
+      results.push(
+        passiveResult(
+          row,
+          "skipped",
+          decision?.skipReason === "duplicate"
+            ? "Another CSV row resolves to the same movie."
+            : "Skipped by user.",
+        ),
+      );
       continue;
     }
 
@@ -146,9 +168,21 @@ export async function importConfirmedMovies(
         throw new LibraryValidationError("Choose a valid TMDB movie.");
       }
 
+      const tmdbId = validateTmdbId(decision.tmdbId);
+      if (selectedTmdbIds.has(tmdbId)) {
+        results.push(
+          passiveResult(
+            row,
+            "skipped",
+            "Another CSV row resolves to the same movie.",
+          ),
+        );
+        continue;
+      }
+      selectedTmdbIds.add(tmdbId);
       confirmed.push({
         row,
-        tmdbId: validateTmdbId(decision.tmdbId),
+        tmdbId,
         status: row.status ?? "want_to_watch",
       });
     } catch {
@@ -172,36 +206,44 @@ export async function importConfirmedMovies(
   const sharedMovieCache = new Map<number, Promise<SharedMovieReference>>();
 
   for (const item of confirmed) {
-    if (item.status === "watch_next" && !queueAvailable) {
-      results.push(
-        passiveResult(
-          item.row,
-          "failed",
-          "The Watch Next position could not be assigned. Retry this row later.",
-        ),
-      );
-      continue;
-    }
-
-    const assignedQueuePosition =
-      item.status === "watch_next" ? queuePosition : null;
-
     try {
       const ownedMovie = await dependencies.findOwnedMovie(
         session,
         item.tmdbId,
       );
       if (ownedMovie) {
+        const updated = await dependencies.updateOwnedMovie(
+          session,
+          ownedMovie,
+          item,
+        );
         results.push({
           rowId: item.row.id,
           rowNumber: item.row.rowNumber,
           importedTitle: item.row.title,
           matchedTitle: ownedMovie.matchedTitle,
-          status: "already_in_library",
-          message: "Already in library.",
+          status: updated.status,
+          message:
+            updated.status === "updated"
+              ? "Library metadata updated."
+              : "Already in Library; no user metadata was supplied.",
         });
         continue;
       }
+
+      if (item.status === "watch_next" && !queueAvailable) {
+        results.push(
+          passiveResult(
+            item.row,
+            "failed",
+            "The Watch Next position could not be assigned. Retry this row later.",
+          ),
+        );
+        continue;
+      }
+
+      const assignedQueuePosition =
+        item.status === "watch_next" ? queuePosition : null;
 
       let sharedMovie = sharedMovieCache.get(item.tmdbId);
       if (!sharedMovie) {
@@ -221,12 +263,12 @@ export async function importConfirmedMovies(
         matchedTitle: saved.matchedTitle,
         status: saved.status,
         message:
-          saved.status === "imported"
-            ? "Imported successfully."
-            : "Already in library.",
+          saved.status === "added"
+            ? "Added successfully."
+            : "Already in Library; no duplicate was created.",
       });
 
-      if (saved.status === "imported" && item.status === "watch_next") {
+      if (saved.status === "added" && item.status === "watch_next") {
         queuePosition += 1;
         queueChanged = true;
       }
