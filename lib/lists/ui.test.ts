@@ -287,14 +287,12 @@ describe("Part 13 private-data and cross-feature regression contracts", () => {
     const libraryActions = source("app/(app)/actions/library.ts");
     const managementActions = source("app/(app)/actions/management.ts");
     const settingsActions = source("app/(app)/settings/actions.ts");
+    const revalidation = source("lib/revalidation/private-data.ts");
 
-    expect(libraryActions).toContain(
-      'revalidatePath("/lists", "layout")',
-    );
-    expect(managementActions).toContain(
-      'revalidatePath("/lists", "layout")',
-    );
-    expect(settingsActions).toContain('"/lists"');
-    expect(settingsActions).toContain("revalidatePath(path)");
+    expect(libraryActions).toContain("revalidateLibraryDerivedViews");
+    expect(managementActions).toContain("revalidateLibraryDerivedViews");
+    expect(settingsActions).toContain("revalidateLibraryDerivedViews");
+    expect(revalidation).toContain('revalidatePath("/lists")');
+    expect(revalidation).toContain('["/lists/[listId]", "page"]');
   });
 });

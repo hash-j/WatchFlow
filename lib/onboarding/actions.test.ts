@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("next/server", () => ({ after: (callback: () => void) => callback() }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/onboarding/supabase-onboarding", async () => {
   const actual = await vi.importActual<typeof import("./supabase-onboarding")>("./supabase-onboarding");

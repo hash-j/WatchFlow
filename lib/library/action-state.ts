@@ -1,6 +1,7 @@
 export type LibraryActionState = {
   status: "idle" | "success" | "error";
   message: string | null;
+  favourite?: boolean;
 };
 
 export const initialLibraryActionState: LibraryActionState = {

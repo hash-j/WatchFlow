@@ -25,7 +25,15 @@ async function removeBatchOneMovie(page: Page, movie: ControlledMovie) {
   const item = page.locator(`article[data-tmdb-id="${movie.tmdbId}"]`);
   await expect(item).toBeVisible();
   await item.getByRole("link").first().click();
-  await page.getByRole("button", { name: "Remove" }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: movie.title, exact: true }),
+  ).toBeVisible();
+  await page.waitForTimeout(1_000);
+  await page
+    .locator(
+      `button[aria-label="Remove ${movie.title} from your library"]:visible`,
+    )
+    .click();
   const responsePromise = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&

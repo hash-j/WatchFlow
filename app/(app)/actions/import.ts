@@ -2,8 +2,6 @@
 
 import "server-only";
 
-import { revalidatePath } from "next/cache";
-
 import {
   CsvImportValidationError,
   parseCsvText,
@@ -32,6 +30,7 @@ import {
   LibraryValidationError,
 } from "@/lib/library/errors";
 import { createClient } from "@/lib/supabase/server";
+import { revalidateLibraryDerivedViews } from "@/lib/revalidation/private-data";
 
 async function isAuthenticated() {
   const supabase = await createClient();
@@ -196,13 +195,7 @@ export async function confirmCsvImportAction(input: {
       createMovieImportDependencies(),
     );
 
-    revalidatePath("/dashboard");
-    revalidatePath("/library", "layout");
-    revalidatePath("/statistics");
-    revalidatePath("/watch-next");
-    revalidatePath("/schedule");
-    revalidatePath("/picker");
-    revalidatePath("/recommendations");
+    revalidateLibraryDerivedViews();
     return { ok: true, data: result };
   } catch (error) {
     return { ok: false, message: friendlyImportError(error) };

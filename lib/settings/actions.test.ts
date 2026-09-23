@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("next/server", () => ({ after: (callback: () => void) => callback() }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/settings/supabase-settings", () => ({
   authenticateSettings: mocks.authenticateSettings,
@@ -193,16 +194,25 @@ describe("settings Server Actions", () => {
     );
     for (const path of [
       "/dashboard",
-      "/library",
       "/watch-next",
       "/schedule",
       "/picker",
       "/recommendations",
+      "/statistics",
       "/settings/data",
     ]) {
       expect(mocks.revalidatePath).toHaveBeenCalledWith(path);
     }
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists", "layout");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/library");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/library/[movieId]",
+      "page",
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/lists/[listId]",
+      "page",
+    );
   });
 
   it("rejects unauthenticated library deletion", async () => {

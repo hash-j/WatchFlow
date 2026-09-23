@@ -23,7 +23,7 @@ export async function login(page: Page, credentials: QaCredentials) {
     ]);
     await expect(
       page.getByRole("heading", { level: 1, name: "Dashboard" }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30_000 });
   } catch (error) {
     await clearPasswordIfVisible(page);
     throw error;

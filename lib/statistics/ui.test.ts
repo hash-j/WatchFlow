@@ -325,13 +325,18 @@ describe("Statistics loading, error, and revalidation contracts", () => {
   });
 
   it("revalidates Statistics after every existing mutation that changes its source data", () => {
+    const revalidation = source("lib/revalidation/private-data.ts");
+    expect(revalidation).toContain('"/statistics"');
+
     for (const relativePath of [
       "app/(app)/actions/library.ts",
       "app/(app)/actions/management.ts",
       "app/(app)/actions/import.ts",
       "app/(app)/settings/actions.ts",
     ]) {
-      expect(source(relativePath), relativePath).toContain('"/statistics"');
+      expect(source(relativePath), relativePath).toContain(
+        "revalidateLibraryDerivedViews",
+      );
     }
   });
 });

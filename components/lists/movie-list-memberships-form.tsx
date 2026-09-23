@@ -1,9 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { ListPlus, Save } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 import { setMovieListMembershipsAction } from "@/app/(app)/actions/lists";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -35,7 +34,6 @@ function MovieListMembershipsFormState({
   movieTitle,
   memberships,
 }: MovieListMembershipsFormProps) {
-  const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     () =>
       new Set(
@@ -48,12 +46,6 @@ function MovieListMembershipsFormState({
     setMovieListMembershipsAction,
     initialListActionState,
   );
-
-  useEffect(() => {
-    if (state.requestId > 0 && state.status === "success") {
-      router.refresh();
-    }
-  }, [router, state.requestId, state.status]);
 
   function toggleList(listId: string) {
     setSelectedIds((current) => {

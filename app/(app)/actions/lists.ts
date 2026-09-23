@@ -2,7 +2,6 @@
 
 import "server-only";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import {
@@ -37,6 +36,7 @@ import {
   setMovieListMembershipsSchema,
   updateListSchema,
 } from "@/lib/lists/validation";
+import { revalidateListViews } from "@/lib/revalidation/private-data";
 
 function nextState(
   previousState: ListActionState,
@@ -87,23 +87,6 @@ function listErrorMessage(error: unknown) {
   return "The custom list could not be updated. Please try again.";
 }
 
-function revalidateListViews(listId?: string | null) {
-  revalidatePath("/lists");
-  revalidatePath("/lists", "layout");
-  if (listId) {
-    revalidatePath(`/lists/${listId}`);
-  }
-}
-
-function revalidateMovieDetail(movieId: FormDataEntryValue | null) {
-  if (
-    typeof movieId === "string" &&
-    /^[a-zA-Z0-9-]{1,64}$/.test(movieId)
-  ) {
-    revalidatePath(`/library/${movieId}`);
-  }
-}
-
 export async function createListAction(
   previousState: ListActionState,
   formData: FormData,
@@ -135,8 +118,7 @@ export async function createListAction(
     return errorState(previousState, listErrorMessage(error));
   }
 
-  revalidateListViews(createdId);
-  revalidatePath("/library", "layout");
+  revalidateListViews({ allMovieDetails: true });
   redirect(`/lists/${createdId}?created=1`);
 }
 
@@ -167,8 +149,7 @@ export async function updateListAction(
       );
     }
 
-    revalidateListViews(parsed.data.listId);
-    revalidatePath("/library", "layout");
+    revalidateListViews({ allMovieDetails: true });
     return successState(previousState, "List details saved.");
   } catch (error) {
     if (error instanceof ListsConflictError) {
@@ -214,8 +195,7 @@ export async function deleteListAction(
     return errorState(previousState, listErrorMessage(error));
   }
 
-  revalidateListViews(parsed.data.listId);
-  revalidatePath("/library", "layout");
+  revalidateListViews({ allMovieDetails: true });
   redirect("/lists?deleted=1");
 }
 
@@ -247,8 +227,7 @@ export async function addMoviesToListAction(
       );
     }
 
-    revalidateListViews(parsed.data.listId);
-    revalidatePath("/library", "layout");
+    revalidateListViews({ allMovieDetails: true });
 
     const addedLabel = `${result.added} ${
       result.added === 1 ? "movie" : "movies"
@@ -292,7 +271,7 @@ export async function moveListItemAction(
       );
     }
 
-    revalidateListViews(result.listId);
+    revalidateListViews();
     return successState(
       previousState,
       result.moved
@@ -327,8 +306,7 @@ export async function removeMovieFromListAction(
       );
     }
 
-    revalidateListViews(result.listId);
-    revalidatePath("/library", "layout");
+    revalidateListViews({ allMovieDetails: true });
     return successState(
       previousState,
       "Removed from this list. The movie remains in your library.",
@@ -371,7 +349,6 @@ export async function setMovieListMembershipsAction(
     }
 
     revalidateListViews();
-    revalidateMovieDetail(formData.get("movieId"));
 
     return successState(
       previousState,

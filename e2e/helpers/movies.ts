@@ -68,12 +68,17 @@ export async function removeControlledMovie(
     }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Remove" }).click();
+  await page
+    .getByRole("button", {
+      name: `Remove ${movie.title} from your library`,
+      exact: true,
+    })
+    .click();
   await clickAndWaitForMutation(
     page,
     page.getByRole("button", { name: "Yes, remove" }),
     {
-      url: /\/library$/,
+      url: /\/library(?:\?.*)?$/,
       visible: page.getByRole("heading", { level: 1, name: "Library" }),
     },
   );

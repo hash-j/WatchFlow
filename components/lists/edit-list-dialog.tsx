@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { Pencil } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 import { updateListAction } from "@/app/(app)/actions/lists";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,6 @@ export function EditListDialog({
   list: CustomList;
   compact?: boolean;
 }) {
-  const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [state, action, isPending] = useActionState(
@@ -35,9 +33,8 @@ export function EditListDialog({
   useEffect(() => {
     if (state.requestId > 0 && state.status === "success") {
       dialogRef.current?.close();
-      router.refresh();
     }
-  }, [router, state.requestId, state.status]);
+  }, [state.requestId, state.status]);
 
   return (
     <>

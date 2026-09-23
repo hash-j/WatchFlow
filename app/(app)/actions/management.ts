@@ -2,8 +2,6 @@
 
 import "server-only";
 
-import { revalidatePath } from "next/cache";
-
 import type { LibraryActionState } from "@/lib/library/action-state";
 import {
   LibraryAuthorizationError,
@@ -19,27 +17,14 @@ import {
   updateLibraryMovie,
 } from "@/lib/library/management";
 import { createSupabaseManagementDependencies } from "@/lib/library/supabase-management";
+import {
+  revalidateLibraryDerivedViews,
+  revalidateQueueViews,
+} from "@/lib/revalidation/private-data";
 
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
-}
-
-function revalidateMovieViews() {
-  revalidatePath("/dashboard");
-  revalidatePath("/library", "layout");
-  revalidatePath("/statistics");
-  revalidatePath("/watch-next");
-  revalidatePath("/schedule");
-  revalidatePath("/lists", "layout");
-  revalidatePath("/picker");
-  revalidatePath("/recommendations");
-}
-
-function revalidateMovieDetail(movieId: string) {
-  if (/^[a-zA-Z0-9-]{1,64}$/.test(movieId)) {
-    revalidatePath(`/library/${movieId}`);
-  }
 }
 
 function getActionErrorMessage(error: unknown) {
@@ -87,8 +72,7 @@ export async function updateMovieAction(
       return { status: "error", message: "That library item was not found." };
     }
 
-    revalidateMovieDetail(getString(formData, "movieId"));
-    revalidateMovieViews();
+    revalidateLibraryDerivedViews({ movieDetails: false });
     return { status: "success", message: "Movie details saved." };
   } catch (error) {
     return { status: "error", message: getActionErrorMessage(error) };
@@ -113,7 +97,7 @@ export async function moveQueueMovieAction(
       };
     }
 
-    revalidateMovieViews();
+    revalidateQueueViews();
     return { status: "success", message: "Queue order updated." };
   } catch (error) {
     return { status: "error", message: getActionErrorMessage(error) };
@@ -140,8 +124,7 @@ export async function scheduleMovieAction(
       return { status: "error", message: "That library item was not found." };
     }
 
-    revalidateMovieDetail(scheduled.movieId);
-    revalidateMovieViews();
+    revalidateLibraryDerivedViews({ movieDetails: false });
     return { status: "success", message: "Movie scheduled." };
   } catch (error) {
     return { status: "error", message: getActionErrorMessage(error) };

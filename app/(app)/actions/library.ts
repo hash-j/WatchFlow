@@ -2,7 +2,7 @@
 
 import "server-only";
 
-import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import type {
   BulkLibraryActionState,
@@ -33,6 +33,7 @@ import {
   MovieProviderError,
 } from "@/lib/movies/errors";
 import { SupabaseAdminConfigurationError } from "@/lib/supabase/admin";
+import { revalidateLibraryDerivedViews } from "@/lib/revalidation/private-data";
 
 function getActionErrorMessage(error: unknown) {
   if (error instanceof AuthenticationRequiredError) {
@@ -66,26 +67,6 @@ function getActionErrorMessage(error: unknown) {
   return "WatchFlow could not update your library. Please try again.";
 }
 
-function revalidateLibraryViews() {
-  revalidatePath("/dashboard");
-  revalidatePath("/library", "layout");
-  revalidatePath("/statistics");
-  revalidatePath("/watch-next");
-  revalidatePath("/schedule");
-  revalidatePath("/lists", "layout");
-  revalidatePath("/picker");
-  revalidatePath("/recommendations");
-}
-
-function revalidateMovieDetail(movieId: FormDataEntryValue | null) {
-  if (
-    typeof movieId === "string" &&
-    /^[a-zA-Z0-9-]{1,64}$/.test(movieId)
-  ) {
-    revalidatePath(`/library/${movieId}`);
-  }
-}
-
 export async function addMovieAction(
   _previousState: LibraryActionState,
   formData: FormData,
@@ -98,7 +79,7 @@ export async function addMovieAction(
       createSupabaseLibraryDependencies(),
     );
 
-    revalidateLibraryViews();
+    revalidateLibraryDerivedViews();
 
     return result === "duplicate"
       ? { status: "success", message: "This movie is already in your library." }
@@ -112,26 +93,13 @@ export async function removeMovieAction(
   _previousState: LibraryActionState,
   formData: FormData,
 ): Promise<LibraryActionState> {
+  let result: Awaited<ReturnType<typeof removeLibraryMovie>>;
+
   try {
-    const result = await removeLibraryMovie(
+    result = await removeLibraryMovie(
       formData.get("userMovieId"),
       createSupabaseLibraryMutationDependencies(),
     );
-
-    if (!result.success || result.matched !== 1 || result.affected !== 1) {
-      return {
-        status: "error",
-        message: "This movie is no longer in your library.",
-      };
-    }
-
-    revalidateMovieDetail(formData.get("movieId"));
-    revalidateLibraryViews();
-
-    return {
-      status: "success",
-      message: getMovieRemovalMessage(formData.get("movieTitle")),
-    };
   } catch (error) {
     if (error instanceof AuthenticationRequiredError) {
       return { status: "error", message: "Please sign in again." };
@@ -149,10 +117,30 @@ export async function removeMovieAction(
       message: "The movie could not be removed. Please try again.",
     };
   }
+
+  if (!result.success || result.matched !== 1 || result.affected !== 1) {
+    return {
+      status: "error",
+      message: "This movie is no longer in your library.",
+    };
+  }
+
+  const movieTitle = formData.get("movieTitle");
+  revalidateLibraryDerivedViews();
+
+  if (formData.get("redirectAfterRemoval") === "true") {
+    const removedTitle = typeof movieTitle === "string" ? movieTitle : "Movie";
+    redirect(`/library?removed=${encodeURIComponent(removedTitle)}`);
+  }
+
+  return {
+    status: "success",
+    message: getMovieRemovalMessage(movieTitle),
+  };
 }
 
 export async function setFavouriteAction(
-  _previousState: LibraryActionState,
+  previousState: LibraryActionState,
   formData: FormData,
 ): Promise<LibraryActionState> {
   try {
@@ -170,8 +158,7 @@ export async function setFavouriteAction(
       };
     }
 
-    revalidateMovieDetail(formData.get("movieId"));
-    revalidateLibraryViews();
+    revalidateLibraryDerivedViews();
 
     return {
       status: "success",
@@ -179,9 +166,14 @@ export async function setFavouriteAction(
         favourite === "true"
           ? "Added to favourites."
           : "Removed from favourites.",
+      favourite: favourite === "true",
     };
   } catch (error) {
-    return { status: "error", message: getActionErrorMessage(error) };
+    return {
+      status: "error",
+      message: getActionErrorMessage(error),
+      favourite: previousState.favourite,
+    };
   }
 }
 
@@ -213,7 +205,7 @@ export async function bulkUpdateStatusAction(
       });
     }
 
-    revalidateLibraryViews();
+    revalidateLibraryDerivedViews();
     return bulkState(previousState, {
       status: "success",
       message: `${result.affected} ${
@@ -252,7 +244,7 @@ export async function bulkRemoveMoviesAction(
       });
     }
 
-    revalidateLibraryViews();
+    revalidateLibraryDerivedViews();
     return bulkState(previousState, {
       status: "success",
       message: `${result.affected} ${

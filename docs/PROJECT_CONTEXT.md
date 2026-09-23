@@ -1,16 +1,85 @@
 # WatchFlow Project Context
 
 Last updated: 2026-09-23
-Last updated by: Codex / Part 18A Batch 3B discovery and Statistics query optimization
+Last updated by: Codex / Part 18A Batch 3C cache and revalidation architecture cleanup
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18A performance and reliability work; Batches 1, 2, 3A, and 3B are implemented locally.
+Current phase: Part 18A performance and reliability work; Batches 1, 2, 3A, 3B, and 3C are implemented locally.
 Current branch: `part-18a-core-reliability`.
-Current status: Part 17 Production Launch remains PASS. Part 18A Batch 3B discovery and Statistics optimization is complete and accepted against watchflow-dev with QA User B. QA User A remains unavailable for browser cross-user verification. Changes remain uncommitted and unpushed.
+Current status: Part 17 Production Launch remains PASS. Part 18A Batch 3C cache/revalidation cleanup is complete and accepted against watchflow-dev with QA User B. QA User A remains unavailable for browser cross-user verification. Changes remain uncommitted and unpushed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-23 Part 18A Performance Fix Batch 3C
+
+- Revalidation was duplicated across Server Actions and five client components,
+  and Library/List mutations repeatedly named the same routes. More importantly,
+  `revalidatePath("/library", "layout")` and the equivalent Lists call targeted
+  URL segments without local layout files, allowing invalidation to reach the
+  shared authenticated layout and remount unrelated private pages. All mutation
+  mappings now live in `lib/revalidation/private-data.ts`; five redundant
+  `router.refresh()` calls were removed.
+- Library-wide changes now register explicit Dashboard, Library index, movie-
+  detail pattern, Statistics, Watch Next, Schedule, Lists index, list-detail
+  pattern, Picker, and Recommendations page invalidations. They run through
+  Next `after()` so the Server Action result is sent before the broader cache
+  work. Current movie-detail edits can omit their own detail pattern where local
+  form state is already authoritative. Favourite state is returned explicitly
+  by its Server Action so the current button reflects the confirmed write without
+  a client refresh. Detail removals redirect on the server after deletion,
+  preventing an invalidated deleted route from winning a client-effect race.
+- Queue reorder is deliberately different: it synchronously invalidates only
+  Dashboard and Watch Next, allowing the same action response to carry the new
+  visible order. List mutations register the Lists index and list-detail pattern;
+  mutations that change membership choices additionally register the movie-
+  detail pattern. No nonexistent route layout or entire authenticated workspace
+  is invalidated.
+- Structural evidence: queue reorder falls from the shared eight-view fan-out to
+  two calls. List operations fall from repeated exact/index/layout combinations
+  to two page targets, or three when every movie detail is affected. Full Library
+  changes move from eight or nine synchronous calls containing two accidentally
+  broad layout targets to nine or ten post-response, page-scoped targets; the
+  call count can increase because index and dynamic pages are now explicit, but
+  invalidation scope and response-path work are reduced. Onboarding completion
+  remains narrowed to two routes, and preference mutations share one consumer
+  map. No millisecond improvement is claimed.
+- No shared cache was added. Authenticated Library, queue, schedule, list,
+  preference, favourite, rating/review, and Statistics data remains uncached
+  across requests because ownership isolation is more important than reuse and
+  the current private-cache primitive is experimental. TMDB calls retain
+  `no-store` plus the existing process-local in-flight deduplication; search is
+  query/preference-sensitive and detail ingestion has explicit freshness and
+  rate-limit behavior, so no material safe cache was justified. Shared movie
+  metadata remains canonical in the database and is read through owner-scoped
+  relationships.
+- Live QA exposed a stalled client Search transition, so Search now uses an
+  accessible native GET form with the same empty-query validation and normalized
+  query. It also exposed removal redirect ordering, transient action-state loss,
+  and favourite-button state assumptions; those were fixed without adding a
+  schema change or client refresh. Guarded QA helpers now use exact accessible
+  removal names and bounded streamed-UI waits.
+- Regression coverage adds exact invalidation-map contracts, post-response
+  scheduling, current-detail preservation, confirmed favourite state, absence
+  of private caching, absence of the five redundant refreshes, native Search,
+  and a live mutation/navigation scenario covering add, status/rating/Watched
+  Date, favourite, Dashboard, Statistics, List membership add/remove, removal,
+  cleanup, and restored counts. Focused coverage passed 6 files/67 tests; the
+  full suite passed 84 files/815 tests.
+- Final validation passed `git diff --check`, ESLint, direct TypeScript, the Next
+  16.2.12 production build with 37 routes, and the 507-browser-artifact secret
+  scan. Built-server watchflow-dev QA passed Batch 3C (1 test), Batch 1 (2),
+  Batch 2 (1), Batch 3A (2), and Batch 3B (1), with no unexpected console/network
+  failures in the accepted runs. Controlled Inception/Arrival and temporary List
+  fixtures were removed; baseline Library/Statistics counts were restored.
+- Security boundaries are unchanged: private reads remain request/user scoped,
+  mutations keep fresh authenticated clients and RLS, no browser owner ID or
+  admin/service-role path was added, and no migration, schema, RLS, grant, Auth,
+  dependency, environment, Production, deployment, commit, or push changed.
+  Remaining Part 18 work intentionally excludes completed Batch 3C and includes
+  CSV Import V2, Movie Details status redesign, Search Already-in-Library,
+  Watch Next priority, custom-list ordering, and later notifications/PWA/Series.
 
 ## 2026-09-23 Part 18A Performance Fix Batch 3B
 

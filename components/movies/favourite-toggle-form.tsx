@@ -29,7 +29,8 @@ export function FavouriteToggleForm({
     setFavouriteAction,
     initialLibraryActionState,
   );
-  const label = favourite
+  const confirmedFavourite = state.favourite ?? favourite;
+  const label = confirmedFavourite
     ? `Remove ${title} from favourites`
     : `Add ${title} to favourites`;
 
@@ -37,27 +38,31 @@ export function FavouriteToggleForm({
     <form action={action} className="space-y-1">
       <input type="hidden" name="libraryId" value={libraryId} />
       <input type="hidden" name="movieId" value={movieId} />
-      <input type="hidden" name="favourite" value={String(!favourite)} />
+      <input
+        type="hidden"
+        name="favourite"
+        value={String(!confirmedFavourite)}
+      />
       <Button
         type="submit"
         size="sm"
-        variant={favourite ? "secondary" : "outline"}
+        variant={confirmedFavourite ? "secondary" : "outline"}
         disabled={isPending}
         aria-label={label}
-        aria-pressed={favourite}
-        className={cn(favourite && "font-semibold", className)}
+        aria-pressed={confirmedFavourite}
+        className={cn(confirmedFavourite && "font-semibold", className)}
       >
         <Star
-          className={cn("size-4", favourite && "fill-current")}
+          className={cn("size-4", confirmedFavourite && "fill-current")}
           aria-hidden="true"
         />
         {compact
-          ? favourite
+          ? confirmedFavourite
             ? "Favourite"
             : "Add favourite"
           : isPending
             ? "Saving favourite…"
-            : favourite
+            : confirmedFavourite
               ? "Favourite"
               : "Add to favourites"}
       </Button>

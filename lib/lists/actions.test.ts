@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("next/server", () => ({ after: (callback: () => void) => callback() }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/lists/supabase-lists", () => ({
   createOwnedCustomList: mocks.createOwnedCustomList,
@@ -108,8 +109,9 @@ describe("custom-list create, edit, and delete actions", () => {
       "user_id",
     );
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists");
-    expect(mocks.revalidatePath).toHaveBeenCalledWith(`/lists/${listId}`);
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/library", "layout");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists/[listId]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/library/[movieId]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledTimes(3);
   });
 
   it("returns field errors for a blank name without writing", async () => {
@@ -173,8 +175,9 @@ describe("custom-list create, edit, and delete actions", () => {
       "user_id",
     );
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists");
-    expect(mocks.revalidatePath).toHaveBeenCalledWith(`/lists/${listId}`);
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/library", "layout");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists/[listId]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/library/[movieId]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledTimes(3);
   });
 
   it("reports a stale or foreign list without claiming an update", async () => {
@@ -238,8 +241,9 @@ describe("custom-list create, edit, and delete actions", () => {
       "Weekend Movies",
     );
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists");
-    expect(mocks.revalidatePath).toHaveBeenCalledWith(`/lists/${listId}`);
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/library", "layout");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists/[listId]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/library/[movieId]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -268,8 +272,9 @@ describe("custom-list membership actions", () => {
       message: "1 movie added. 1 already belongs to this list.",
     });
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists");
-    expect(mocks.revalidatePath).toHaveBeenCalledWith(`/lists/${listId}`);
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/library", "layout");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists/[listId]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/library/[movieId]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledTimes(3);
   });
 
   it("keeps stale multi-add selections atomic and honest", async () => {
@@ -315,7 +320,9 @@ describe("custom-list membership actions", () => {
       status: "success",
       message: "This movie is already first.",
     });
-    expect(mocks.revalidatePath).toHaveBeenCalledWith(`/lists/${listId}`);
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists/[listId]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledTimes(2);
   });
 
   it("removes only a list membership and states that the library movie remains", async () => {
@@ -334,8 +341,10 @@ describe("custom-list membership actions", () => {
       status: "success",
       message: "Removed from this list. The movie remains in your library.",
     });
-    expect(mocks.revalidatePath).toHaveBeenCalledWith(`/lists/${listId}`);
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/library", "layout");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists/[listId]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/library/[movieId]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledTimes(3);
   });
 
   it("supports removing all movie-detail memberships with an empty list selection", async () => {
@@ -361,7 +370,8 @@ describe("custom-list membership actions", () => {
       message: "List memberships saved: 0 added, 2 removed.",
     });
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists");
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/library/975");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists/[listId]", "page");
+    expect(mocks.revalidatePath).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -192,7 +192,8 @@ describe("Part 12 library UI contracts", () => {
     const linkEnd = card.indexOf("</Link>");
     const actions = card.indexOf("<LibraryItemActions");
 
-    expect(favourite).toContain("aria-pressed={favourite}");
+    expect(favourite).toContain("aria-pressed={confirmedFavourite}");
+    expect(favourite).toContain("state.favourite ?? favourite");
     expect(favourite).toContain("Add ${title} to favourites");
     expect(favourite).toContain("Remove ${title} from favourites");
     expect(favourite).toContain("fill-current");
@@ -334,7 +335,7 @@ describe("Part 16F-B Batch 2B library polish contracts", () => {
     expect(remove).toContain('variant="outline"');
     expect(remove).toContain("border-destructive/50");
     expect(remove).toContain("aria-label={`Remove ${movieTitle}");
-    expect(favourite).toContain("aria-pressed={favourite}");
+    expect(favourite).toContain("aria-pressed={confirmedFavourite}");
   });
 
   it("aligns the responsive selection toolbar and gives clear and exit visible borders", () => {
@@ -368,7 +369,8 @@ describe("Part 16F-B Batch 2B library polish contracts", () => {
     const action = source("app/(app)/actions/library.ts");
 
     expect(form).toContain('name="movieTitle" value={movieTitle}');
-    expect(form).toContain("/library?removed=");
+    expect(form).toContain('name="redirectAfterRemoval"');
+    expect(action).toContain("/library?removed=");
     expect(page).toContain("getMovieRemovalMessage(removedTitle)");
     expect(page).toContain('role="status"');
     expect(action).toContain('formData.get("movieTitle")');

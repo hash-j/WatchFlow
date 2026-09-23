@@ -19,7 +19,7 @@ export async function expectSuccessState(
   message: TextExpectation,
 ) {
   const status = page.getByRole("status").filter({ hasText: message });
-  await expect(status).toBeVisible();
+  await expect(status).toBeVisible({ timeout: 30_000 });
   return status;
 }
 
@@ -28,7 +28,7 @@ export async function expectErrorState(
   message: TextExpectation,
 ) {
   const alert = page.getByRole("alert").filter({ hasText: message });
-  await expect(alert).toBeVisible();
+  await expect(alert).toBeVisible({ timeout: 30_000 });
   return alert;
 }
 

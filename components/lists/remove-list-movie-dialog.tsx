@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { ListX } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 import { removeMovieFromListAction } from "@/app/(app)/actions/lists";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,6 @@ export function RemoveListMovieDialog({
   title: string;
   listName: string;
 }) {
-  const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [state, action, isPending] = useActionState(
@@ -31,12 +29,11 @@ export function RemoveListMovieDialog({
   useEffect(() => {
     if (state.requestId > 0 && state.status === "success") {
       dialogRef.current?.close();
-      router.refresh();
       window.requestAnimationFrame(() => {
         document.getElementById("list-movies-heading")?.focus();
       });
     }
-  }, [router, state.requestId, state.status]);
+  }, [state.requestId, state.status]);
 
   return (
     <>

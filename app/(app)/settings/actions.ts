@@ -28,6 +28,10 @@ import {
   profileSettingsSchema,
 } from "@/lib/settings/validation";
 import { logSupabaseError } from "@/lib/supabase/error-logging";
+import {
+  revalidateApplicationPreferenceViews,
+  revalidateLibraryDerivedViews,
+} from "@/lib/revalidation/private-data";
 
 function value(formData: FormData, key: string) {
   const result = formData.get(key);
@@ -140,16 +144,7 @@ export async function updateApplicationPreferencesAction(
       session.user.id,
       parsed.data,
     );
-    for (const path of [
-      "/dashboard",
-      "/search",
-      "/library",
-      "/schedule",
-      "/statistics",
-    ]) {
-      revalidatePath(path);
-    }
-    revalidatePath("/settings/preferences");
+    revalidateApplicationPreferenceViews();
     return {
       status: "success",
       message: "Application preferences saved.",
@@ -212,20 +207,8 @@ export async function deleteLibraryDataAction(
     return persistenceError(error);
   }
 
-  for (const path of [
-    "/dashboard",
-    "/library",
-    "/watch-next",
-    "/schedule",
-    "/lists",
-    "/picker",
-    "/recommendations",
-    "/statistics",
-    "/settings/data",
-  ]) {
-    revalidatePath(path);
-  }
-  revalidatePath("/lists", "layout");
+  revalidateLibraryDerivedViews();
+  revalidatePath("/settings/data");
   redirect(`/settings/data?libraryDeleted=${removed}`);
 }
 

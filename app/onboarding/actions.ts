@@ -38,6 +38,10 @@ import {
 import { readUserPreferences, updateApplicationPreferences } from "@/lib/settings/supabase-settings";
 import { flattenZodErrors } from "@/lib/settings/validation";
 import { SupabaseAdminConfigurationError } from "@/lib/supabase/admin";
+import {
+  revalidateLibraryDerivedViews,
+  revalidateOnboardingPreferenceViews,
+} from "@/lib/revalidation/private-data";
 
 function value(formData: FormData, key: string) {
   const result = formData.get(key);
@@ -83,26 +87,6 @@ function safeMovieError(error: unknown) {
   return "WatchFlow could not add that movie. Please try again.";
 }
 
-const REVALIDATED_PRODUCT_PATHS = [
-  "/onboarding",
-  "/dashboard",
-  "/search",
-  "/library",
-  "/statistics",
-  "/watch-next",
-  "/schedule",
-  "/lists",
-  "/picker",
-  "/recommendations",
-  "/settings/preferences",
-] as const;
-
-function revalidateOnboardingProductViews() {
-  for (const path of REVALIDATED_PRODUCT_PATHS) revalidatePath(path);
-  revalidatePath("/library", "layout");
-  revalidatePath("/lists", "layout");
-}
-
 export async function saveOnboardingPreferencesAction(
   _previousState: OnboardingActionState,
   formData: FormData,
@@ -144,11 +128,7 @@ export async function saveOnboardingPreferencesAction(
     );
   }
 
-  revalidatePath("/onboarding");
-  revalidatePath("/search");
-  revalidatePath("/library");
-  revalidatePath("/schedule");
-  revalidatePath("/statistics");
+  revalidateOnboardingPreferenceViews();
   redirect("/onboarding?step=3");
 }
 
@@ -193,7 +173,8 @@ export async function addOnboardingMovieAction(
       );
     }
 
-    revalidateOnboardingProductViews();
+    revalidateLibraryDerivedViews();
+    revalidatePath("/onboarding");
     const statusLabel =
       status.data === "watched" ? "Watched" : "Want to Watch";
     return {
@@ -221,7 +202,8 @@ async function finishOnboarding(): Promise<OnboardingActionState> {
     );
   }
 
-  revalidateOnboardingProductViews();
+  revalidatePath("/onboarding");
+  revalidatePath("/dashboard");
   redirect("/dashboard");
 }
 

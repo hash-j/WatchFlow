@@ -6,6 +6,7 @@ const {
   setFavouriteMock,
   bulkStatusMock,
   bulkRemoveMock,
+  redirectMock,
   mutationDependencies,
 } = vi.hoisted(() => ({
   revalidatePathMock: vi.fn(),
@@ -13,11 +14,14 @@ const {
   setFavouriteMock: vi.fn(),
   bulkStatusMock: vi.fn(),
   bulkRemoveMock: vi.fn(),
+  redirectMock: vi.fn(),
   mutationDependencies: { kind: "authenticated-mutation-dependencies" },
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
+vi.mock("next/server", () => ({ after: (callback: () => void) => callback() }));
+vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock("./mutations", () => ({
   removeLibraryMovie: removeMovieMock,
   setLibraryMovieFavourite: setFavouriteMock,
@@ -61,6 +65,7 @@ beforeEach(() => {
   setFavouriteMock.mockReset();
   bulkStatusMock.mockReset();
   bulkRemoveMock.mockReset();
+  redirectMock.mockReset();
 });
 
 describe("Part 12 library Server Actions", () => {
@@ -92,14 +97,15 @@ describe("Part 12 library Server Actions", () => {
     );
     expect([...formData.keys()]).not.toContain("user_id");
     expect([...formData.keys()]).not.toContain("libraryId");
-    expect(revalidatePathMock).toHaveBeenCalledWith("/library/42");
     expect(revalidatePathMock).toHaveBeenCalledWith("/dashboard");
-    expect(revalidatePathMock).toHaveBeenCalledWith("/library", "layout");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/library");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/library/[movieId]", "page");
     expect(revalidatePathMock).toHaveBeenCalledWith("/statistics");
     expect(revalidatePathMock).toHaveBeenCalledWith("/watch-next");
     expect(revalidatePathMock).toHaveBeenCalledWith("/schedule");
     expect(revalidatePathMock).toHaveBeenCalledWith("/picker");
     expect(revalidatePathMock).toHaveBeenCalledWith("/recommendations");
+    expect(revalidatePathMock).toHaveBeenCalledTimes(10);
   });
 
   it("does not treat a stale, missing, or foreign user_movies ID as success", async () => {
@@ -122,6 +128,29 @@ describe("Part 12 library Server Actions", () => {
       message: "This movie is no longer in your library.",
     });
     expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects detail-page removals after invalidating affected views", async () => {
+    removeMovieMock.mockResolvedValue({
+      success: true,
+      requested: 1,
+      matched: 1,
+      affected: 1,
+      skipped: 0,
+      failed: 0,
+      reason: null,
+    });
+    const formData = new FormData();
+    formData.set("userMovieId", libraryId);
+    formData.set("movieTitle", "The Matrix");
+    formData.set("redirectAfterRemoval", "true");
+
+    await removeMovieAction(initialLibraryActionState, formData);
+
+    expect(revalidatePathMock).toHaveBeenCalledTimes(10);
+    expect(redirectMock).toHaveBeenCalledWith(
+      "/library?removed=The%20Matrix",
+    );
   });
 
   it("reports unauthenticated and invalid single removals specifically", async () => {
@@ -191,6 +220,7 @@ describe("Part 12 library Server Actions", () => {
     ).resolves.toEqual({
       status: "success",
       message: "Added to favourites.",
+      favourite: true,
     });
 
     expect(setFavouriteMock).toHaveBeenCalledWith(
@@ -199,14 +229,15 @@ describe("Part 12 library Server Actions", () => {
       mutationDependencies,
     );
     expect([...formData.keys()]).not.toContain("user_id");
-    expect(revalidatePathMock).toHaveBeenCalledWith("/library/42");
     expect(revalidatePathMock).toHaveBeenCalledWith("/dashboard");
-    expect(revalidatePathMock).toHaveBeenCalledWith("/library", "layout");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/library");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/library/[movieId]", "page");
     expect(revalidatePathMock).toHaveBeenCalledWith("/statistics");
     expect(revalidatePathMock).toHaveBeenCalledWith("/watch-next");
     expect(revalidatePathMock).toHaveBeenCalledWith("/schedule");
     expect(revalidatePathMock).toHaveBeenCalledWith("/picker");
     expect(revalidatePathMock).toHaveBeenCalledWith("/recommendations");
+    expect(revalidatePathMock).toHaveBeenCalledTimes(10);
   });
 
   it("reports another user's or stale favourite record without claiming success", async () => {
@@ -306,7 +337,8 @@ describe("Part 12 library Server Actions", () => {
       [libraryId],
       mutationDependencies,
     );
-    expect(revalidatePathMock).toHaveBeenCalledWith("/library", "layout");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/library");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/library/[movieId]", "page");
     expect(revalidatePathMock).toHaveBeenCalledWith("/statistics");
     expect(revalidatePathMock).toHaveBeenCalledWith("/watch-next");
     expect(revalidatePathMock).toHaveBeenCalledWith("/schedule");

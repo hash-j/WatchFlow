@@ -1,8 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 import { removeMovieAction } from "@/app/(app)/actions/library";
 import { Button } from "@/components/ui/button";
@@ -23,26 +22,11 @@ export function RemoveFromLibraryForm({
   redirectAfterRemoval = false,
   compact = false,
 }: RemoveFromLibraryFormProps) {
-  const router = useRouter();
   const [isConfirming, setIsConfirming] = useState(false);
   const [state, action, isPending] = useActionState(
     removeMovieAction,
     initialLibraryActionState,
   );
-
-  useEffect(() => {
-    if (state.status !== "success") {
-      return;
-    }
-
-    if (redirectAfterRemoval) {
-      router.replace(`/library?removed=${encodeURIComponent(movieTitle)}`);
-      router.refresh();
-      return;
-    }
-
-    router.refresh();
-  }, [movieTitle, redirectAfterRemoval, router, state.status]);
 
   if (state.status === "success") {
     return (
@@ -73,6 +57,11 @@ export function RemoveFromLibraryForm({
       <input type="hidden" name="userMovieId" value={userMovieId} />
       <input type="hidden" name="movieId" value={movieId} />
       <input type="hidden" name="movieTitle" value={movieTitle} />
+      <input
+        type="hidden"
+        name="redirectAfterRemoval"
+        value={String(redirectAfterRemoval)}
+      />
       <p className="text-xs font-medium">Remove this movie from your library?</p>
       <div className="flex flex-wrap gap-2">
         <Button type="submit" size="sm" variant="destructive" disabled={isPending}>

@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useState, useTransition } from "react";
+import { type FormEvent, useState } from "react";
 import { Search } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,28 +15,35 @@ export function MovieSearchForm() {
 }
 
 function MovieSearchFormFields({ initialQuery }: { initialQuery: string }) {
-  const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
     const normalized = query.trim().replace(/\s+/g, " ");
 
     if (!normalized) {
+      event.preventDefault();
       setError("Enter a movie title to search.");
       return;
     }
 
     setError(null);
-    startTransition(() => {
-      router.push(`/search?q=${encodeURIComponent(normalized)}`);
-    });
+    const queryInput = event.currentTarget.elements.namedItem("q");
+    if (queryInput instanceof HTMLInputElement) {
+      queryInput.value = normalized;
+    }
+    setIsPending(true);
   }
 
   return (
-    <form onSubmit={handleSubmit} role="search" className="mt-6 max-w-2xl">
+    <form
+      action="/search"
+      method="get"
+      onSubmit={handleSubmit}
+      role="search"
+      className="mt-6 max-w-2xl"
+    >
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="flex-1">
           <label htmlFor="movie-query" className="sr-only">

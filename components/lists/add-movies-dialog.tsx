@@ -82,12 +82,6 @@ export function AddMoviesDialog({
     }
   }, [open]);
 
-  useEffect(() => {
-    if (state.requestId > 0 && state.status === "success") {
-      router.refresh();
-    }
-  }, [router, state.requestId, state.status]);
-
   function closeDialog() {
     dialogRef.current?.close();
   }

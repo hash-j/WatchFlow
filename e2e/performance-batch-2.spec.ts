@@ -80,7 +80,12 @@ async function removeBatchTwoMovie(page: Page, movie: ControlledMovie) {
       exact: true,
     }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Remove" }).click();
+  await page.waitForTimeout(1_000);
+  await page
+    .locator(
+      `button[aria-label="Remove ${movie.title} from your library"]:visible`,
+    )
+    .click();
   const responsePromise = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
