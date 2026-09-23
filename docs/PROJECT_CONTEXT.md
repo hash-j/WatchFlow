@@ -1,16 +1,59 @@
 # WatchFlow Project Context
 
 Last updated: 2026-09-23
-Last updated by: Codex / Part 18A Movie Details Status-Specific Form
+Last updated by: Codex / Part 18A Search Already-in-Library
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18A performance and reliability work; CSV Import V2 and Batches 1, 2, 3A, 3B, and 3C are implemented locally.
 Current branch: `part-18a-core-reliability`.
-Current status: Part 17 Production Launch remains PASS. Part 18A Movie Details status-specific form is complete and accepted against watchflow-dev with QA User B. Changes remain uncommitted and unpushed.
+Current status: Part 17 Production Launch remains PASS. All scoped Part 18A feature work is complete and accepted against watchflow-dev with QA User B. Changes remain uncommitted and unpushed.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-23 Part 18A Search Already-in-Library
+
+- Search now resolves ownership separately from shared TMDB metadata. After the
+  existing authenticated, preference-aware, rate-limited TMDB search returns its
+  bounded result set, one authenticated RLS-bound query starts at `user_movies`,
+  filters by the verified current `user_id`, joins `movies`, and filters the
+  complete visible TMDB ID set with one `in` predicate. A shared `movies` row or
+  another user's relationship therefore never marks a result as owned. Before
+  this feature Search made zero Library-membership queries; it now makes exactly
+  one set-based membership request for a non-empty result set and zero for no
+  results. No private membership cache was introduced.
+- A non-owned result retains its normal Add to Library Server Action form. An
+  owned result renders a full-width disabled outline control labelled “Already
+  in your Library” and concise neutral explanatory text. It contains no
+  submission form, no destructive/error styling, and an accessible disabled
+  state. The existing action's client success state now uses the same label so
+  an add is immediately clear without a `router.refresh`; leaving/researching
+  performs the fresh server-side ownership check.
+- The existing authenticated Add path remains the security boundary. It derives
+  identity from the server-validated TMDB ID, resolves shared metadata only
+  after authentication, and invokes the established owner-scoped atomic add
+  RPC. Stale pages, two tabs, double submits, and bypassed UI continue to return
+  the existing duplicate result rather than creating another `user_movies` row.
+- Deterministic coverage adds the one-query membership contract, ID
+  de-duplication, no-result short circuit, owner filtering, safe read failure,
+  UI non-submission/normal-add contracts, and existing duplicate-add coverage.
+  Focused Search/Library/CSV/Movie Details/queue/revalidation coverage passed
+  11 files/90 tests. Guarded browser QA against the exact watchflow-dev pin
+  passed with QA User B: normal add, immediate owned state, refresh/research,
+  disabled duplicate prevention, 390x844/820x1180/1366x768 light and dark
+  layouts without horizontal overflow, controlled removal, re-search returning
+  normal addability, cleanup, and no unexpected browser/network failure. Only
+  the categorized non-blocking Next image LCP advice was observed.
+- Final validation passed `git diff --check`, ESLint, direct TypeScript, the
+  full Vitest suite (88 files/846 tests), the Next 16.2.12 production build
+  with 37 routes, and the 508-browser-artifact client-secret scan.
+- No migration, schema, historical migration, RLS policy, grant, Auth flow,
+  service-role/admin path, dependency, environment, Production data/config,
+  deployment, commit, or push changed. The Part 18A scoped feature set is now
+  ready for the separately authorized final acceptance; do not begin it
+  automatically. Part 18B priority sorting, custom-list ordering,
+  notifications, PWA, and Series support remain unstarted.
 
 ## 2026-09-23 Part 18A Movie Details Status-Specific Form
 

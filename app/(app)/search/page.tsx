@@ -12,6 +12,7 @@ import {
   MovieSearchValidationError,
 } from "@/lib/movies/errors";
 import { AuthenticationRequiredError } from "@/lib/library/errors";
+import { getCurrentUserSearchOwnedTmdbIds } from "@/lib/library/supabase-search-membership";
 import { getMovieReleaseYear } from "@/lib/movies/images";
 import { searchTmdbMoviesForCurrentUser } from "@/lib/movies/server-search";
 
@@ -54,12 +55,16 @@ async function SearchResults({ searchParams }: SearchPageProps) {
     | {
         status: "success";
         movies: Awaited<ReturnType<typeof searchTmdbMoviesForCurrentUser>>;
+        ownedTmdbIds: Set<number>;
       }
     | { status: "error"; message: string };
 
   try {
     const movies = await searchTmdbMoviesForCurrentUser(query);
-    searchResult = { status: "success", movies };
+    const ownedTmdbIds = await getCurrentUserSearchOwnedTmdbIds(
+      movies.map((movie) => movie.tmdbId),
+    );
+    searchResult = { status: "success", movies, ownedTmdbIds };
   } catch (error) {
     if (error instanceof AuthenticationRequiredError) {
       redirect("/auth/login");
@@ -124,7 +129,10 @@ async function SearchResults({ searchParams }: SearchPageProps) {
               <p className="mt-3 line-clamp-4 text-sm text-muted-foreground">
                 {movie.overview ?? "No overview is available for this movie."}
               </p>
-              <AddToLibraryForm tmdbId={movie.tmdbId} />
+              <AddToLibraryForm
+                tmdbId={movie.tmdbId}
+                alreadyInLibrary={searchResult.ownedTmdbIds.has(movie.tmdbId)}
+              />
             </div>
           </article>
         );
