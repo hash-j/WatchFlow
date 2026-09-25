@@ -92,7 +92,7 @@ describe("Part 18D service worker privacy contract", () => {
     expect(worker).toContain('url.pathname.startsWith("/icons/")');
     expect(worker).toContain("if (!isCacheableStaticAsset(url)) return;");
     expect(worker).not.toMatch(
-      /addEventListener\(["'](?:push|sync|periodicsync|notificationclick)["']/,
+      /addEventListener\(["'](?:sync|periodicsync)["']/,
     );
     expect(worker).not.toMatch(/supabase|access_token|refresh_token/i);
   });

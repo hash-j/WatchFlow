@@ -103,6 +103,7 @@ export function mapUserPreferences(value: unknown): UserPreferences {
       DEFAULT_USER_PREFERENCES.moviesPerPage,
     ),
     emailNotificationsEnabled: record.email_notifications_enabled === true,
+    pushNotificationsEnabled: record.push_notifications_enabled === true,
     scheduleRemindersEnabled: record.schedule_reminders_enabled === true,
     reminderOffsetMinutes: numericOption(
       record.reminder_offset_minutes,

@@ -1,5 +1,36 @@
 # WatchFlow Architecture
 
+## Part 18E browser push subscription boundary
+
+Part 18E adds subscription infrastructure, not notification delivery. The
+settings Server Component reads the owner preference under the existing SSR/RLS
+boundary and passes only the public VAPID application-server key to an explicit
+Client Component. The browser asks for permission only after a button press,
+uses the already-registered service worker, and returns its native subscription
+to a Server Action.
+
+```text
+user gesture -> Notification permission -> PushManager.subscribe(public VAPID key)
+             -> fresh server auth.getUser() -> security-invoker save RPC
+             -> auth.uid()-owned subscription + enabled preference
+
+disable -> fresh server auth.getUser() -> owner-only disable RPC
+        -> delete that owner's stored subscriptions -> browser unsubscribe
+```
+
+The browser never sends a user ID. `push_subscriptions` is RLS-protected for all
+operations, and the RPCs derive ownership from `auth.uid()`. The application
+uses the authenticated SSR client and contains no service-role/admin path for
+subscriptions. Endpoints and Push API keys are private owner data.
+
+The service worker's push handler is a display boundary only. It accepts a
+bounded title/body, uses fixed local icons, and permits only an internal
+single-slash action path. Notification clicks focus or open a same-origin
+window. Push payloads, private pages, Supabase responses, and sessions are never
+cached. A public VAPID key is supported for browser subscription; private-key
+signing and delivery intentionally do not exist in this milestone. There is no
+scheduler, delivery worker, background sync, email, or weekly-summary behavior.
+
 ## Part 18D installable PWA and offline-shell boundary
 
 Part 18D adds a progressive, installable web-app shell without changing the

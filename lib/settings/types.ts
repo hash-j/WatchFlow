@@ -47,6 +47,7 @@ export type UserPreferences = {
   preferredLanguage: SupportedLanguage;
   moviesPerPage: number;
   emailNotificationsEnabled: boolean;
+  pushNotificationsEnabled: boolean;
   scheduleRemindersEnabled: boolean;
   reminderOffsetMinutes: number;
   weeklySummaryEnabled: boolean;
@@ -63,6 +64,7 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   preferredLanguage: "en",
   moviesPerPage: 24,
   emailNotificationsEnabled: false,
+  pushNotificationsEnabled: false,
   scheduleRemindersEnabled: false,
   reminderOffsetMinutes: 60,
   weeklySummaryEnabled: false,

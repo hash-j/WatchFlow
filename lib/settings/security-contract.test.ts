@@ -34,7 +34,8 @@ describe("settings security boundaries", () => {
   it("distinguishes the active system feed from deferred delivery channels", () => {
     const page = source("app/(app)/settings/notifications/page.tsx");
     expect(page).toContain("in-app system notifications are available now");
-    expect(page).toContain("email, and push notifications");
+    expect(page).toContain("Browser push");
+    expect(page).toContain("automated push delivery");
     expect(page).toMatch(/are not\s+currently sent/);
   });
 

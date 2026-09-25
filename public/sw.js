@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "watchflow-static-";
-const CACHE_NAME = `${CACHE_PREFIX}v1`;
+const CACHE_NAME = `${CACHE_PREFIX}v2`;
 const OFFLINE_URL = "/offline.html";
 const PRECACHE_URLS = [
   OFFLINE_URL,
@@ -74,5 +74,68 @@ self.addEventListener("fetch", (event) => {
       }
       return response;
     }),
+  );
+});
+
+function pushPayload(event) {
+  let value = {};
+  try {
+    value = event.data?.json() ?? {};
+  } catch {
+    value = {};
+  }
+
+  const title =
+    typeof value.title === "string" && value.title.trim()
+      ? value.title.trim().slice(0, 100)
+      : "WatchFlow";
+  const body =
+    typeof value.body === "string"
+      ? value.body.trim().slice(0, 300)
+      : "You have a new WatchFlow notification.";
+  const candidatePath =
+    typeof value.actionPath === "string" ? value.actionPath.trim() : "";
+  const actionPath =
+    candidatePath.startsWith("/") && !candidatePath.startsWith("//")
+      ? candidatePath
+      : "/notifications";
+
+  return { title, body, actionPath };
+}
+
+self.addEventListener("push", (event) => {
+  const payload = pushPayload(event);
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: "/icons/watchflow-192.png",
+      badge: "/icons/watchflow-192.png",
+      data: { actionPath: payload.actionPath },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const candidatePath = event.notification.data?.actionPath;
+  const actionPath =
+    typeof candidatePath === "string" &&
+    candidatePath.startsWith("/") &&
+    !candidatePath.startsWith("//")
+      ? candidatePath
+      : "/notifications";
+  const targetUrl = new URL(actionPath, self.location.origin).href;
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then(async (clients) => {
+        const existing = clients.find((client) => client.url.startsWith(self.location.origin));
+        if (existing) {
+          await existing.navigate(targetUrl);
+          return existing.focus();
+        }
+        return self.clients.openWindow(targetUrl);
+      }),
   );
 });

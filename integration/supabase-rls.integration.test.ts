@@ -142,6 +142,62 @@ integrationDescribe("development Supabase RLS integration", () => {
     expect(crossUser.data).toEqual([]);
   });
 
+  it("isolates push subscriptions and derives the owner in the save RPC", async () => {
+    const endpoint = `https://push.example.test/watchflow-part18e/${crypto.randomUUID()}`;
+    const initialPreference = await userA.client
+      .from("user_preferences")
+      .select("push_notifications_enabled")
+      .eq("user_id", userA.userId)
+      .single();
+    expect(initialPreference.error).toBeNull();
+
+    try {
+      const saved = await userA.client.rpc("watchflow_save_push_subscription", {
+        p_endpoint: endpoint,
+        p_p256dh: "A".repeat(64),
+        p_auth_key: "B".repeat(24),
+        p_expiration_time: null,
+        p_user_agent: "WatchFlow Part 18E RLS acceptance",
+      });
+      expect(saved.error).toBeNull();
+      expect(saved.data).toEqual(expect.any(String));
+
+      const own = await userA.client
+        .from("push_subscriptions")
+        .select("user_id, endpoint")
+        .eq("endpoint", endpoint);
+      expect(own.error).toBeNull();
+      expect(own.data).toEqual([{ user_id: userA.userId, endpoint }]);
+
+      const crossUser = await userB.client
+        .from("push_subscriptions")
+        .select("user_id, endpoint")
+        .eq("endpoint", endpoint);
+      expect(crossUser.error).toBeNull();
+      expect(crossUser.data).toEqual([]);
+
+      const crossDelete = await userB.client
+        .from("push_subscriptions")
+        .delete()
+        .eq("endpoint", endpoint)
+        .select("id");
+      expect(crossDelete.error).toBeNull();
+      expect(crossDelete.data).toEqual([]);
+    } finally {
+      await userA.client
+        .from("push_subscriptions")
+        .delete()
+        .eq("endpoint", endpoint);
+      await userA.client
+        .from("user_preferences")
+        .update({
+          push_notifications_enabled:
+            initialPreference.data?.push_notifications_enabled === true,
+        })
+        .eq("user_id", userA.userId);
+    }
+  });
+
   it("denies anonymous reads of every user-owned table", async () => {
     const anonymous = createClient(
       environmentValue("NEXT_PUBLIC_SUPABASE_URL")!,
@@ -161,6 +217,7 @@ integrationDescribe("development Supabase RLS integration", () => {
       "user_movies",
       "lists",
       "list_movies",
+      "push_subscriptions",
     ] as const) {
       const { data, error } = await anonymous.from(table).select("*").limit(1);
       expectNoRows(data, error);

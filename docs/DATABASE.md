@@ -1,5 +1,29 @@
 # WatchFlow Database
 
+## Part 18E browser push subscriptions
+
+Migration `202609260001_part_18e_push_notification_foundation.sql` adds
+`user_preferences.push_notifications_enabled`, defaulting to false, and the
+private `push_subscriptions` relation:
+
+- `id` UUID primary key;
+- `user_id` Auth owner with cascade deletion;
+- globally unique HTTPS `endpoint`;
+- bounded base64url `p256dh` and `auth_key` values;
+- optional positive `expiration_time` and bounded `user_agent`; and
+- created/updated audit timestamps.
+
+The table has owner-scoped SELECT, INSERT, UPDATE, and DELETE RLS policies. The
+authenticated role receives only the table/column privileges needed under RLS;
+anonymous access is revoked. `watchflow_save_push_subscription(...)` and
+`watchflow_disable_push_notifications()` are security-invoker functions that
+derive the owner from `auth.uid()` and never accept a browser user ID. The first
+atomically saves the subscription and enables the preference; the second
+deletes only the current owner's subscriptions and disables the preference.
+
+This model is storage-only. It adds no delivery/outbox table, schedule, cron,
+email field, weekly-summary job, background worker, or service-role access.
+
 ## Part 18D PWA foundation
 
 Part 18D makes no database, migration, grant, policy, Auth, or RLS changes. The
@@ -50,7 +74,8 @@ auth.users
   |-- 1:1 profiles
   |-- 1:many user_movies -- many:1 movies
   |-- 1:many lists -- 1:many list_movies -- many:1 user_movies
-  `-- 1:many notifications
+  |-- 1:many notifications
+  `-- 1:many push_subscriptions
 ```
 
 ## Tables
@@ -125,7 +150,7 @@ and references `auth.users(id) on delete cascade`.
 Application fields are `default_movie_status`, `default_priority`,
 `default_library_view`, `date_format`, `time_format`, `show_adult_results`,
 `include_unreleased_movies`, `preferred_language`, `movies_per_page`,
-`email_notifications_enabled`, `schedule_reminders_enabled`,
+`email_notifications_enabled`, `push_notifications_enabled`, `schedule_reminders_enabled`,
 `reminder_offset_minutes`, and `weekly_summary_enabled`. Audit fields are
 `created_at` and trigger-maintained `updated_at`.
 

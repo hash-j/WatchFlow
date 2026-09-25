@@ -1,16 +1,93 @@
 # WatchFlow Project Context
 
 Last updated: 2026-09-26
-Last updated by: Codex / Part 18D PWA Foundation
+Last updated by: Codex / Part 18E Push Notification Foundation
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18D installable PWA and static-only offline-shell foundation is implemented locally; guarded browser execution is pending because the host currently rejects browser/server subprocess creation with `spawn EPERM`.
+Current phase: Part 18E owner-scoped browser push subscription foundation is installed on watchflow-dev. A local acceptance feedback repair is implemented; guarded Playwright confirmation remains pending because this host rejects browser subprocess creation.
 Current branch: `codex/part-18c-notifications`.
-Current status: Part 17 Production Launch remains PASS. Part 18A final acceptance is PASS and Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`). Part 18C-1 migration `202609250001_part_18c_notification_foundation.sql` is installed on watchflow-dev. Trusted CSV Import V2, movie-status, Watch Next, and custom-list producers passed guarded browser/RLS acceptance. Part 18D contract tests, full Vitest, ESLint, direct TypeScript, diff checking, and client-secret scanning pass; the production build compiled successfully before the host rejected its TypeScript worker, and the guarded Playwright/dev-server launch is blocked by the same host `spawn EPERM`. Changes remain local and uncommitted; no deployment, merge, push, database migration, or Production change occurred.
+Current status: Part 17 Production Launch remains PASS. Part 18A final acceptance is PASS and Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`). Part 18C-1 migration `202609250001_part_18c_notification_foundation.sql` and Part 18E migration `202609260001_part_18e_push_notification_foundation.sql` are installed on watchflow-dev. Trusted Part 18C producers passed guarded browser/RLS acceptance. Part 18D remains locally implemented with its browser run blocked by the host. The Part 18E save RPC passed a development-guarded authenticated probe; its exact fixture was deleted and the prior preference restored. Part 18E Vitest, ESLint, direct TypeScript, and diff checking pass; Playwright startup and the post-compile build worker remain blocked by host `spawn EPERM`. Changes remain local and uncommitted; no deployment, merge, push, or Production change occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-26 Part 18E Playwright Feedback Blocker Repair — LOCAL FIX
+
+- The failing acceptance clicked Enable but never observed the returned success
+  text. The push Server Action imperatively returned a result to the Client
+  Component while also calling `revalidatePath("/settings/notifications")`.
+  That same-response route refresh could replace the settings tree before its
+  local `setEnabled`, subscription-state, and `setMessage` updates became
+  visible.
+- The push actions no longer revalidate their own active route. Save/disable
+  persistence remains authoritative in the same owner-derived, authenticated
+  RPCs. The mounted client now consumes the action result directly and renders
+  the exact success or controlled error message; a later visit reads the saved
+  preference normally through the existing SSR/RLS path.
+- A development-target-guarded QA User B probe called the installed save RPC
+  with one unique synthetic HTTPS subscription. It succeeded and returned a
+  UUID, proving the installed migration, grants, RLS, preference upsert, and RPC
+  return shape. Cleanup deleted only that endpoint and restored the exact prior
+  push preference. The configured public VAPID key also decodes to the required
+  65-byte uncompressed P-256 public key.
+- Regression coverage now asserts that imperative push actions return their
+  exact success copy without same-route revalidation and that the client applies
+  the returned message and enabled/subscribed state.
+- `npx vitest run --configLoader native` passes 101 files/917 tests, ESLint and
+  direct TypeScript pass, and `git diff --check` passes. The requested default
+  `npm test` command was attempted twice but this host rejected Vite's config
+  subprocess with `spawn EPERM`; the native config loader ran the same suite
+  successfully. The production bundle compiled successfully before the host
+  rejected Next's post-compile TypeScript worker with the same error.
+- The exact Playwright command was attempted after the repair, but the host
+  rejected browser/server subprocess startup with `spawn EPERM` before test
+  discovery. No test was skipped or weakened, and no live browser PASS is
+  claimed. Production was untouched.
+
+## 2026-09-26 Part 18E Push Notification Foundation — LOCAL IMPLEMENTATION
+
+- Migration `202609260001_part_18e_push_notification_foundation.sql` adds a
+  disabled-by-default `user_preferences.push_notifications_enabled` flag and a
+  private `push_subscriptions` table containing only the browser endpoint,
+  Push API key material, optional expiration/user-agent metadata, owner, and
+  audit timestamps. HTTPS, length, and base64url constraints reject malformed
+  subscription data.
+- SELECT, INSERT, UPDATE, and DELETE policies compare `user_id` to
+  `auth.uid()`. Two security-invoker RPCs derive ownership internally: one
+  saves/refreshes a subscription and enables the preference; the other disables
+  the preference and removes only the authenticated owner's subscriptions.
+  Neither RPC accepts a user ID. No admin client, service-role shortcut, or
+  cross-user subscription access was added.
+- The notification settings page has an explicit, accessible browser permission
+  flow. Permission is requested only after the user presses Enable. The client
+  waits for the existing service worker, subscribes with the configured public
+  VAPID key, and sends the browser-produced endpoint and keys to a freshly
+  authenticated Server Action. Disable removes the owner's stored subscriptions
+  before unsubscribing the current browser.
+- Only `NEXT_PUBLIC_VAPID_PUBLIC_KEY` is configured because this milestone has
+  no sender. No VAPID private key enters browser code. There is no push delivery
+  service, scheduler, worker, background sync, email, or weekly summary.
+- The service worker accepts a future push event, bounds title/body lengths,
+  fixes icon paths, restricts click navigation to same-origin relative paths,
+  and never writes push payloads to Cache Storage. Existing static-only caching
+  and network-only private navigation remain unchanged.
+- Migration/RLS, persistence, Server Action, permission-flow, VAPID, and worker
+  focused coverage passes 15 files/89 tests; full Vitest passes 101 files/916
+  tests. ESLint, direct TypeScript, `git diff --check`, and the 528-artifact
+  client-secret scan also pass. The production build compiled successfully,
+  then the host rejected Next's TypeScript subprocess with `spawn EPERM`.
+- The guarded serial browser suite
+  is in `e2e/part18e-push.spec.ts`; it enables a real browser subscription,
+  proves owner read and second-user read/delete isolation, verifies the stored
+  preference, disables/unsubscribes, and performs exact authenticated cleanup.
+  It is guarded by the development target, both QA identities, and a configured
+  public VAPID key. Live acceptance requires applying the new migration to
+  watchflow-dev first. The integration and Playwright commands were attempted,
+  but the host rejected each runner before test discovery with `spawn EPERM`;
+  no remote mutation occurred and no live acceptance pass is claimed.
+- Production was untouched. No deployment, migration application, commit,
+  merge, or push occurred.
 
 ## 2026-09-26 Part 18D PWA Foundation — IMPLEMENTED, BROWSER RUN BLOCKED
 
