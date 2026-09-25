@@ -1,5 +1,112 @@
 # WatchFlow Architecture
 
+## Part 18D installable PWA and offline-shell boundary
+
+Part 18D adds a progressive, installable web-app shell without changing the
+authentication or private-data architecture. `app/manifest.ts` supplies the
+typed web manifest, root metadata supplies install/icon hints, and a small
+Client Component registers the root-scoped public service worker after load.
+The manifest's protected `/dashboard` start URL still passes through the normal
+Supabase authentication boundary while the manifest, icons, worker, and generic
+offline document remain public static resources.
+
+The service worker has a deliberately narrow cache contract:
+
+```text
+precache: /offline.html + public WatchFlow icons
+runtime cache: /_next/static/* + /icons/* + /favicon.ico
+navigation: network only -> generic offline.html on network failure
+everything else: network only, never written to Cache Storage
+```
+
+Consequently, rendered pages and route responses containing private library,
+movie, notification, preference, or session data are never cached. Cross-origin
+requests, including Supabase Auth and data traffic, are ignored by the worker.
+The offline shell contains no personalized content and offers only a retry link.
+There are no push events, background sync, offline writes, mutation queues, or
+notification workers in this foundation.
+
+`proxy.ts` excludes only the public PWA asset paths from cookie refresh; all
+authenticated application routes retain the existing proxy, server-verified
+identity, SSR client, and RLS model. The worker script is explicitly revalidated
+by HTTP caches so updates are discovered without making private responses
+cacheable.
+
+## Part 18C-1 in-app notification foundation
+
+Part 18C-1 introduces only private in-app system notifications. It does not
+introduce email, scheduled delivery, a worker, weekly summaries, or push
+notifications. `/notifications` is rendered inside the authenticated App Router
+shell and reads through the cookie-bound Supabase client under RLS.
+
+The authenticated layout reuses its request-scoped verified claims and client
+to count unread rows once. That count is passed through `AppShell` to the shared
+desktop/mobile navigation and is capped visually at `99+`. A count failure is
+logged with the existing redacted database logger and degrades to zero so an
+optional badge cannot make the entire authenticated application unavailable.
+The feed itself is a bounded newest-first read and surfaces a controlled load
+failure.
+
+```text
+authenticated shell -> owner-scoped unread count -> shared navigation badge
+
+/notifications -> getAuthContext() -> owner-scoped notifications SELECT + RLS
+mark-read form -> validated UUID -> fresh auth.getUser()
+               -> security-invoker RPC deriving auth.uid() -> RLS UPDATE
+               -> synchronous feed + layout revalidation
+```
+
+The database accepts only the `system` notification type in this milestone.
+Authenticated clients have no notification INSERT or DELETE privilege. System
+row creation is limited to fixed-payload server-only producers after a freshly
+verified authenticated event. Users receive table SELECT and `read_at`-only
+UPDATE privileges, while ownership policies and the two RPCs keep ordinary
+mutations scoped to `auth.uid()`. Browser actions never accept an owner ID or
+notification content.
+
+The first producer is CSV Import V2 completion. The Client Component supplies
+only a per-upload UUID and final-batch marker to the existing import Server
+Action. After a verified final batch returns no failed rows, the action passes
+its fresh `getUser()` ID to the server-only notification service. The service
+constructs fixed system copy and a `/library` action, then inserts through the
+narrow trusted server client. A SHA-256-derived UUID over the verified user and
+completion UUID is the primary key; conflict-ignore insertion makes a retry of
+the same completion idempotent and includes the owner in the identity. No
+generic creation Server Action or authenticated RPC exists. A producer failure
+does not misreport already-persisted movie rows as failed; it adds a controlled
+batch warning instead.
+
+Movie status mutations are the next trusted producers. The authenticated
+management adapters capture an owner-scoped pre-mutation snapshot through the
+signed-in user's Supabase client, run the existing atomic status mutation, and
+only then invoke the server-only producer for Scheduled to Currently Watching,
+Currently Watching to Watched, or entry into Watch Next. Direct movie-details
+and bulk status flows share this boundary. The browser supplies neither an
+owner nor notification content.
+
+Each transition ID hashes the verified owner, `user_movies` ID, transition
+event, and pre-transition `updated_at` value. This collapses retries and
+concurrent delivery of the same transition without suppressing a later genuine
+cycle. Producer failures do not turn an already-committed library mutation into
+a false failure. Successful actions synchronously revalidate notification views
+so the shell badge and feed reflect the event on the next render.
+
+Custom-list membership additions are also trusted producers. Both the
+list-detail batch picker and movie-detail membership form freshly authenticate
+inside the list adapter. Before the existing atomic RPC, the adapter reads the
+owned lists, owned library movies, and current memberships through the signed-in
+Supabase client. After a successful RPC, it resolves only the newly created
+`list_movies` rows and passes their server-created IDs plus server-read names to
+the notification service. Removal and reorder functions never invoke this path.
+
+The custom-list notification ID hashes the verified owner and `list_movies.id`.
+This suppresses duplicate delivery for one membership while allowing a later
+real remove-and-readd cycle to notify because the database creates a new
+membership ID. The service fixes the notification type, title, action path, and
+metadata source; browser fields cannot choose notification content or owner.
+Watch Next remains event-specific in the movie-status producer, so queue
+priority, reorder, and removal mutations remain silent.
+
 ## Part 15.5C discoverability architecture
 
 `components/app-navigation.tsx` is the single authenticated navigation source

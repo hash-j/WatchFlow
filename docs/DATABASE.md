@@ -1,5 +1,12 @@
 # WatchFlow Database
 
+## Part 18D PWA foundation
+
+Part 18D makes no database, migration, grant, policy, Auth, or RLS changes. The
+service worker caches only public static assets and a generic offline shell; it
+does not cache Supabase requests or any response containing private database or
+session data.
+
 ## Scope and source of truth
 
 The deployed Supabase database already contains `profiles`, `movies`, and
@@ -42,7 +49,8 @@ result.
 auth.users
   |-- 1:1 profiles
   |-- 1:many user_movies -- many:1 movies
-  `-- 1:many lists -- 1:many list_movies -- many:1 user_movies
+  |-- 1:many lists -- 1:many list_movies -- many:1 user_movies
+  `-- 1:many notifications
 ```
 
 ## Tables
@@ -144,6 +152,53 @@ member delete operation.
 `watchflow_auth_user_preferences_created` is a preferences-only Auth trigger.
 It supplements, and does not replace, the deployed profile-creation trigger.
 The migration backfills every existing Auth user with `ON CONFLICT DO NOTHING`.
+
+### `notifications`
+
+Purpose: a private, durable in-app feed for trusted WatchFlow system updates.
+Part 18C-1 supports only `type = 'system'`; email delivery, reminder jobs,
+weekly summaries, push delivery, and an outbox are intentionally absent.
+
+Each row belongs to one Auth user through `user_id` with account-deletion
+cascade. It stores bounded `title` and `body` presentation text, an optional
+internal-only `action_path`, small object-shaped non-secret `metadata`, optional
+`read_at`, and `created_at`. External and protocol-relative action URLs are
+rejected by the database. Feed and partial unread indexes lead with `user_id`
+and use deterministic `created_at desc, id desc` ordering.
+
+RLS allows authenticated users to select and update only their own rows.
+Authenticated table privileges are limited to SELECT and `read_at` UPDATE;
+there is no user INSERT or DELETE grant. The security-invoker
+`watchflow_mark_notification_read(uuid)` and
+`watchflow_mark_all_notifications_read()` functions derive ownership from
+`auth.uid()`, remain subject to RLS, and are unavailable to `PUBLIC` and
+`anon`.
+
+CSV Import V2 completion is the first trusted producer. After fresh server
+authentication and a successful final import batch, a server-only service
+inserts fixed `system` content for that verified user. It accepts no browser
+owner, title, body, type, or action path. Its deterministic UUID includes the
+verified user ID and per-upload completion UUID; `ON CONFLICT` ignore behavior
+prevents retry duplicates without adding a new browser-accessible database
+function or changing the table's RLS/grants.
+
+Movie status changes also use the same narrow trusted service boundary. The
+authenticated application reads an owner-scoped pre-transition snapshot and
+produces only for Scheduled to Currently Watching, Currently Watching to
+Watched, or entry into Watch Next after the atomic library mutation succeeds.
+The deterministic identifier includes owner, `user_movies` row, event, and the
+pre-transition `updated_at` version, preventing duplicate delivery of one
+transition while allowing a later real status cycle. These producers required
+no schema, grant, policy, or RLS change.
+
+Custom-list additions are another fixed trusted producer. The authenticated
+list adapter compares owner-scoped membership state around the existing atomic
+list RPC and produces only newly inserted memberships. Its deterministic key
+includes the verified owner and server-created `list_movies.id`, preventing
+retry duplicates while allowing a later remove-and-readd cycle to have a new
+identity. List removals, list/list-item reorder, Watch Next priority changes,
+queue reorder, and queue removal do not produce notifications. This integration
+also required no schema, grant, policy, or RLS change.
 
 ### `movies`
 

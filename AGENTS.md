@@ -65,9 +65,11 @@ account data controls. Payments remain explicitly out of scope.
   Supabase claims.
 - Confirm the authenticated user before invoking TMDB detail ingestion or
   constructing the secret-key admin client.
-- Restrict the secret-key client to shared `movies` metadata. Perform
-  `user_movies` reads and mutations with the authenticated SSR client so RLS
-  remains enforced.
+- Restrict the secret-key client to shared `movies` metadata and fixed-payload
+  trusted system-notification producers invoked only after a freshly verified
+  authenticated event. Perform ordinary notification reads/read-state updates
+  and all `user_movies` operations with the authenticated SSR client so RLS
+  remains enforced. Never expose a generic notification creation action.
 - Keep queue and schedule mutations user-scoped. Direct `user_movies` updates
   must filter by both the record ID and the verified user ID; database
   functions must derive ownership from `auth.uid()`. RLS must apply in either

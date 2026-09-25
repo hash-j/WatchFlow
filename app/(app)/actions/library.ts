@@ -33,7 +33,10 @@ import {
   MovieProviderError,
 } from "@/lib/movies/errors";
 import { SupabaseAdminConfigurationError } from "@/lib/supabase/admin";
-import { revalidateLibraryDerivedViews } from "@/lib/revalidation/private-data";
+import {
+  revalidateLibraryDerivedViews,
+  revalidateNotificationViews,
+} from "@/lib/revalidation/private-data";
 
 function getActionErrorMessage(error: unknown) {
   if (error instanceof AuthenticationRequiredError) {
@@ -206,6 +209,7 @@ export async function bulkUpdateStatusAction(
     }
 
     revalidateLibraryDerivedViews();
+    revalidateNotificationViews();
     return bulkState(previousState, {
       status: "success",
       message: `${result.affected} ${

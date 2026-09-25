@@ -21,6 +21,7 @@ import { getWatchNextPriorityLabel } from "@/lib/library/watch-next-priority";
 import { createSupabaseManagementDependencies } from "@/lib/library/supabase-management";
 import {
   revalidateLibraryDerivedViews,
+  revalidateNotificationViews,
   revalidateQueueViews,
 } from "@/lib/revalidation/private-data";
 
@@ -75,6 +76,7 @@ export async function updateMovieAction(
     }
 
     revalidateLibraryDerivedViews({ movieDetails: false });
+    revalidateNotificationViews();
     return { status: "success", message: "Movie details saved." };
   } catch (error) {
     return { status: "error", message: getActionErrorMessage(error) };

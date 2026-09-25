@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Library,
   ListPlus,
+  Bell,
   Search,
   Settings,
   Sparkles,
@@ -63,6 +64,7 @@ export const navigationGroups = [
   {
     label: "Account",
     items: [
+      { href: "/notifications", label: "Notifications", icon: Bell },
       { href: "/import", label: "Import Movies", icon: FileUp },
       { href: "/settings", label: "Settings", icon: Settings },
     ],
@@ -86,9 +88,11 @@ export function getNavigationTitle(pathname: string) {
 export function AppNavigation({
   onNavigate,
   className,
+  unreadCount = 0,
 }: {
   onNavigate?: () => void;
   className?: string;
+  unreadCount?: number;
 }) {
   const pathname = usePathname();
 
@@ -132,7 +136,15 @@ export function AppNavigation({
                     )}
                   >
                     <Icon className="size-4 shrink-0" aria-hidden="true" />
-                    <span className="min-w-0 break-words">{label}</span>
+                    <span className="min-w-0 flex-1 break-words">{label}</span>
+                    {href === "/notifications" && unreadCount > 0 ? (
+                      <span
+                        className="min-w-5 rounded-full bg-sidebar-active px-1.5 py-0.5 text-center text-[0.6875rem] font-semibold leading-none text-rating-foreground"
+                        aria-label={`${unreadCount} unread notifications`}
+                      >
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    ) : null}
                   </Link>
                 );
               })}

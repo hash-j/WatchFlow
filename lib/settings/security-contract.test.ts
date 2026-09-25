@@ -31,10 +31,11 @@ describe("settings security boundaries", () => {
     expect(controls).toContain("admin.auth.admin.deleteUser(user.id)");
   });
 
-  it("states clearly that notification delivery is not active", () => {
+  it("distinguishes the active system feed from deferred delivery channels", () => {
     const page = source("app/(app)/settings/notifications/page.tsx");
-    expect(page).toContain("future update");
-    expect(page).toContain("not currently sent");
+    expect(page).toContain("in-app system notifications are available now");
+    expect(page).toContain("email, and push notifications");
+    expect(page).toMatch(/are not\s+currently sent/);
   });
 
   it("uses private no-store attachment responses for both exports", () => {

@@ -5,6 +5,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { logSupabaseError } from "../supabase/error-logging";
 import { createClient } from "../supabase/server";
 import {
+  createMovieStatusTransitionNotification,
+  isMovieStatusNotificationTarget,
+  readOwnedMovieStatusTransitionSnapshots,
+} from "../notifications/supabase-notifications";
+import {
   LibraryAuthorizationError,
   LibraryConstraintError,
   LibraryPersistenceError,
@@ -150,7 +155,39 @@ async function updateMovie(
   input: ValidatedMovieManagement,
 ) {
   const { client, userId } = getSessionClient(session);
-  return updateAuthenticatedUserMovie(client, userId, libraryId, input);
+  let snapshot = null;
+  if (isMovieStatusNotificationTarget(input.status)) {
+    try {
+      [snapshot] = await readOwnedMovieStatusTransitionSnapshots(
+        client,
+        userId,
+        [libraryId],
+      );
+    } catch {
+      // Notification production is best-effort and must not block the movie update.
+    }
+  }
+
+  const updated = await updateAuthenticatedUserMovie(
+    client,
+    userId,
+    libraryId,
+    input,
+  );
+
+  if (updated && snapshot) {
+    try {
+      await createMovieStatusTransitionNotification({
+        verifiedUserId: userId,
+        snapshot,
+        nextStatus: input.status,
+      });
+    } catch {
+      // The owned status mutation succeeded; producer failures stay non-fatal.
+    }
+  }
+
+  return updated;
 }
 
 async function moveQueueMovie(

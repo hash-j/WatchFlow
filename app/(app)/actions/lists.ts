@@ -41,6 +41,7 @@ import {
 import {
   revalidateListOrderViews,
   revalidateListViews,
+  revalidateNotificationViews,
 } from "@/lib/revalidation/private-data";
 
 function nextState(
@@ -233,6 +234,7 @@ export async function addMoviesToListAction(
     }
 
     revalidateListViews({ allMovieDetails: true });
+    if (result.added > 0) revalidateNotificationViews();
 
     const addedLabel = `${result.added} ${
       result.added === 1 ? "movie" : "movies"
@@ -391,6 +393,7 @@ export async function setMovieListMembershipsAction(
     }
 
     revalidateListViews();
+    if (result.added > 0) revalidateNotificationViews();
 
     return successState(
       previousState,

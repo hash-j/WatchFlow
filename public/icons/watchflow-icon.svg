@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="WatchFlow">
+  <rect width="512" height="512" rx="112" fill="#121212"/>
+  <rect x="104" y="108" width="304" height="82" rx="20" fill="#ffe072"/>
+  <path d="M151 108h62l-55 82h-54v-12zm116 0h62l-55 82h-62zm116 0h5a20 20 0 0 1 20 20v35l-18 27h-62z" fill="#3e2c0a"/>
+  <rect x="104" y="216" width="304" height="192" rx="38" fill="#f5c518"/>
+  <path d="M221 275v75l86-37.5z" fill="#3e2c0a"/>
+</svg>

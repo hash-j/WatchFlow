@@ -56,6 +56,11 @@ export function revalidateListOrderViews() {
   revalidatePath("/lists");
 }
 
+export function revalidateNotificationViews() {
+  revalidatePath("/notifications");
+  revalidatePath("/", "layout");
+}
+
 export function revalidateOnboardingPreferenceViews() {
   after(() => {
     for (const path of [

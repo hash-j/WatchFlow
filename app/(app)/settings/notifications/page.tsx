@@ -17,8 +17,9 @@ export default async function NotificationSettingsPage() {
       <div className="mt-4 flex gap-3 rounded-lg border bg-muted/50 p-4 text-sm">
         <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <p>
-          Notification delivery will be enabled in a future update. Your
-          preferences are saved now; reminders and email are not currently sent.
+          Private in-app system notifications are available now. Scheduled
+          reminders, weekly summaries, email, and push notifications are not
+          currently sent.
         </p>
       </div>
       <div className="mt-6 border-t pt-6">

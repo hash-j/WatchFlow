@@ -16,9 +16,11 @@ import { Button } from "@/components/ui/button";
 export function MobileAppNavigation({
   identity,
   email,
+  unreadCount = 0,
 }: {
   identity: string;
   email: string | null;
+  unreadCount?: number;
 }) {
   const pathname = usePathname();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -91,6 +93,7 @@ export function MobileAppNavigation({
           <AppNavigation
             onNavigate={closeDrawer}
             className="flex-1 overflow-y-auto py-4"
+            unreadCount={unreadCount}
           />
 
           <div className="border-t border-white/10 p-4">

@@ -1,16 +1,223 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-24
-Last updated by: Codex / Part 18B Guarded Acceptance
+Last updated: 2026-09-26
+Last updated by: Codex / Part 18D PWA Foundation
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18B Watch Next priorities and custom-list card ordering are implemented and accepted against watchflow-dev.
-Current branch: `codex/part-18b-priority-list-ordering`.
-Current status: Part 17 Production Launch remains PASS. Part 18A final acceptance is PASS against watchflow-dev and its accepted release is `8835f79` (`part-18a-final-release`). Part 18B migration `202609240001_part_18b_priority_and_list_ordering.sql` is installed on watchflow-dev and guarded acceptance is PASS. Part 18B application and test changes remain uncommitted and unpushed; no deployment, merge, or Production change occurred.
+Current phase: Part 18D installable PWA and static-only offline-shell foundation is implemented locally; guarded browser execution is pending because the host currently rejects browser/server subprocess creation with `spawn EPERM`.
+Current branch: `codex/part-18c-notifications`.
+Current status: Part 17 Production Launch remains PASS. Part 18A final acceptance is PASS and Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`). Part 18C-1 migration `202609250001_part_18c_notification_foundation.sql` is installed on watchflow-dev. Trusted CSV Import V2, movie-status, Watch Next, and custom-list producers passed guarded browser/RLS acceptance. Part 18D contract tests, full Vitest, ESLint, direct TypeScript, diff checking, and client-secret scanning pass; the production build compiled successfully before the host rejected its TypeScript worker, and the guarded Playwright/dev-server launch is blocked by the same host `spawn EPERM`. Changes remain local and uncommitted; no deployment, merge, push, database migration, or Production change occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-26 Part 18D PWA Foundation — IMPLEMENTED, BROWSER RUN BLOCKED
+
+- The App Router now publishes a typed `/manifest.webmanifest` contract with
+  WatchFlow name, description, standalone display mode, `/dashboard` start URL,
+  dark theme/background colors, and dedicated 192px, 512px, maskable, and Apple
+  touch icons. Root metadata and viewport theme configuration point to those
+  public assets.
+- A small Client Component registers `/sw.js` at root scope after page load.
+  Registration failure is contained so this progressive enhancement cannot
+  make the authenticated application unavailable.
+- The service worker precaches only the generic offline page and public brand
+  icons. Runtime caching is allowlisted to same-origin Next static build assets,
+  icons, and the favicon. Document navigation remains network-only and falls
+  back to the generic offline shell only when the network request fails. It
+  never stores navigation responses, API/RPC responses, Supabase traffic,
+  sessions, notifications, library pages, or movie data.
+- No push listener, background-sync listener, offline mutation queue, worker
+  backend, Auth change, database change, or RLS change was introduced. Public
+  PWA files are excluded from the Supabase cookie-refresh proxy matcher.
+- Focused PWA contracts passed 5/5 and full Vitest passed 97 files/902 tests.
+  ESLint, direct TypeScript, `git diff --check`, and the 272-artifact client
+  secret scan passed. The build retry compiled successfully, then the host
+  rejected Next's TypeScript subprocess with `spawn EPERM`; the first attempt
+  was separately interrupted by an external Google Fonts fetch failure.
+- Guarded serial browser acceptance is implemented in
+  `e2e/part18d-pwa.spec.ts`. It checks manifest/icon delivery, service-worker
+  control, the exact Cache Storage allowlist after authenticated private-route
+  visits, offline fallback, and `/auth/sign-up` availability. The host rejected
+  Playwright and direct Next dev-server startup before either could launch with
+  `spawn EPERM`, so no browser result is claimed. The suite is read-only and
+  creates no shared fixtures.
+- Production was untouched. No deploy, database migration, merge, commit, or
+  push occurred.
+
+## 2026-09-25 Part 18C-3 Watch Next and Custom List Producers — PASS
+
+- Watch Next entry continues through the existing trusted movie-status producer:
+  a transition from any non-queue status to `watch_next` creates one fixed
+  system notification. Priority changes, queue reorder, queue exit/removal, and
+  library deletion do not invoke notification creation. Focused adapter tests
+  explicitly cover these negative paths.
+- Adding a movie to a custom list now produces `Added to custom list` through
+  the existing server-only notification service. Both the list-detail batch
+  picker and movie-detail membership reconciliation use the same path. The list
+  adapter freshly authenticates with `auth.getUser()`, reads list/movie names
+  and membership state through the owner's RLS client, performs the existing
+  atomic RPC, and produces only memberships newly created by that successful
+  mutation. Removals and list/list-item reorder do not notify.
+- Custom-list notification IDs hash the verified owner and the database-created
+  `list_movies.id`. Conflict-ignore insertion suppresses retries for the same
+  membership, while a genuine removal and later re-add has a new membership ID
+  and can create a new event. Browser input cannot supply notification owner,
+  type, copy, action, source, or membership ID.
+- No migration, notification grant, Auth policy, or RLS change was required.
+  Authenticated users retain no notification INSERT access. No email, push,
+  scheduler, worker, outbox, or summary behavior was added.
+- Focused producer/list/library coverage passed 5 files/75 tests. Full Vitest
+  passed 96 files/897 tests. Coverage includes creation, deterministic duplicate
+  suppression, verified-owner payloads, existing-membership skips, removal and
+  reorder exclusions, and notification-view revalidation only when additions
+  occur. ESLint, direct TypeScript, `git diff --check`, the 523-file
+  client-secret scan, and the Next 16.2.12 production build with 38 routes also
+  passed; the build required one retry after a transient Google Fonts fetch
+  failure.
+- The guarded serial watchflow-dev notification suite passed its six existing
+  groups in the combined run. The new custom-list group then passed 1/1 after a
+  durable UI assertion correction: it created a controlled list membership,
+  observed exactly one unread owner notification, proved removal created no
+  second notification, persisted read state through refresh, and proved QA User
+  A could not read QA User B's row. Exact movie, list, and notification fixtures
+  were removed; preflight/teardown also target only tagged or orphaned controlled
+  Part 18C fixtures.
+- Production was untouched. No deployment, migration, commit, merge, or push
+  occurred.
+
+## 2026-09-24 Part 18C-1 Movie Status Producers — PASS
+
+- The existing server-only notification service now produces fixed `system`
+  notifications for exactly three owned transitions: Scheduled to Currently
+  Watching, Currently Watching to Watched, and any non-queue status to Watch
+  Next. Both movie-details management and authenticated bulk status mutations
+  use the same producer path.
+- Before mutation, the authenticated Supabase client captures only the owned
+  `user_movies` row's status, `updated_at`, and shared movie title. Production
+  occurs only after the existing atomic mutation succeeds. The verified session
+  user is the notification owner; browser input cannot supply an owner,
+  notification type, copy, action path, or producer event.
+- Notification IDs are deterministic over verified owner, user-movie row,
+  transition event, and the pre-transition `updated_at` version. Concurrent or
+  retried delivery of one transition conflicts safely, while a later legitimate
+  status cycle has a new version and can notify again. Producer read/write
+  failures remain non-fatal to an already-successful movie mutation.
+- No migration, grant, policy, or RLS change was needed. Authenticated browser
+  clients still have no INSERT path; the narrow server-side producer remains
+  the only creation boundary. No email, push, worker, scheduler, or summary
+  behavior was added.
+- Guarded serial watchflow-dev acceptance passed 6/6 in 2.9 minutes. It drove
+  Saved to Watch Next, Scheduled to Currently Watching through the bulk UI,
+  and Currently Watching to Watched; observed exactly the three expected rows;
+  verified unread/read and refresh persistence; proved QA User A could not read
+  QA User B's producer rows; reran anonymous/cross-owner RLS checks; and retained
+  CSV producer, empty-state, settings, and badge coverage.
+- Cleanup removed the exact created movie and producer notification IDs. The
+  suite also removes only stale rows explicitly tagged by earlier Part 18C QA
+  runs and orphaned controlled-transition rows left by an interrupted run; it
+  does not delete unrelated QA or application data.
+- Verification passed: Vitest 96 files/893 tests, ESLint, direct TypeScript,
+  `git diff --check`, the 523-file client-secret scan, and the Next 16.2.12
+  production build with 38 routes. Production was untouched and no deployment,
+  commit, merge, or push occurred.
+
+## 2026-09-24 Part 18C-1 CSV Import Producer — PASS
+
+- CSV Import V2 is the first trusted system-notification producer. Each upload
+  receives a browser-generated completion UUID, but the browser supplies no
+  owner, notification type, title, body, or action path. The final import Server
+  Action freshly validates the Auth user and invokes the producer only after a
+  non-empty final batch completes with zero failed rows.
+- The server-only notification service constructs fixed `system` content and
+  `/library` action data. It uses the verified importing user's ID and a
+  deterministic SHA-256-derived notification UUID over owner plus completion
+  UUID. Conflict-ignore insertion makes retries of the same completion
+  idempotent. Authenticated users retain no notification INSERT privilege and
+  there is no generic notification creation action or RPC.
+- A producer failure after movie rows are persisted does not falsely report the
+  import as failed or encourage destructive retries. The completed import
+  remains successful with a controlled warning stating only that its completion
+  notification could not be created.
+- Focused notification/import coverage passed 12 files/80 tests. It proves a
+  successful final batch creates a notification, authentication/import/row
+  failures create none, the producer receives only the verified importing user,
+  intermediate batches do not notify, fixed content cannot be supplied by the
+  browser, and the same owner/completion pair reuses one deterministic ID.
+- Guarded serial watchflow-dev browser acceptance passed 5/5 in 1.6 minutes.
+  It performed a real single-movie CSV Import V2 flow, observed exactly one
+  unread `CSV import complete` notification for QA User B, marked it read,
+  proved refresh persistence, retained the earlier empty-state/badge/two-user
+  isolation/RLS/settings evidence, and reported no unexpected browser failures.
+  The imported movie and exact service/producer notification fixtures were
+  removed; guarded read-back found zero remaining Part 18C fixtures.
+- Full verification passed: Vitest 96 files/887 tests, ESLint, direct
+  TypeScript, `git diff --check`, the 523-file client-secret scan, and the Next
+  16.2.12 production build with 38 routes. No new migration was required;
+  Production was untouched and no deployment, commit, merge, or push occurred.
+
+## 2026-09-24 Part 18C-1 Guarded Acceptance — FAIL
+
+- The exact development target guard passed and linked migration history shows
+  local/remote version `202609250001`. The pre-existing application schema
+  contracts also passed against watchflow-dev. Production was not linked,
+  contacted, migrated, or modified.
+- The corrected serial Playwright run used one worker and passed 4/5 groups.
+  QA User B opened `/notifications` and saw the empty state. Narrow service-side
+  fixtures then proved individual mark-read, mark-all-read, unread badge changes,
+  refresh persistence, and bidirectional two-user feed isolation. The settings
+  page loaded and saved the existing QA User B preference values successfully.
+  Browser diagnostics reported no unexpected console or network failures in
+  the passing groups.
+- Live RLS verification passed: anonymous notification reads were denied, each
+  authenticated QA user selected only their own tagged rows, and QA User B's
+  mark-read RPC returned false for QA User A's notification ID. Fixture setup
+  used the server-side development QA boundary solely to exercise feed
+  consumption; it is not application-creation acceptance evidence.
+- Acceptance item 3 failed: no application component, Server Action, or service
+  exposes a trusted system-notification creation flow. Authenticated INSERT is
+  correctly denied by the migration, and Part 18C-1 deliberately did not add a
+  privileged creation boundary. The browser suite therefore must not claim that
+  notification creation works through an allowed application flow.
+- `afterAll` removed the exact inserted notification IDs. A separate guarded
+  read-back found zero rows whose `metadata.qa_run_id` matched the Part 18C QA
+  fixture prefix. No unrelated notification or other user data was deleted.
+- A first browser attempt exposed only harness issues: duplicate desktop/mobile
+  badge nodes made a strict locator ambiguous, and placing the intentional
+  creation failure before seeded checks caused Playwright worker cleanup before
+  later tests. The narrowed locator and reordered test produced authoritative
+  results. A focused settings-save rerun passed 1/1.
+
+## 2026-09-24 Part 18C-1 Notification Foundation — Local Implementation
+
+- Migration `202609250001_part_18c_notification_foundation.sql` adds only the
+  private `notifications` table, deterministic owner/feed and partial-unread
+  indexes, own-row SELECT/UPDATE RLS, `read_at`-only authenticated UPDATE
+  privilege, and two security-invoker mark-read RPCs deriving ownership from
+  `auth.uid()`. The initial database type constraint accepts only `system`.
+  Authenticated clients have no INSERT or DELETE path.
+- The migration and application deliberately add no email provider, delivery
+  or outbox table, scheduler, worker, weekly summary, or push behavior. Narrow
+  server-only producers create fixed system rows only after freshly verified
+  authenticated application events; no generic browser creation boundary
+  exists.
+- `/notifications` is a protected authenticated Server Component feed with a
+  bounded 50-row newest-first owner read, controlled empty/error states,
+  internal action links, individual mark-read, and mark-all-read. Mutations
+  freshly validate the Auth user, validate notification UUIDs, invoke only the
+  owner-scoped RPCs, and synchronously refresh the feed and authenticated shell.
+- The authenticated layout uses its request-scoped claims/client to obtain an
+  owner-scoped unread count. Shared desktop and mobile navigation display the
+  same accessible badge, visually capped at `99+`. A badge-count failure safely
+  degrades to zero instead of blocking every authenticated route.
+- Focused verification passed 8 files/53 tests. Full Vitest passed 95 files/882
+  tests, along with ESLint, direct TypeScript, `git diff --check`, the 508-file
+  client-secret scan, and the Next 16.2.12 production build with 38 routes.
+  The first sandboxed build attempt could not download the configured Google
+  Geist font; the permitted network rerun passed. This was the implementation
+  checkpoint; the later guarded acceptance section records the now-installed
+  watchflow-dev migration and live acceptance result.
 
 ## 2026-09-24 Part 18B Guarded Acceptance — PASS
 

@@ -10,9 +10,15 @@ type AppShellProps = {
   children: React.ReactNode;
   email: string | null;
   profileName: string | null;
+  unreadNotificationCount?: number;
 };
 
-export function AppShell({ children, email, profileName }: AppShellProps) {
+export function AppShell({
+  children,
+  email,
+  profileName,
+  unreadNotificationCount = 0,
+}: AppShellProps) {
   const identity = profileName ?? email ?? "WatchFlow member";
 
   return (
@@ -31,7 +37,10 @@ export function AppShell({ children, email, profileName }: AppShellProps) {
             </Link>
           </div>
 
-          <AppNavigation className="flex-1 overflow-y-auto" />
+          <AppNavigation
+            className="flex-1 overflow-y-auto"
+            unreadCount={unreadNotificationCount}
+          />
 
           <div className="border-t border-white/10 p-4">
             <p className="break-words text-sm font-medium">{identity}</p>
@@ -47,7 +56,11 @@ export function AppShell({ children, email, profileName }: AppShellProps) {
       </aside>
 
       <div className="min-w-0">
-        <MobileAppNavigation identity={identity} email={email} />
+        <MobileAppNavigation
+          identity={identity}
+          email={email}
+          unreadCount={unreadNotificationCount}
+        />
         <main className="min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
           {children}
         </main>

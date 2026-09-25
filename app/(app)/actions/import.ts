@@ -32,15 +32,20 @@ import {
   LibraryValidationError,
 } from "@/lib/library/errors";
 import { createClient } from "@/lib/supabase/server";
-import { revalidateLibraryDerivedViews } from "@/lib/revalidation/private-data";
+import {
+  revalidateLibraryDerivedViews,
+  revalidateNotificationViews,
+} from "@/lib/revalidation/private-data";
+import { createCsvImportCompletedNotification } from "@/lib/notifications/supabase-notifications";
+import { csvImportNotificationCompletionSchema } from "@/lib/notifications/validation";
 
-async function isAuthenticated() {
+async function authenticatedUser() {
   const supabase = await createClient();
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
-  return !error && Boolean(user);
+  return error ? null : user;
 }
 
 function friendlyImportError(error: unknown) {
@@ -141,7 +146,7 @@ function validateChunk(parsed: ParsedCsv) {
 export async function parseCsvAction(
   formData: FormData,
 ): Promise<ImportActionResult<ParsedCsv>> {
-  if (!(await isAuthenticated())) {
+  if (!(await authenticatedUser())) {
     return {
       ok: false,
       message: "Your session has expired. Sign in again before importing movies.",
@@ -167,7 +172,7 @@ export async function matchCsvRowsAction(input: {
   mapping: unknown;
   rowIds: unknown;
 }): Promise<ImportActionResult<ImportRowMatch[]>> {
-  if (!(await isAuthenticated())) {
+  if (!(await authenticatedUser())) {
     return {
       ok: false,
       message: "Your session has expired. Sign in again before importing movies.",
@@ -193,8 +198,10 @@ export async function confirmCsvImportAction(input: {
   parsed: unknown;
   mapping: unknown;
   decisions: unknown;
+  notificationCompletion: unknown;
 }): Promise<ImportActionResult<ImportBatchResult>> {
-  if (!(await isAuthenticated())) {
+  const user = await authenticatedUser();
+  if (!user) {
     return {
       ok: false,
       message: "Your session has expired. Sign in again before importing movies.",
@@ -204,11 +211,36 @@ export async function confirmCsvImportAction(input: {
   try {
     const parsed = validateChunk(validateParsedCsvChunkPayload(input.parsed));
     const rows = validateAndMapRows(parsed, mappingFromUnknown(input.mapping));
-    const result = await importConfirmedMovies(
+    const notificationCompletion = csvImportNotificationCompletionSchema.parse(
+      input.notificationCompletion,
+    );
+    let result = await importConfirmedMovies(
       rows,
       decisionsFromUnknown(input.decisions),
       createMovieImportDependencies(),
     );
+
+    if (
+      notificationCompletion.finalBatch &&
+      result.summary.total > 0 &&
+      result.summary.failed === 0
+    ) {
+      try {
+        await createCsvImportCompletedNotification({
+          verifiedUserId: user.id,
+          completionId: notificationCompletion.completionId,
+        });
+        revalidateNotificationViews();
+      } catch {
+        result = {
+          ...result,
+          warnings: [
+            ...result.warnings,
+            "Movies were imported, but the completion notification could not be created.",
+          ],
+        };
+      }
+    }
 
     revalidateLibraryDerivedViews();
     return { ok: true, data: result };

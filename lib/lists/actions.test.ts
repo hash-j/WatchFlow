@@ -320,7 +320,9 @@ describe("custom-list membership actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists/[listId]", "page");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/library/[movieId]", "page");
-    expect(mocks.revalidatePath).toHaveBeenCalledTimes(3);
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/notifications");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
+    expect(mocks.revalidatePath).toHaveBeenCalledTimes(5);
   });
 
   it("keeps stale multi-add selections atomic and honest", async () => {
@@ -418,6 +420,29 @@ describe("custom-list membership actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists/[listId]", "page");
     expect(mocks.revalidatePath).toHaveBeenCalledTimes(2);
+  });
+
+  it("refreshes notifications only when movie-detail memberships add a list", async () => {
+    const formData = new FormData();
+    formData.set("userMovieId", userMovieId);
+    formData.append("listIds", listId);
+
+    const result = await setMovieListMembershipsAction(
+      initialListActionState,
+      formData,
+    );
+
+    expect(mocks.setOwnedMovieListMemberships).toHaveBeenCalledWith(
+      userMovieId,
+      [listId],
+    );
+    expect(result).toMatchObject({
+      status: "success",
+      message: "List memberships saved: 1 added, 0 removed.",
+    });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/notifications");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
+    expect(mocks.revalidatePath).toHaveBeenCalledTimes(4);
   });
 });
 

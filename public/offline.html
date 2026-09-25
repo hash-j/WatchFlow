@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#121212" />
+    <title>Offline | WatchFlow</title>
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; min-height: 100vh; display: grid; place-items: center; background: #121212; color: #f5f5f5; }
+      main { width: min(36rem, calc(100% - 2rem)); border: 1px solid #333; border-radius: 1rem; background: #1e1e1e; padding: clamp(1.5rem, 5vw, 3rem); text-align: center; }
+      .mark { display: grid; width: 3rem; height: 3rem; margin: 0 auto 1.25rem; place-items: center; border-radius: .75rem; background: #f5c518; color: #3e2c0a; font-weight: 800; }
+      h1 { margin: 0; font-size: clamp(1.75rem, 6vw, 2.5rem); }
+      p { margin: 1rem auto 0; max-width: 28rem; color: #b8b8b8; line-height: 1.6; }
+      a { display: inline-block; margin-top: 1.5rem; border-radius: .65rem; background: #f5c518; color: #281d07; padding: .75rem 1rem; font-weight: 700; text-decoration: none; }
+      a:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark" aria-hidden="true">WF</div>
+      <h1>You’re offline</h1>
+      <p>WatchFlow needs a connection to load your private account data. Nothing from your Library, notifications, or session is stored for offline use.</p>
+      <a href="/">Try again</a>
+    </main>
+  </body>
+</html>

@@ -1,13 +1,22 @@
 import { Suspense } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { countUnreadNotifications } from "@/lib/notifications/supabase-notifications";
 import { getAuthContext } from "@/lib/supabase/auth";
 
 async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
-  const { user, profileName } = await getAuthContext();
+  const { user, profileName, client } = await getAuthContext();
+  const unreadNotificationCount = await countUnreadNotifications(
+    client,
+    user.id,
+  );
 
   return (
-    <AppShell email={user.email} profileName={profileName}>
+    <AppShell
+      email={user.email}
+      profileName={profileName}
+      unreadNotificationCount={unreadNotificationCount}
+    >
       {children}
     </AppShell>
   );

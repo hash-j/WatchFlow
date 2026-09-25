@@ -1,0 +1,109 @@
+import Link from "next/link";
+import { Bell, Circle } from "lucide-react";
+
+import {
+  MarkAllNotificationsReadForm,
+  MarkNotificationReadForm,
+} from "@/components/notifications/notification-actions";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/responsive-layout";
+import type { NotificationItem } from "@/lib/notifications/types";
+import { cn } from "@/lib/utils";
+
+function formatCreatedAt(value: string, timeZone: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone,
+  }).format(new Date(value));
+}
+
+export function NotificationFeed({
+  notifications,
+  unreadCount,
+  timeZone,
+}: {
+  notifications: NotificationItem[];
+  unreadCount: number;
+  timeZone: string;
+}) {
+  if (notifications.length === 0) {
+    return (
+      <EmptyState
+        icon={<Bell className="size-6" aria-hidden="true" />}
+        title="No notifications yet"
+        description="Important WatchFlow system updates will appear here. Email, scheduled reminders, summaries, and push delivery are not part of this release."
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex min-w-0 flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          {unreadCount} unread
+        </p>
+        {unreadCount > 0 ? <MarkAllNotificationsReadForm /> : null}
+      </div>
+
+      <ol className="space-y-3" aria-label="Notification feed">
+        {notifications.map((notification) => {
+          const unread = notification.readAt === null;
+
+          return (
+            <li
+              key={notification.id}
+              className={cn(
+                "rounded-xl border bg-card p-4 shadow-sm sm:p-5",
+                unread && "border-primary/40 bg-primary/[0.03]",
+              )}
+            >
+              <article className="flex min-w-0 gap-3">
+                <Circle
+                  className={cn(
+                    "mt-1 size-2.5 shrink-0",
+                    unread ? "fill-primary text-primary" : "fill-muted text-muted",
+                  )}
+                  aria-hidden="true"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-col justify-between gap-1 sm:flex-row sm:gap-4">
+                    <h2 className="break-words font-semibold">
+                      {notification.title}
+                    </h2>
+                    <time
+                      dateTime={notification.createdAt}
+                      className="shrink-0 text-xs text-muted-foreground"
+                    >
+                      {formatCreatedAt(notification.createdAt, timeZone)}
+                    </time>
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
+                    {notification.body}
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    {notification.actionPath ? (
+                      <Button asChild size="sm">
+                        <Link href={notification.actionPath}>View details</Link>
+                      </Button>
+                    ) : null}
+                    {unread ? (
+                      <MarkNotificationReadForm
+                        notificationId={notification.id}
+                        title={notification.title}
+                      />
+                    ) : (
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Read
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </article>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}

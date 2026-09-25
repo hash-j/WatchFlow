@@ -4,6 +4,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 import { logSupabaseError } from "@/lib/supabase/error-logging";
 import { getAuthContext } from "@/lib/supabase/auth";
+import { createCustomListMovieAddedNotification } from "@/lib/notifications/supabase-notifications";
 import { createClient } from "@/lib/supabase/server";
 
 import {
@@ -460,7 +461,17 @@ async function callListRpc(
   rpcName: string,
   parameters: Record<string, unknown>,
 ): Promise<ListMutationResult> {
-  const { client } = await authenticateLists();
+  const session = await authenticateLists();
+  return callAuthenticatedListRpc(session, operation, rpcName, parameters);
+}
+
+async function callAuthenticatedListRpc(
+  session: AuthenticatedListsSession,
+  operation: string,
+  rpcName: string,
+  parameters: Record<string, unknown>,
+): Promise<ListMutationResult> {
+  const { client } = session;
   const { data, error } = await client.rpc(rpcName, parameters);
 
   if (error) {
@@ -470,8 +481,147 @@ async function callListRpc(
   return mapListMutationResult(data);
 }
 
-export function addOwnedMoviesToList(input: AddMoviesToListInput) {
-  return callListRpc(
+type ListAdditionCandidate = {
+  listId: string;
+  userMovieId: string;
+  listName: string;
+  movieTitle: string;
+};
+
+async function readNewListAdditionCandidates(
+  session: AuthenticatedListsSession,
+  listIds: string[],
+  userMovieIds: string[],
+): Promise<ListAdditionCandidate[]> {
+  if (listIds.length === 0 || userMovieIds.length === 0) return [];
+  const { client, user } = session;
+  const [listsResult, moviesResult, membershipsResult] = await Promise.all([
+    client
+      .from("lists")
+      .select("id, name")
+      .eq("user_id", user.id)
+      .in("id", listIds),
+    client
+      .from("user_movies")
+      .select("id, movies!inner(title)")
+      .eq("user_id", user.id)
+      .in("id", userMovieIds),
+    client
+      .from("list_movies")
+      .select("list_id, user_movie_id")
+      .in("list_id", listIds)
+      .in("user_movie_id", userMovieIds),
+  ]);
+
+  const error = listsResult.error ?? moviesResult.error ?? membershipsResult.error;
+  if (error) {
+    logSupabaseError("custom list notification snapshot read failed", error);
+    return [];
+  }
+
+  const listNames = new Map(
+    (listsResult.data ?? []).flatMap((row) =>
+      typeof row.id === "string" && typeof row.name === "string"
+        ? [[row.id, row.name] as const]
+        : [],
+    ),
+  );
+  const movieTitles = new Map(
+    (moviesResult.data ?? []).flatMap((row) => {
+      const movie = Array.isArray(row.movies) ? row.movies[0] : row.movies;
+      return typeof row.id === "string" && movie && typeof movie.title === "string"
+        ? [[row.id, movie.title] as const]
+        : [];
+    }),
+  );
+  const existing = new Set(
+    (membershipsResult.data ?? []).flatMap((row) =>
+      typeof row.list_id === "string" && typeof row.user_movie_id === "string"
+        ? [`${row.list_id}:${row.user_movie_id}`]
+        : [],
+    ),
+  );
+
+  return listIds.flatMap((listId) =>
+    userMovieIds.flatMap((userMovieId) => {
+      const listName = listNames.get(listId);
+      const movieTitle = movieTitles.get(userMovieId);
+      return listName && movieTitle && !existing.has(`${listId}:${userMovieId}`)
+        ? [{ listId, userMovieId, listName, movieTitle }]
+        : [];
+    }),
+  );
+}
+
+async function produceListAdditionNotifications(
+  session: AuthenticatedListsSession,
+  candidates: ListAdditionCandidate[],
+) {
+  if (candidates.length === 0) return;
+  const { client, user } = session;
+  const listIds = [...new Set(candidates.map(({ listId }) => listId))];
+  const userMovieIds = [
+    ...new Set(candidates.map(({ userMovieId }) => userMovieId)),
+  ];
+  const { data, error } = await client
+    .from("list_movies")
+    .select("id, list_id, user_movie_id")
+    .in("list_id", listIds)
+    .in("user_movie_id", userMovieIds);
+
+  if (error) {
+    logSupabaseError("custom list notification membership read failed", error);
+    return;
+  }
+
+  const candidateByMembership = new Map(
+    candidates.map((candidate) => [
+      `${candidate.listId}:${candidate.userMovieId}`,
+      candidate,
+    ]),
+  );
+  await Promise.allSettled(
+    (data ?? []).flatMap((row) => {
+      if (
+        typeof row.id !== "string" ||
+        typeof row.list_id !== "string" ||
+        typeof row.user_movie_id !== "string"
+      ) {
+        return [];
+      }
+      const candidate = candidateByMembership.get(
+        `${row.list_id}:${row.user_movie_id}`,
+      );
+      return candidate
+        ? [
+            createCustomListMovieAddedNotification({
+              verifiedUserId: user.id,
+              listId: candidate.listId,
+              listMovieId: row.id,
+              userMovieId: candidate.userMovieId,
+              listName: candidate.listName,
+              movieTitle: candidate.movieTitle,
+            }),
+          ]
+        : [];
+    }),
+  );
+}
+
+export async function addOwnedMoviesToList(input: AddMoviesToListInput) {
+  const session = await authenticateLists();
+  let candidates: ListAdditionCandidate[] = [];
+  try {
+    candidates = await readNewListAdditionCandidates(
+      session,
+      [input.listId],
+      input.userMovieIds,
+    );
+  } catch {
+    // Notification production is best-effort and must not block list membership.
+  }
+  const result = await callAuthenticatedListRpc(
+    session,
     "custom list batch append failed",
     "watchflow_add_movies_to_list",
     {
@@ -479,6 +629,14 @@ export function addOwnedMoviesToList(input: AddMoviesToListInput) {
       p_user_movie_ids: input.userMovieIds,
     },
   );
+  if (result.success && result.added > 0) {
+    try {
+      await produceListAdditionNotifications(session, candidates);
+    } catch {
+      // The membership mutation succeeded; producer failures stay non-fatal.
+    }
+  }
+  return result;
 }
 
 export function moveOwnedListItem(
@@ -517,11 +675,23 @@ export function removeOwnedListMovie(listMovieId: string) {
   );
 }
 
-export function setOwnedMovieListMemberships(
+export async function setOwnedMovieListMemberships(
   userMovieId: string,
   listIds: string[],
 ) {
-  return callListRpc(
+  const session = await authenticateLists();
+  let candidates: ListAdditionCandidate[] = [];
+  try {
+    candidates = await readNewListAdditionCandidates(
+      session,
+      listIds,
+      [userMovieId],
+    );
+  } catch {
+    // Notification production is best-effort and must not block list membership.
+  }
+  const result = await callAuthenticatedListRpc(
+    session,
     "movie custom-list membership update failed",
     "watchflow_set_movie_list_memberships",
     {
@@ -529,4 +699,12 @@ export function setOwnedMovieListMemberships(
       p_list_ids: listIds,
     },
   );
+  if (result.success && result.added > 0) {
+    try {
+      await produceListAdditionNotifications(session, candidates);
+    } catch {
+      // The membership mutation succeeded; producer failures stay non-fatal.
+    }
+  }
+  return result;
 }

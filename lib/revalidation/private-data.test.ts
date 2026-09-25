@@ -12,6 +12,7 @@ import {
   revalidateLibraryDerivedViews,
   revalidateListOrderViews,
   revalidateListViews,
+  revalidateNotificationViews,
   revalidateOnboardingPreferenceViews,
   revalidateQueueViews,
 } from "./private-data";
@@ -77,6 +78,15 @@ describe("private-data revalidation architecture", () => {
     revalidateListOrderViews();
 
     expect(revalidatePath.mock.calls).toEqual([["/lists"]]);
+  });
+
+  it("refreshes the notification feed and shell unread count immediately", () => {
+    revalidateNotificationViews();
+
+    expect(revalidatePath.mock.calls).toEqual([
+      ["/notifications"],
+      ["/", "layout"],
+    ]);
   });
 
   it("keeps profile/preference freshness scoped to their consumers", () => {

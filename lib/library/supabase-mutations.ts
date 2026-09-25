@@ -4,6 +4,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { logSupabaseError } from "@/lib/supabase/error-logging";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createMovieStatusTransitionNotification,
+  isMovieStatusNotificationTarget,
+  readOwnedMovieStatusTransitionSnapshots,
+  type MovieStatusTransitionSnapshot,
+} from "@/lib/notifications/supabase-notifications";
 
 import {
   LibraryAuthorizationError,
@@ -160,7 +166,19 @@ async function bulkUpdateStatus(
   libraryIds: string[],
   status: BulkLibraryStatus,
 ) {
-  const { client } = mutationClient(session);
+  const { client, userId } = mutationClient(session);
+  let snapshots: MovieStatusTransitionSnapshot[] = [];
+  if (isMovieStatusNotificationTarget(status)) {
+    try {
+      snapshots = await readOwnedMovieStatusTransitionSnapshots(
+        client,
+        userId,
+        libraryIds,
+      );
+    } catch {
+      // Notification production is best-effort and must not block the bulk update.
+    }
+  }
   const { data, error } = await client.rpc(
     "watchflow_bulk_update_library_status",
     {
@@ -173,7 +191,20 @@ async function bulkUpdateStatus(
     throwMutationError("user_movies bulk status update failed", error);
   }
 
-  return mapBulkResult(data, "updated");
+  const result = mapBulkResult(data, "updated");
+  if (result.success && snapshots.length > 0) {
+    await Promise.allSettled(
+      snapshots.map((snapshot) =>
+        createMovieStatusTransitionNotification({
+          verifiedUserId: userId,
+          snapshot,
+          nextStatus: status,
+        }),
+      ),
+    );
+  }
+
+  return result;
 }
 
 async function removeUserMovies(

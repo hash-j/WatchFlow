@@ -1,14 +1,22 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createClientMock } = vi.hoisted(() => ({
+const { createClientMock, readSnapshotsMock, createNotificationMock } = vi.hoisted(() => ({
   createClientMock: vi.fn(),
+  readSnapshotsMock: vi.fn(),
+  createNotificationMock: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("../supabase/server", () => ({ createClient: createClientMock }));
 vi.mock("../supabase/error-logging", () => ({
   logSupabaseError: vi.fn(),
+}));
+vi.mock("../notifications/supabase-notifications", () => ({
+  readOwnedMovieStatusTransitionSnapshots: readSnapshotsMock,
+  createMovieStatusTransitionNotification: createNotificationMock,
+  isMovieStatusNotificationTarget: (status: string) =>
+    ["watch_next", "currently_watching", "watched"].includes(status),
 }));
 
 import {
@@ -35,6 +43,11 @@ function createUpdateBuilder(result: { data: unknown; error: unknown }) {
 
 beforeEach(() => {
   createClientMock.mockReset();
+  readSnapshotsMock.mockReset().mockResolvedValue([]);
+  createNotificationMock.mockReset().mockResolvedValue({
+    id: "notification-id",
+    created: true,
+  });
 });
 
 describe("Supabase favourite persistence", () => {
@@ -117,6 +130,46 @@ describe("Supabase favourite persistence", () => {
 });
 
 describe("Supabase bulk library RPCs", () => {
+  it("creates owner-bound notifications after a successful bulk status update", async () => {
+    const snapshot = {
+      userMovieId: libraryId,
+      status: "want_to_watch",
+      updatedAt: "2026-09-24T10:00:00.000Z",
+      movieTitle: "Inception",
+    };
+    readSnapshotsMock.mockResolvedValue([snapshot]);
+    const client = {
+      rpc: vi.fn().mockResolvedValue({
+        data: {
+          success: true,
+          requested: 1,
+          matched: 1,
+          updated: 1,
+          skipped: 0,
+          failed: 0,
+        },
+        error: null,
+      }),
+    } as unknown as SupabaseClient;
+
+    await createSupabaseLibraryMutationDependencies().bulkUpdateStatus(
+      { userId: "verified-user-id", client } as never,
+      [libraryId],
+      "watch_next",
+    );
+
+    expect(readSnapshotsMock).toHaveBeenCalledWith(
+      client,
+      "verified-user-id",
+      [libraryId],
+    );
+    expect(createNotificationMock).toHaveBeenCalledWith({
+      verifiedUserId: "verified-user-id",
+      snapshot,
+      nextStatus: "watch_next",
+    });
+  });
+
   it("updates owned records through an authenticated RPC with no browser user ID", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: {
@@ -212,6 +265,7 @@ describe("Supabase bulk library RPCs", () => {
       "watchflow_bulk_remove_library_movies",
       { p_user_movie_ids: [libraryId] },
     );
+    expect(createNotificationMock).not.toHaveBeenCalled();
   });
 
   it("maps RLS and missing-RPC failures to safe domain errors", async () => {

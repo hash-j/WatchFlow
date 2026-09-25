@@ -1,14 +1,22 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createClientMock } = vi.hoisted(() => ({
+const { createClientMock, readSnapshotsMock, createNotificationMock } = vi.hoisted(() => ({
   createClientMock: vi.fn(),
+  readSnapshotsMock: vi.fn(),
+  createNotificationMock: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("../supabase/server", () => ({ createClient: createClientMock }));
 vi.mock("../supabase/error-logging", () => ({
   logSupabaseError: vi.fn(),
+}));
+vi.mock("../notifications/supabase-notifications", () => ({
+  readOwnedMovieStatusTransitionSnapshots: readSnapshotsMock,
+  createMovieStatusTransitionNotification: createNotificationMock,
+  isMovieStatusNotificationTarget: (status: string) =>
+    ["watch_next", "currently_watching", "watched"].includes(status),
 }));
 
 import {
@@ -41,9 +49,55 @@ const input: ValidatedMovieManagement = {
 
 beforeEach(() => {
   createClientMock.mockReset();
+  readSnapshotsMock.mockReset().mockResolvedValue([]);
+  createNotificationMock.mockReset().mockResolvedValue({
+    id: "notification-id",
+    created: true,
+  });
 });
 
 describe("authenticated Supabase movie updates", () => {
+  it("creates a notification only after a successful owned status transition", async () => {
+    const snapshot = {
+      userMovieId: "owned-row-id",
+      status: "scheduled",
+      updatedAt: "2026-09-24T10:00:00.000Z",
+      movieTitle: "Arrival",
+    };
+    readSnapshotsMock.mockResolvedValue([snapshot]);
+    const client = {
+      rpc: vi.fn().mockResolvedValue({ data: true, error: null }),
+    } as unknown as SupabaseClient;
+
+    await expect(
+      createSupabaseManagementDependencies().updateMovie(
+        { userId: "verified-user-id", client } as never,
+        "owned-row-id",
+        { ...input, status: "currently_watching" },
+      ),
+    ).resolves.toBe(true);
+
+    expect(readSnapshotsMock).toHaveBeenCalledWith(
+      client,
+      "verified-user-id",
+      ["owned-row-id"],
+    );
+    expect(createNotificationMock).toHaveBeenCalledWith({
+      verifiedUserId: "verified-user-id",
+      snapshot,
+      nextStatus: "currently_watching",
+    });
+
+    client.rpc = vi.fn().mockResolvedValue({ data: false, error: null });
+    createNotificationMock.mockClear();
+    await createSupabaseManagementDependencies().updateMovie(
+      { userId: "verified-user-id", client } as never,
+      "another-users-row-id",
+      { ...input, status: "currently_watching" },
+    );
+    expect(createNotificationMock).not.toHaveBeenCalled();
+  });
+
   it("verifies authentication with auth.getUser", async () => {
     const getUser = vi.fn().mockResolvedValue({
       data: { user: { id: "verified-user-id" } },
@@ -276,6 +330,7 @@ describe("authenticated Supabase movie updates", () => {
       p_priority: 5,
     });
     expect(rpc.mock.calls[0][1]).not.toHaveProperty("user_id");
+    expect(createNotificationMock).not.toHaveBeenCalled();
   });
 
   it("preserves hidden metadata through an authenticated owner-scoped lookup", async () => {
@@ -419,6 +474,7 @@ describe("authenticated Supabase movie updates", () => {
       p_user_movie_id: "owned-row-id",
       p_direction: "down",
     });
+    expect(createNotificationMock).not.toHaveBeenCalled();
   });
 
   it("refuses a queue item that is not owned by the RPC caller", async () => {

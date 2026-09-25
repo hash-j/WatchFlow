@@ -152,6 +152,7 @@ export function ImportWizard() {
   const [progress, setProgress] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [notificationCompletionId, setNotificationCompletionId] = useState<string | null>(null);
 
   function resetImport() {
     setStep(1);
@@ -166,6 +167,7 @@ export function ImportWizard() {
     setCompletedBatches([]);
     setMessage(null);
     setProgress(null);
+    setNotificationCompletionId(null);
   }
 
   function uploadCsv(formData: FormData) {
@@ -198,6 +200,7 @@ export function ImportWizard() {
       setProgress("Validating");
       const suggested = suggestColumnMappings(response.data.columns);
       setParsed(response.data);
+      setNotificationCompletionId(crypto.randomUUID());
       setMapping(suggested);
       setStep(2);
       setProgress(null);
@@ -224,7 +227,7 @@ export function ImportWizard() {
   }
 
   function previewRows() {
-    if (!parsed) {
+    if (!parsed || !notificationCompletionId) {
       return;
     }
 
@@ -399,11 +402,16 @@ export function ImportWizard() {
     reportProgress();
 
     void (async () => {
-      for (const chunk of chunkImportValues(pendingRows)) {
+      const pendingChunks = chunkImportValues(pendingRows);
+      for (const [chunkIndex, chunk] of pendingChunks.entries()) {
         const response = await confirmCsvImportAction({
           parsed: parsedRows(chunk.map((row) => row.id)),
           mapping,
           decisions: chunk.map((row) => decisions.get(row.id)!),
+          notificationCompletion: {
+            completionId: notificationCompletionId,
+            finalBatch: chunkIndex === pendingChunks.length - 1,
+          },
         });
         if (!response.ok) {
           setCompletedBatches(batches);

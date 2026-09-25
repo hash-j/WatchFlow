@@ -1,15 +1,19 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createClientMock, logSupabaseErrorMock } = vi.hoisted(() => ({
+const { createClientMock, logSupabaseErrorMock, createNotificationMock } = vi.hoisted(() => ({
   createClientMock: vi.fn(),
   logSupabaseErrorMock: vi.fn(),
+  createNotificationMock: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: createClientMock }));
 vi.mock("@/lib/supabase/error-logging", () => ({
   logSupabaseError: logSupabaseErrorMock,
+}));
+vi.mock("@/lib/notifications/supabase-notifications", () => ({
+  createCustomListMovieAddedNotification: createNotificationMock,
 }));
 
 import {
@@ -103,8 +107,37 @@ function authenticatedClient(overrides: Record<string, unknown> = {}) {
   } as unknown as SupabaseClient;
 }
 
+function membershipQueryBuilder(result: QueryResult) {
+  let inCalls = 0;
+  const builder = {
+    select: vi.fn(),
+    in: vi.fn(),
+  };
+  builder.select.mockReturnValue(builder);
+  builder.in.mockImplementation(() => {
+    inCalls += 1;
+    return inCalls === 1 ? builder : Promise.resolve(result);
+  });
+  return builder;
+}
+
+function ownerQueryBuilder(result: QueryResult) {
+  const builder = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    in: vi.fn().mockResolvedValue(result),
+  };
+  builder.select.mockReturnValue(builder);
+  builder.eq.mockReturnValue(builder);
+  return builder;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  createNotificationMock.mockResolvedValue({
+    id: "notification-id",
+    created: true,
+  });
 });
 
 describe("custom-list authentication and owner filters", () => {
@@ -263,6 +296,84 @@ describe("custom-list authentication and owner filters", () => {
 });
 
 describe("custom-list RPC boundaries", () => {
+  it("creates a trusted notification only for a newly added owned membership", async () => {
+    const preMemberships = membershipQueryBuilder({ data: [], error: null });
+    const postMemberships = membershipQueryBuilder({
+      data: [{
+        id: listMovieId,
+        list_id: listId,
+        user_movie_id: userMovieId,
+      }],
+      error: null,
+    });
+    let membershipReads = 0;
+    const from = vi.fn((table: string) => {
+      if (table === "lists") {
+        return ownerQueryBuilder({
+          data: [{ id: listId, name: "Weekend Movies" }],
+          error: null,
+        });
+      }
+      if (table === "user_movies") {
+        return ownerQueryBuilder({
+          data: [{ id: userMovieId, movies: { title: "Arrival" } }],
+          error: null,
+        });
+      }
+      membershipReads += 1;
+      return membershipReads === 1 ? preMemberships : postMemberships;
+    });
+    const rpc = vi.fn().mockResolvedValue({
+      data: { ...rpcResult, requested: 1, matched: 1, added_count: 1 },
+      error: null,
+    });
+    createClientMock.mockResolvedValue(authenticatedClient({ from, rpc }));
+
+    await addOwnedMoviesToList({ listId, userMovieIds: [userMovieId] });
+
+    expect(createNotificationMock).toHaveBeenCalledWith({
+      verifiedUserId: userId,
+      listId,
+      listMovieId,
+      userMovieId,
+      listName: "Weekend Movies",
+      movieTitle: "Arrival",
+    });
+  });
+
+  it("does not notify an existing membership or non-add mutations", async () => {
+    const existingMemberships = membershipQueryBuilder({
+      data: [{ list_id: listId, user_movie_id: userMovieId }],
+      error: null,
+    });
+    const from = vi.fn((table: string) => {
+      if (table === "lists") {
+        return ownerQueryBuilder({
+          data: [{ id: listId, name: "Weekend Movies" }],
+          error: null,
+        });
+      }
+      if (table === "user_movies") {
+        return ownerQueryBuilder({
+          data: [{ id: userMovieId, movies: { title: "Arrival" } }],
+          error: null,
+        });
+      }
+      return existingMemberships;
+    });
+    const rpc = vi.fn().mockResolvedValue({
+      data: { ...rpcResult, added_count: 0, skipped_count: 1 },
+      error: null,
+    });
+    createClientMock.mockResolvedValue(authenticatedClient({ from, rpc }));
+
+    await addOwnedMoviesToList({ listId, userMovieIds: [userMovieId] });
+    await moveOwnedListItem(listMovieId, "up");
+    await removeOwnedListMovie(listMovieId);
+
+    expect(createNotificationMock).not.toHaveBeenCalled();
+  });
+
   it("submits list, membership, and user_movies IDs under their exact RPC parameter names", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: rpcResult, error: null });
     createClientMock.mockResolvedValue(authenticatedClient({ rpc }));

@@ -14,6 +14,7 @@ export const PROTECTED_ROUTE_PREFIXES = [
   "/statistics",
   "/watch-next",
   "/schedule",
+  "/notifications",
   "/settings",
   "/protected",
 ] as const;

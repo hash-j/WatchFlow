@@ -274,6 +274,7 @@ describe("critical authentication route contracts", () => {
       "/statistics",
       "/watch-next",
       "/schedule",
+      "/notifications",
       "/import",
       "/settings",
       "/settings/profile",
