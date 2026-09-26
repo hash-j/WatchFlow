@@ -5,12 +5,67 @@ Last updated by: Codex / Part 18H Notification Center and User Experience
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18H adds the complete user-facing notification center experience, category controls, richer payload context, and safe push-click navigation.
 Current branch: `codex/part-18c-notifications`.
-Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. The manual GitHub Actions acceptance reached its preflight, where an invalid publishable-key Bearer header blocked the schema check. A sanitized, server-secret, direct-column preflight repair is now local and awaits an intentional commit/push and workflow rerun. Complete browser acceptance is still blocked and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
+Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. The manual GitHub Actions acceptance now passes preflight and every static/database gate, but its existing Part 18C browser suite exposed streamed Server Action/revalidation races plus one stale custom-list assertion. The root repairs are local and await an intentional commit/push and workflow rerun. Complete browser acceptance is still pending and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-26 Part 18H CI Browser Failure Repair — LOCAL FIX
+
+- GitHub run `36239991730` passed the pinned watchflow-dev/schema preflight,
+  guarded Part 18H database integration, focused and full Vitest, ESLint,
+  TypeScript, diff check, production build, client-secret scan, and Chrome
+  installation. The existing Part 18C browser suite then reported four
+  repeatable failures; no Production endpoint was used or changed.
+- Notification mutations synchronously invalidated the root layout while their
+  Server Action response was still streaming. That broad refresh could remount
+  an active movie or notification action subtree before React exposed its
+  `useActionState` feedback. Notification feed invalidation remains immediate,
+  while root-layout unread-badge invalidation now runs through Next `after()` so
+  it occurs after the response without weakening freshness or ownership.
+- CI screenshots showed movie and custom-list producer buttons still pending.
+  The Web Push adapter had no transport timeout, so a stale or unreachable push
+  endpoint could keep a successful owner-scoped mutation's Server Action stream
+  open indefinitely. Web Push now has a five-second transport bound; timeout is
+  a transient best-effort delivery failure, never an application mutation
+  failure, and expired-endpoint cleanup behavior is unchanged.
+- The browser mutation helper previously treated response headers as mutation
+  completion. It now requires `response.finished()` before asserting UI,
+  navigating, or auditing network failures. This makes a genuinely aborted
+  action response fail at its source rather than being misclassified later.
+- Notification-preference save had an unnecessary same-route revalidation that
+  could replace its own success feedback and leave the POST stream cancelled
+  when the test completed. The owner-scoped write remains unchanged; the action
+  now returns its normal feedback without invalidating its active route.
+- Custom-list addition intentionally keeps the add dialog open and refreshes
+  the list after the user selects `Done`. The old acceptance expected a
+  background remove button while the modal was still open. It now verifies the
+  successful add, closes through the product's intended flow, waits for the
+  canonical list URL, and then verifies membership. No list application
+  behavior changed.
+- Read and mark-all browser assertions now use the shared complete-response
+  synchronization. No aborted request was whitelisted, no timeout was loosened,
+  and console/network diagnostics remain strict. Part 18H's corresponding read
+  check uses the same contract.
+- The retained CI trace identified the redacted dashboard warning as Chromium's
+  advisory that a Next-generated `.woff2` preload was unused after QA navigated
+  away immediately. Diagnostics now assign only that exact two-condition message
+  a narrow expected-advisory category; hydration, React, network, and all other
+  runtime warnings remain failures.
+- Focused affected tests pass 10 files/75 tests. Full Vitest passes 108
+  files/954 tests with the native-loader fallback. ESLint, direct TypeScript,
+  `git diff --check`, and the 272-artifact client-secret scan pass. An existing
+  Part 18B migration contract was made newline-agnostic so it passes on both
+  Windows CRLF and Linux LF checkouts.
+- Local Part 18C and Part 18H Playwright attempts are still blocked before test
+  discovery by the Windows host's `spawn EPERM`. The production build compiles
+  successfully and is blocked only when Next starts its post-compile worker for
+  the same reason. GitHub CI must be rerun for browser and complete build proof.
+- No schema, migration, RLS/Auth policy, target guard, service-role browser
+  path, credential mapping, deployment, commit, merge, push, or Production
+  change was made.
 
 ## 2026-09-26 Part 18H CI Preflight Repair — LOCAL FIX
 

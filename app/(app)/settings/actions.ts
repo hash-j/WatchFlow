@@ -187,7 +187,6 @@ export async function updateNotificationPreferencesAction(
       session.user.id,
       parsed.data,
     );
-    revalidatePath("/settings/notifications");
     return {
       status: "success",
       message: "Notification preferences saved.",

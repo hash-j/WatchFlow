@@ -298,10 +298,15 @@ test.describe("Part 18H guarded notification-center acceptance", () => {
       await expect(qaUserBPage.getByText("1 unread", { exact: true })).toBeVisible();
       await qaUserBPage.reload();
       await expect(qaUserBPage.getByText("1 unread", { exact: true })).toBeVisible();
-      await qaUserBPage
-        .getByRole("button", { name: "Mark Added to Watch Next as read" })
-        .click();
-      await expect(qaUserBPage.getByText("0 unread", { exact: true })).toBeVisible();
+      await clickAndWaitForMutation(
+        qaUserBPage,
+        qaUserBPage.getByRole("button", {
+          name: "Mark Added to Watch Next as read",
+        }),
+        {
+          visible: qaUserBPage.getByText("0 unread", { exact: true }),
+        },
+      );
 
       await qaUserAPage.goto("/notifications");
       await expect(qaUserAPage.getByText(movie.title)).toHaveCount(0);

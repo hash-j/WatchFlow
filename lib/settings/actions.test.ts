@@ -156,6 +156,9 @@ describe("settings Server Actions", () => {
         notificationImportsEnabled: true,
       }),
     );
+    expect(mocks.revalidatePath).not.toHaveBeenCalledWith(
+      "/settings/notifications",
+    );
   });
 
   it("preserves the stored TMDB language when saving other preferences", async () => {

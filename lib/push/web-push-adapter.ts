@@ -4,6 +4,8 @@ import webPush from "web-push";
 
 import { getVapidConfiguration } from "./config";
 
+const WEB_PUSH_TIMEOUT_MS = 5_000;
+
 export type PushDeliveryPayload = {
   notificationId: string;
   category: "movie_status" | "watch_next" | "custom_lists" | "imports";
@@ -59,6 +61,7 @@ export async function sendWebPush(
       {
         TTL: 300,
         urgency: "normal",
+        timeout: WEB_PUSH_TIMEOUT_MS,
       },
     );
     return { outcome: "delivered" };

@@ -409,10 +409,15 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
       qaUserBPage.locator('a[href="/notifications"] span[aria-label="2 unread notifications"]'),
     ).toHaveCount(2);
 
-    await qaUserBPage
-      .getByRole("button", { name: `Mark ${userBFirstTitle} as read` })
-      .click();
-    await expect(qaUserBPage.getByText("1 unread", { exact: true })).toBeVisible();
+    await clickAndWaitForMutation(
+      qaUserBPage,
+      qaUserBPage.getByRole("button", {
+        name: `Mark ${userBFirstTitle} as read`,
+      }),
+      {
+        visible: qaUserBPage.getByText("1 unread", { exact: true }),
+      },
+    );
     await expect(
       qaUserBPage.locator('a[href="/notifications"] span[aria-label="1 unread notifications"]'),
     ).toHaveCount(2);
@@ -423,8 +428,13 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
       qaUserBPage.getByRole("button", { name: `Mark ${userBFirstTitle} as read` }),
     ).toHaveCount(0);
 
-    await qaUserBPage.getByRole("button", { name: "Mark all as read" }).click();
-    await expect(qaUserBPage.getByText("0 unread", { exact: true })).toBeVisible();
+    await clickAndWaitForMutation(
+      qaUserBPage,
+      qaUserBPage.getByRole("button", { name: "Mark all as read" }),
+      {
+        visible: qaUserBPage.getByText("0 unread", { exact: true }),
+      },
+    );
     await expect(
       qaUserBPage.locator('a[href="/notifications"] span[aria-label$="unread notifications"]'),
     ).toHaveCount(0);
@@ -480,10 +490,15 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
         qaUserBPage.getByRole("heading", { name: "CSV import complete" }),
       ).toBeVisible();
       await expect(qaUserBPage.getByText("1 unread", { exact: true })).toBeVisible();
-      await qaUserBPage
-        .getByRole("button", { name: "Mark CSV import complete as read" })
-        .click();
-      await expect(qaUserBPage.getByText("0 unread", { exact: true })).toBeVisible();
+      await clickAndWaitForMutation(
+        qaUserBPage,
+        qaUserBPage.getByRole("button", {
+          name: "Mark CSV import complete as read",
+        }),
+        {
+          visible: qaUserBPage.getByText("0 unread", { exact: true }),
+        },
+      );
       await qaUserBPage.reload();
       await expect(qaUserBPage.getByText("0 unread", { exact: true })).toBeVisible();
       expectNoUnexpectedBrowserFailures(qaUserBAudit, {
@@ -578,14 +593,24 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
       await expect(qaUserBPage.getByText(`You started watching ${movie.title}.`)).toBeVisible();
       await expect(qaUserBPage.getByText(`You finished watching ${movie.title}.`)).toBeVisible();
       await expect(qaUserBPage.getByText("3 unread", { exact: true })).toBeVisible();
-      await qaUserBPage
-        .getByRole("button", { name: "Mark Added to Watch Next as read" })
-        .click();
-      await expect(qaUserBPage.getByText("2 unread", { exact: true })).toBeVisible();
+      await clickAndWaitForMutation(
+        qaUserBPage,
+        qaUserBPage.getByRole("button", {
+          name: "Mark Added to Watch Next as read",
+        }),
+        {
+          visible: qaUserBPage.getByText("2 unread", { exact: true }),
+        },
+      );
       await qaUserBPage.reload();
       await expect(qaUserBPage.getByText("2 unread", { exact: true })).toBeVisible();
-      await qaUserBPage.getByRole("button", { name: "Mark all as read" }).click();
-      await expect(qaUserBPage.getByText("0 unread", { exact: true })).toBeVisible();
+      await clickAndWaitForMutation(
+        qaUserBPage,
+        qaUserBPage.getByRole("button", { name: "Mark all as read" }),
+        {
+          visible: qaUserBPage.getByText("0 unread", { exact: true }),
+        },
+      );
 
       await qaUserAPage.goto("/notifications");
       await expect(qaUserAPage.getByText(movie.title)).toHaveCount(0);
@@ -649,11 +674,20 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
         qaUserBPage,
         dialog.getByRole("button", { name: "Add Selected Movies (1)" }),
         {
-          visible: qaUserBPage.getByRole("button", {
-            name: `Remove ${movie.title} from ${list.name}`,
-          }),
+          success: "1 movie added.",
         },
       );
+      await Promise.all([
+        qaUserBPage.waitForURL((url) =>
+          url.pathname === `/lists/${list.id}` && !url.searchParams.has("add"),
+        ),
+        dialog.getByRole("button", { name: "Done" }).click(),
+      ]);
+      await expect(
+        qaUserBPage.getByRole("button", {
+          name: `Remove ${movie.title} from ${list.name}`,
+        }),
+      ).toBeVisible();
 
       if (!admin) throw new Error("Guarded custom-list inspection is unavailable.");
       const created = await admin
@@ -704,10 +738,15 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
       await expect(
         qaUserBPage.getByText(`${movie.title} was added to ${list.name}.`),
       ).toBeVisible();
-      await qaUserBPage
-        .getByRole("button", { name: "Mark Added to custom list as read" })
-        .click();
-      await expect(qaUserBPage.getByText("0 unread", { exact: true })).toBeVisible();
+      await clickAndWaitForMutation(
+        qaUserBPage,
+        qaUserBPage.getByRole("button", {
+          name: "Mark Added to custom list as read",
+        }),
+        {
+          visible: qaUserBPage.getByText("0 unread", { exact: true }),
+        },
+      );
       await qaUserBPage.reload();
       await expect(qaUserBPage.getByText("0 unread", { exact: true })).toBeVisible();
 
@@ -791,12 +830,13 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
     await expect(
       qaUserBPage.getByRole("button", { name: "Save notification preferences" }),
     ).toBeVisible();
-    await qaUserBPage
-      .getByRole("button", { name: "Save notification preferences" })
-      .click();
-    await expect(
-      qaUserBPage.getByText("Notification preferences saved."),
-    ).toBeVisible();
+    await clickAndWaitForMutation(
+      qaUserBPage,
+      qaUserBPage.getByRole("button", {
+        name: "Save notification preferences",
+      }),
+      { success: "Notification preferences saved." },
+    );
     expectNoUnexpectedBrowserFailures(qaUserBAudit);
   });
 

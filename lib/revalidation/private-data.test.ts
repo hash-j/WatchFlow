@@ -2,10 +2,13 @@ import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const revalidatePath = vi.hoisted(() => vi.fn());
+const after = vi.hoisted(() =>
+  vi.fn((callback: () => void) => callback()),
+);
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath }));
-vi.mock("next/server", () => ({ after: (callback: () => void) => callback() }));
+vi.mock("next/server", () => ({ after }));
 
 import {
   revalidateApplicationPreferenceViews,
@@ -19,6 +22,7 @@ import {
 
 beforeEach(() => {
   revalidatePath.mockReset();
+  after.mockClear();
 });
 
 describe("private-data revalidation architecture", () => {
@@ -80,13 +84,14 @@ describe("private-data revalidation architecture", () => {
     expect(revalidatePath.mock.calls).toEqual([["/lists"]]);
   });
 
-  it("refreshes the notification feed and shell unread count immediately", () => {
+  it("refreshes the feed immediately and defers broad shell invalidation", () => {
     revalidateNotificationViews();
 
     expect(revalidatePath.mock.calls).toEqual([
       ["/notifications"],
       ["/", "layout"],
     ]);
+    expect(after).toHaveBeenCalledTimes(1);
   });
 
   it("keeps profile/preference freshness scoped to their consumers", () => {

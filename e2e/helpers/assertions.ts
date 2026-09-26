@@ -54,6 +54,10 @@ export async function clickAndWaitForMutation(
   await trigger.click();
   const response = await responsePromise;
   expect(response.status()).toBeLessThan(500);
+  expect(
+    await response.finished(),
+    "The streamed Server Action response should finish without being aborted.",
+  ).toBeNull();
 
   if (outcome.url) {
     await page.waitForURL(outcome.url);

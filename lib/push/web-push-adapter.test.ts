@@ -60,7 +60,7 @@ describe("server-only Web Push adapter", () => {
         keys: { p256dh: subscription.p256dh, auth: subscription.auth },
       },
       JSON.stringify(payload),
-      { TTL: 300, urgency: "normal" },
+      { TTL: 300, urgency: "normal", timeout: 5_000 },
     );
   });
 
@@ -78,6 +78,16 @@ describe("server-only Web Push adapter", () => {
     await expect(sendWebPush(subscription, payload)).resolves.toEqual({
       outcome: "failed",
       statusCode: 503,
+      permanent: false,
+    });
+  });
+
+  it("treats a timed-out push request as a transient delivery failure", async () => {
+    mocks.sendNotification.mockRejectedValueOnce({ code: "ETIMEDOUT" });
+
+    await expect(sendWebPush(subscription, payload)).resolves.toEqual({
+      outcome: "failed",
+      statusCode: null,
       permanent: false,
     });
   });

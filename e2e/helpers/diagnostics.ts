@@ -104,6 +104,12 @@ function browserMessageCategory(value: string) {
   ) {
     return "next-image-lcp-advice";
   }
+  if (
+    normalized.includes("was preloaded using link preload but not used") &&
+    normalized.includes(".woff2")
+  ) {
+    return "unused-font-preload-advice";
+  }
   if (normalized.includes("websocket") || normalized.includes("hmr")) {
     return "development-transport";
   }
@@ -205,6 +211,7 @@ function isAllowed(
   if (
     "category" in failure &&
     (failure.category === "development-transport" ||
+      failure.category === "unused-font-preload-advice" ||
       allowance.allowedCategories?.includes(failure.category))
   ) {
     return true;

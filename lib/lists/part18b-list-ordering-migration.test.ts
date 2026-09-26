@@ -8,7 +8,9 @@ const migration = readFileSync(
     "supabase/migrations/202609240001_part_18b_priority_and_list_ordering.sql",
   ),
   "utf8",
-).toLowerCase();
+)
+  .replaceAll("\r\n", "\n")
+  .toLowerCase();
 
 function functionSql(name: string) {
   const start = Math.max(
