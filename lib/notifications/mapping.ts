@@ -1,4 +1,9 @@
-import { NOTIFICATION_TYPES, type NotificationItem } from "./types";
+import {
+  NOTIFICATION_CATEGORIES,
+  NOTIFICATION_TYPES,
+  type NotificationCategory,
+  type NotificationItem,
+} from "./types";
 import { NotificationsPersistenceError } from "./errors";
 
 type UnknownRecord = Record<string, unknown>;
@@ -21,6 +26,13 @@ function internalActionPath(value: unknown) {
   const path = optionalText(value);
   return path && path.startsWith("/") && !path.startsWith("//")
     ? path
+    : null;
+}
+
+function category(value: unknown): NotificationCategory | null {
+  return typeof value === "string" &&
+    (NOTIFICATION_CATEGORIES as readonly string[]).includes(value)
+    ? (value as NotificationCategory)
     : null;
 }
 
@@ -55,6 +67,9 @@ export function mapNotification(value: unknown): NotificationItem {
     body,
     actionPath: internalActionPath(row.action_path),
     metadata,
+    category: category(metadata.category),
+    movieTitle: optionalText(metadata.movie_title),
+    moviePosterPath: optionalText(metadata.movie_poster_path),
     readAt: optionalText(row.read_at),
     createdAt,
   };

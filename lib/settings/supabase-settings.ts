@@ -58,7 +58,7 @@ export async function readUserPreferences(
   const { data, error } = await client
     .from("user_preferences")
     .select(
-      "default_movie_status, default_priority, default_library_view, date_format, time_format, show_adult_results, include_unreleased_movies, preferred_language, movies_per_page, email_notifications_enabled, push_notifications_enabled, schedule_reminders_enabled, reminder_offset_minutes, weekly_summary_enabled",
+      "default_movie_status, default_priority, default_library_view, date_format, time_format, show_adult_results, include_unreleased_movies, preferred_language, movies_per_page, email_notifications_enabled, push_notifications_enabled, schedule_reminders_enabled, reminder_offset_minutes, weekly_summary_enabled, notification_movie_status_enabled, notification_watch_next_enabled, notification_custom_lists_enabled, notification_imports_enabled",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -167,6 +167,10 @@ export async function updateNotificationPreferences(
     | "scheduleRemindersEnabled"
     | "reminderOffsetMinutes"
     | "weeklySummaryEnabled"
+    | "notificationMovieStatusEnabled"
+    | "notificationWatchNextEnabled"
+    | "notificationCustomListsEnabled"
+    | "notificationImportsEnabled"
   >,
 ) {
   const { error } = await client.from("user_preferences").upsert(

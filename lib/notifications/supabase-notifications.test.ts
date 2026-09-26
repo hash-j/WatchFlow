@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
   createAdminClient: vi.fn(),
   logSupabaseError: vi.fn(),
+  dispatchNotificationEvent: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -17,6 +18,9 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("@/lib/supabase/error-logging", () => ({
   logSupabaseError: mocks.logSupabaseError,
+}));
+vi.mock("./dispatcher", () => ({
+  dispatchNotificationEvent: mocks.dispatchNotificationEvent,
 }));
 
 import {
@@ -58,8 +62,37 @@ function feedClient(result: { data: unknown; error: unknown }) {
   };
 }
 
+function categoryPreferenceClient(ownerId = userId, enabled = true) {
+  const chain = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    maybeSingle: vi.fn().mockResolvedValue({
+      data: {
+        notification_movie_status_enabled: enabled,
+        notification_watch_next_enabled: enabled,
+        notification_custom_lists_enabled: enabled,
+        notification_imports_enabled: enabled,
+      },
+      error: null,
+    }),
+  };
+  chain.select.mockReturnValue(chain);
+  chain.eq.mockReturnValue(chain);
+  return {
+    auth: {
+      getUser: vi.fn().mockResolvedValue({
+        data: { user: { id: ownerId } },
+        error: null,
+      }),
+    },
+    from: vi.fn(() => chain),
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.dispatchNotificationEvent.mockResolvedValue({ status: "delivered" });
+  mocks.createClient.mockResolvedValue(categoryPreferenceClient());
 });
 
 describe("authenticated notification service", () => {
@@ -149,6 +182,12 @@ describe("authenticated notification service", () => {
 
 describe("trusted CSV import notification producer", () => {
   it("uses a fixed owner-scoped payload and deterministic idempotent identifier", async () => {
+    mocks.createClient
+      .mockResolvedValueOnce(categoryPreferenceClient())
+      .mockResolvedValueOnce(categoryPreferenceClient())
+      .mockResolvedValueOnce(
+        categoryPreferenceClient("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
+      );
     const writes: unknown[] = [];
     const maybeSingle = vi
       .fn()
@@ -204,6 +243,40 @@ describe("trusted CSV import notification producer", () => {
       ignoreDuplicates: true,
     });
     expect(duplicateWrite.payload.id).toBe(firstWrite.payload.id);
+    expect(mocks.dispatchNotificationEvent).toHaveBeenCalledTimes(2);
+    expect(mocks.dispatchNotificationEvent).toHaveBeenNthCalledWith(1, {
+      notificationId: first.id,
+      category: "imports",
+      title: "CSV import complete",
+      body: "Your CSV import completed successfully. Review your Library for imported movies.",
+      movieTitle: null,
+      imageUrl: null,
+      actionUrl: `/library?notification=${first.id}&notificationSource=push`,
+    });
+  });
+
+  it("keeps the durable notification successful when push delivery fails", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: { id: "created" },
+      error: null,
+    });
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn(() => ({
+        upsert: vi.fn(() => ({
+          select: vi.fn(() => ({ maybeSingle })),
+        })),
+      })),
+    });
+    mocks.dispatchNotificationEvent.mockRejectedValueOnce(
+      new Error("push provider unavailable"),
+    );
+
+    await expect(
+      createCsvImportCompletedNotification({
+        verifiedUserId: userId,
+        completionId: notificationId,
+      }),
+    ).resolves.toMatchObject({ created: true });
   });
 });
 
@@ -251,12 +324,18 @@ describe("trusted movie status transition notification producer", () => {
         userId,
         [snapshot.userMovieId],
       ),
-    ).resolves.toEqual([snapshot]);
+    ).resolves.toEqual([{ ...snapshot, moviePosterPath: null }]);
     expect(chain.eq).toHaveBeenCalledWith("user_id", userId);
     expect(chain.in).toHaveBeenCalledWith("id", [snapshot.userMovieId]);
   });
 
   it("creates an owner-bound idempotent notification for a valid transition", async () => {
+    mocks.createClient
+      .mockResolvedValueOnce(categoryPreferenceClient())
+      .mockResolvedValueOnce(categoryPreferenceClient())
+      .mockResolvedValueOnce(
+        categoryPreferenceClient("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
+      );
     const writes: Array<Record<string, unknown>> = [];
     const maybeSingle = vi
       .fn()
@@ -299,9 +378,20 @@ describe("trusted movie status transition notification producer", () => {
       body: "You started watching Arrival.",
       metadata: {
         source: "movie_status_transition",
+        category: "movie_status",
         event: "scheduled_to_watching",
         user_movie_id: snapshot.userMovieId,
       },
+    });
+    expect(mocks.dispatchNotificationEvent).toHaveBeenCalledTimes(2);
+    expect(mocks.dispatchNotificationEvent).toHaveBeenNthCalledWith(1, {
+      notificationId: first.id,
+      category: "movie_status",
+      title: "Movie started",
+      body: "You started watching Arrival.",
+      movieTitle: "Arrival",
+      imageUrl: null,
+      actionUrl: `/library?notification=${first.id}&notificationSource=push`,
     });
   });
 
@@ -314,6 +404,23 @@ describe("trusted movie status transition notification producer", () => {
 
     expect(result).toEqual({ id: null, created: false });
     expect(mocks.createAdminClient).not.toHaveBeenCalled();
+    expect(mocks.dispatchNotificationEvent).not.toHaveBeenCalled();
+  });
+
+  it("creates no notification when the owner disabled that category", async () => {
+    mocks.createClient.mockResolvedValueOnce(
+      categoryPreferenceClient(userId, false),
+    );
+
+    await expect(
+      createMovieStatusTransitionNotification({
+        verifiedUserId: userId,
+        snapshot,
+        nextStatus: "currently_watching",
+      }),
+    ).resolves.toEqual({ id: null, created: false });
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
+    expect(mocks.dispatchNotificationEvent).not.toHaveBeenCalled();
   });
 });
 
@@ -328,6 +435,12 @@ describe("trusted custom-list notification producer", () => {
   };
 
   it("creates fixed owner-bound content and suppresses duplicate delivery", async () => {
+    mocks.createClient
+      .mockResolvedValueOnce(categoryPreferenceClient())
+      .mockResolvedValueOnce(categoryPreferenceClient())
+      .mockResolvedValueOnce(
+        categoryPreferenceClient("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
+      );
     const writes: Array<Record<string, unknown>> = [];
     const maybeSingle = vi
       .fn()
@@ -362,11 +475,22 @@ describe("trusted custom-list notification producer", () => {
       action_path: `/lists/${input.listId}`,
       metadata: {
         source: "custom_list_membership",
+        category: "custom_lists",
         event: "movie_added",
         list_id: input.listId,
         list_movie_id: input.listMovieId,
         user_movie_id: input.userMovieId,
       },
+    });
+    expect(mocks.dispatchNotificationEvent).toHaveBeenCalledTimes(2);
+    expect(mocks.dispatchNotificationEvent).toHaveBeenNthCalledWith(1, {
+      notificationId: first.id,
+      category: "custom_lists",
+      title: "Added to custom list",
+      body: "Arrival was added to Weekend Movies.",
+      movieTitle: "Arrival",
+      imageUrl: null,
+      actionUrl: `/lists/${input.listId}?notification=${first.id}&notificationSource=push`,
     });
   });
 });

@@ -130,7 +130,7 @@ describe("settings Server Actions", () => {
     expect(result.message).toContain("session has expired");
   });
 
-  it("saves notification choices without claiming delivery is active", async () => {
+  it("saves notification category and future delivery choices", async () => {
     const result = await updateNotificationPreferencesAction(
       INITIAL_SETTINGS_ACTION_STATE,
       form({
@@ -138,10 +138,24 @@ describe("settings Server Actions", () => {
         scheduleRemindersEnabled: true,
         reminderOffsetMinutes: "60",
         weeklySummaryEnabled: false,
+        notificationMovieStatusEnabled: true,
+        notificationWatchNextEnabled: true,
+        notificationCustomListsEnabled: false,
+        notificationImportsEnabled: true,
       }),
     );
-    expect(result.message).toContain("future delivery");
+    expect(result.message).toBe("Notification preferences saved.");
     expect(result.message).not.toMatch(/sent|sending|active/i);
+    expect(mocks.updateNotificationPreferences).toHaveBeenCalledWith(
+      session.client,
+      "verified-user",
+      expect.objectContaining({
+        notificationMovieStatusEnabled: true,
+        notificationWatchNextEnabled: true,
+        notificationCustomListsEnabled: false,
+        notificationImportsEnabled: true,
+      }),
+    );
   });
 
   it("preserves the stored TMDB language when saving other preferences", async () => {

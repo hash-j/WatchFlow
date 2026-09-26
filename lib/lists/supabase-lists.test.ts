@@ -338,6 +338,7 @@ describe("custom-list RPC boundaries", () => {
       userMovieId,
       listName: "Weekend Movies",
       movieTitle: "Arrival",
+      moviePosterPath: null,
     });
   });
 

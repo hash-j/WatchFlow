@@ -23,6 +23,9 @@ describe("notification response mapping", () => {
       body: row.body,
       actionPath: row.action_path,
       metadata: row.metadata,
+      category: null,
+      movieTitle: null,
+      moviePosterPath: null,
       readAt: null,
       createdAt: row.created_at,
     });

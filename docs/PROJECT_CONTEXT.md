@@ -1,16 +1,231 @@
 # WatchFlow Project Context
 
 Last updated: 2026-09-26
-Last updated by: Codex / Part 18E Push Notification Foundation
+Last updated by: Codex / Part 18H Notification Center and User Experience
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18E owner-scoped browser push subscription foundation is installed on watchflow-dev. A local acceptance feedback repair is implemented; guarded Playwright confirmation remains pending because this host rejects browser subprocess creation.
+Current phase: Part 18H adds the complete user-facing notification center experience, category controls, richer payload context, and safe push-click navigation.
 Current branch: `codex/part-18c-notifications`.
-Current status: Part 17 Production Launch remains PASS. Part 18A final acceptance is PASS and Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`). Part 18C-1 migration `202609250001_part_18c_notification_foundation.sql` and Part 18E migration `202609260001_part_18e_push_notification_foundation.sql` are installed on watchflow-dev. Trusted Part 18C producers passed guarded browser/RLS acceptance. Part 18D remains locally implemented with its browser run blocked by the host. The Part 18E save RPC passed a development-guarded authenticated probe; its exact fixture was deleted and the prior preference restored. Part 18E Vitest, ESLint, direct TypeScript, and diff checking pass; Playwright startup and the post-compile build worker remain blocked by host `spawn EPERM`. Changes remain local and uncommitted; no deployment, merge, push, or Production change occurred.
+Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. A manual, watchflow-dev-pinned GitHub Actions browser-acceptance workflow is ready locally, but it cannot run until these uncommitted files are intentionally committed/pushed and the required GitHub Environment secrets are configured. Complete browser acceptance is therefore still blocked and is not claimed. No deployment, merge, push, or Production change occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-26 Part 18H CI Browser Acceptance Handoff — BLOCKED PENDING RUN
+
+- Added a manual-only `.github/workflows/part18h-live-acceptance.yml` job for an
+  Ubuntu GitHub-hosted runner with Node 22, production Next server, Playwright
+  Chrome, one worker, no retries beyond the repository default, and a
+  non-cancelling `part18h-watchflow-dev` concurrency lock. It does not run on a
+  push or pull request automatically and is assigned to the `watchflow-dev`
+  GitHub Environment.
+- `scripts/verify-part18h-ci-target.mjs` fails closed before tests unless the
+  environment is explicitly development, the configured and independently
+  expected Supabase URLs match, the hostname contains the pinned watchflow-dev
+  project ref, every required QA variable exists, and PostgREST exposes all
+  four Part 18H preference columns. It prints no credential or URL values.
+- The workflow needs these GitHub Environment secrets:
+  `WATCHFLOW_DEV_SUPABASE_URL`,
+  `WATCHFLOW_DEV_SUPABASE_PUBLISHABLE_KEY`,
+  `WATCHFLOW_DEV_SUPABASE_SECRET_KEY`,
+  `WATCHFLOW_DEV_TMDB_READ_ACCESS_TOKEN`,
+  `WATCHFLOW_DEV_QA_USER_A_EMAIL`,
+  `WATCHFLOW_DEV_QA_USER_A_PASSWORD`,
+  `WATCHFLOW_DEV_QA_USER_B_EMAIL`, and
+  `WATCHFLOW_DEV_QA_USER_B_PASSWORD`. The secret key is available only to the
+  server-side preflight/test process and is not exposed to browser code.
+- The existing guarded Part 18C browser suite remains the source of browser
+  coverage for feed rendering, empty state, mark-one/mark-all, badge and refresh
+  persistence, CSV/status/list producers, duplicate counts, RLS/anonymous
+  denial, two-user isolation, console/network diagnostics, and exact fixture
+  cleanup. It now captures, temporarily enables, and restores QA User B's four
+  category preferences so shared fixture state cannot invalidate producer
+  checks.
+- New `e2e/part18h-notification-center.spec.ts` adds serial browser coverage for
+  the route loading boundary, all four category controls and reload
+  persistence, disabled Watch Next suppression, re-enabled creation, duplicate
+  suppression, poster/category context, internal center-link navigation,
+  read/badge refresh persistence, cross-user isolation, service-worker
+  registration, and execution of the shipped push-click URL guard in Chromium.
+  Its mutations use owner-authenticated application flows; the guarded secret
+  client is limited to fixture inspection and exact cleanup.
+- The workflow also runs focused Part 18H unit tests, the guarded live database
+  integration, full Vitest, ESLint, direct TypeScript, `git diff --check`, a
+  production build, and the client-secret scan before the two browser suites.
+  Failed browser runs retain only the existing redacted Playwright diagnostics
+  for seven days.
+- Local static validation of the new harness passes: Playwright discovers three
+  Part 18H tests; focused tests pass 9 files/52 tests; the full native-loader
+  fallback passes 106 files/939 tests; ESLint, direct TypeScript,
+  `git diff --check`, and the 272-artifact client-secret scan pass. The exact
+  `npm test` and the post-compile build worker remain blocked by local Windows
+  `spawn EPERM`; the guarded integration is skipped without its explicit live
+  opt-in. No CI/browser result is claimed because the user prohibited commit,
+  push, and deployment, so GitHub Actions cannot see or execute the local
+  workflow/spec.
+- Production was neither read nor modified. No migration, RLS/Auth policy,
+  service-role browser path, deployment, commit, merge, or push was added by
+  this acceptance-harness work.
+
+## 2026-09-26 Part 18H Guarded Live Acceptance — FAIL (BROWSER BLOCKED)
+
+- The linked Supabase metadata identifies project ref
+  `ckwadpmvxieekjlsfcks` as `watchflow-dev`. Its ref matches the configured
+  Supabase hostname, `E2E_TARGET_ENV` is `development`, and the configured URL
+  exactly matches the separately pinned expected URL. Production was not read
+  or modified.
+- Remote PostgREST OpenAPI confirms all four Part 18H category columns exist on
+  `user_preferences`. Both QA users can read their own new fields, and an
+  authenticated owner update succeeds under the existing RLS/column grants.
+  No direct migration-ledger credential is configured, so verification is
+  object-level rather than a claim about the hosted migration-history row.
+- Guarded live database acceptance passes 1 file/2 tests. It disabled all four
+  QA User B categories, confirmed reload persistence and QA User A isolation,
+  re-enabled all four, and restored the exact original values. It also created
+  three exact UUID fixtures, proved duplicate suppression, owner reads,
+  mark-one/read persistence, mark-all/unread persistence, poster/context
+  metadata, cross-owner isolation, and anonymous denial.
+- Cleanup deleted only those three exact notification UUIDs and verified none
+  remained. The preference test restored QA User B's exact pre-test category
+  values. Preflight and post-test counts found no pre-existing QA notification
+  rows; no movie/list/import browser fixture was created.
+- The in-process Next development server reached Ready on loopback, but the
+  normal Playwright runner could not launch a browser because the Windows host
+  returned `spawn EPERM`. The available browser-control surface then explicitly
+  denied localhost access. Policy prohibits an alternate browser workaround.
+- Consequently, notification-center rendering, transient loading UI, settings
+  browser toggles, live producer suppression/resumption through movie/list/
+  import flows, contextual link clicks, push-click behavior, badge updates,
+  refresh UI persistence, and browser console/network diagnostics remain
+  unverified live. Static/integration coverage passes but cannot substitute for
+  those requested browser checks; final Part 18H acceptance is FAIL.
+- Focused tests pass 10 files/57 tests; full Vitest passes 106 files/939 tests
+  through the native-loader fallback; ESLint, direct TypeScript, client-secret
+  scan, and `git diff --check` pass. The exact `npm test`, Playwright, ordinary
+  Next dev, and post-compile build worker paths are subject to the host's
+  `spawn EPERM` restriction.
+- No Production change, deploy, commit, merge, or push occurred.
+
+## 2026-09-26 Part 18H Notification Center and User Experience — LOCAL IMPLEMENTATION
+
+- The existing private `/notifications` center retains its bounded newest-first
+  SSR/RLS feed, unread styling and badge, per-row mark-read action, mark-all
+  action, and empty/error states. Part 18H adds a route loading skeleton,
+  category labels, optional movie posters, and context-preserving internal
+  action links. Pending button copy continues to expose mutation loading state.
+- Four default-on, user-scoped categories cover movie status, Watch Next,
+  custom-list additions, and CSV imports. The settings form validates and
+  persists them on the existing `user_preferences` owner row. Before a trusted
+  producer insert, a fresh cookie-bound `auth.getUser()` result must match the
+  verified event owner and the category is read through that owner's RLS
+  client. Disabled categories create neither an in-app row nor a push attempt;
+  authentication/preference read failure fails closed without failing the
+  originating movie/list/import mutation.
+- Migration `202609260002_part_18h_notification_categories.sql` adds only the
+  four boolean preference columns and narrow authenticated INSERT/UPDATE column
+  grants. Defaults are true to preserve existing behavior. It creates no table,
+  policy, RLS change, function, trigger, service-role path, or background work.
+  Its four columns are now verified remotely on watchflow-dev; Production was
+  not inspected or modified.
+- Trusted movie producers now store category, movie title, and optional TMDB
+  poster path in bounded notification metadata. Push payloads carry the
+  notification ID, category, movie title, allowlisted image URL when available,
+  and an internal action URL containing notification/source context. CSV import
+  remains non-movie-specific.
+- Both notification-center and push action URLs preserve existing query/hash
+  state and append notification context. The service worker accepts only a
+  single-slash same-origin route without backslashes, falls back to
+  `/notifications`, permits images only from the fixed TMDB image origin, and
+  opens/focuses a WatchFlow window. No external click navigation is possible.
+- Ordinary feed reads, read-state RPCs, category preference reads/writes, and
+  subscription operations remain on authenticated clients under existing RLS.
+  The dispatcher accepts no owner ID. No generic browser insert, service-role
+  key, email, scheduler, new worker backend, or Production change was added.
+- Focused Part 18H tests pass 10 files/74 tests. Full Vitest passes 106
+  files/939 tests through the native config/thread-pool fallback. The exact
+  `npm test` command was attempted first, but this Windows host rejected Vite's
+  config subprocess with `spawn EPERM` before discovery. ESLint, direct
+  TypeScript, `git diff --check`, and the 272-artifact client-secret scan pass.
+- The production build compiled successfully, then the host rejected Next's
+  post-compile TypeScript worker with `spawn EPERM`. Direct TypeScript passed,
+  but no complete build PASS is claimed.
+
+## 2026-09-26 Part 18G Notification Trigger Integration — LOCAL IMPLEMENTATION
+
+- The existing trusted notification producers are the single trigger boundary.
+  After a deterministic notification upsert reports a newly created durable
+  row, the producer invokes the Part 18F dispatcher with fixed presentation
+  data. A conflict-ignore duplicate returns no row and therefore performs no
+  second delivery attempt.
+- Movie status changes now cover Scheduled to Watching and Watching to Watched;
+  entry into Watch Next uses that same status-transition producer. Successful
+  custom-list membership additions use the custom-list producer. Existing
+  mutation adapters invoke these producers only after their authenticated,
+  owner-scoped database mutation succeeds.
+- The database notification remains authoritative. Dispatcher, configuration,
+  subscription, and Web Push failures are contained after notification
+  persistence and never convert an already-successful user mutation into a
+  failure. No delivery call occurs when notification persistence fails or an
+  event is idempotently suppressed.
+- The delivery dispatcher continues to freshly derive the owner from the
+  cookie-bound server Auth context and reads subscriptions through the owner's
+  SSR client under RLS. Trigger integration adds no browser sender, browser
+  owner ID, generic notification creation endpoint, service-role shortcut,
+  policy change, worker, scheduler, retry job, or email path.
+- A focused producer-to-dispatcher integration suite keeps both application
+  layers real and mocks only Supabase/Web Push boundaries. It verifies status,
+  Watch Next, and custom-list payload delivery, duplicate suppression, and
+  non-fatal delivery failure. The suite passes 1 file/4 tests; the combined
+  affected mutation/producer/dispatcher set passes 7 files/71 tests.
+- Full Vitest passes 104 files/931 tests. ESLint, direct TypeScript, and
+  `git diff --check` pass. The production build compiled successfully, then
+  this Windows host rejected Next's post-compile TypeScript worker with
+  `spawn EPERM`; direct TypeScript passed, but no complete build PASS is
+  claimed.
+- No schema, migration, RLS, Production, deployment, commit, merge, or push
+  change occurred.
+
+## 2026-09-26 Part 18F Notification Delivery Pipeline — LOCAL IMPLEMENTATION
+
+- Newly created trusted system notifications now enter a request-driven
+  dispatcher. Duplicate/idempotent producer attempts with no new notification
+  row do not dispatch, so the existing deterministic notification IDs also
+  suppress duplicate push delivery.
+- The dispatcher creates the cookie-bound SSR client, freshly verifies the
+  current user with `auth.getUser()`, checks that owner's push preference, and
+  reads only that owner's `push_subscriptions` rows through existing RLS. It
+  accepts no owner ID and uses no admin/service-role client. Notification row
+  creation remains the only narrow secret-client operation.
+- `lib/push/web-push-adapter.ts` is the isolated server-only delivery boundary.
+  It uses `web-push` with the existing public VAPID key plus server-only
+  `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT`. The private key is never returned to
+  a component, Server Action payload, service worker, or browser bundle.
+- Delivery occurs synchronously after a durable notification is newly created.
+  There is no worker, scheduler, cron, outbox, background job, background sync,
+  or email path. Delivery/configuration/provider failures are best-effort and
+  never convert the already-successful originating mutation or durable in-app
+  notification into a failure.
+- Subscription cleanup remains authenticated and owner-scoped. Locally expired
+  subscriptions are removed without sending. Provider HTTP 404 and 410 results
+  remove only the exact failed subscription IDs; transient errors and unexpected
+  adapter failures retain subscriptions for a later real event. Cleanup failure
+  is contained and redacted.
+- Focused push/notification verification passes 12 files/53 tests, covering
+  fan-out, preference opt-out, ownership filters, payload mapping, duplicate
+  suppression, VAPID signing, transient failure retention, 404/410 removal,
+  local expiration removal, and continued delivery after an adapter exception.
+- Full Vitest passes 103 files/927 tests through the native config/thread-pool
+  fallback. The exact `npm test` command was attempted first, but this host
+  rejected Vite's config subprocess with `spawn EPERM` before test discovery.
+  ESLint, direct TypeScript, `git diff --check`, and the 272-artifact enhanced
+  client-secret scan pass; the scanner now treats `VAPID_PRIVATE_KEY` as a
+  forbidden browser-artifact name and configured value.
+- The production build compiled successfully, then the host rejected Next's
+  post-compile TypeScript worker with the same `spawn EPERM`. Direct TypeScript
+  passed, but no complete build PASS is claimed.
+- No schema, RLS, Auth policy, browser sending, Production, deployment, commit,
+  merge, or push change occurred.
 
 ## 2026-09-26 Part 18E Playwright Feedback Blocker Repair — LOCAL FIX
 

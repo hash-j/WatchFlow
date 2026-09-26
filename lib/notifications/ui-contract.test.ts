@@ -19,14 +19,21 @@ describe("Part 18C-1 notification UI contracts", () => {
     expect(page).toContain("<NotificationFeed {...feed} />");
   });
 
-  it("keeps the feed system-only and states excluded delivery scope", () => {
+  it("renders notification states, media, actions, and category-aware empty copy", () => {
     const feed = source("components/notifications/notification-feed.tsx");
     const types = source("lib/notifications/types.ts");
+    const loading = source("app/(app)/notifications/loading.tsx");
 
     expect(types).toContain('NOTIFICATION_TYPES = ["system"]');
-    expect(feed).toContain("Email, scheduled reminders, summaries, and push delivery are not part of this release.");
+    expect(types).toContain('"movie_status"');
+    expect(types).toContain('"watch_next"');
+    expect(feed).toContain("when their categories are enabled");
+    expect(feed).toContain("notification.moviePosterPath");
+    expect(feed).toContain("notificationActionUrl(");
     expect(feed).toContain("MarkNotificationReadForm");
     expect(feed).toContain("MarkAllNotificationsReadForm");
+    expect(loading).toContain("Loading notifications");
+    expect(loading).toContain("<Skeleton");
   });
 
   it("loads unread count from the authenticated layout without a browser client", () => {

@@ -111,6 +111,14 @@ export function mapUserPreferences(value: unknown): UserPreferences {
       DEFAULT_USER_PREFERENCES.reminderOffsetMinutes,
     ),
     weeklySummaryEnabled: record.weekly_summary_enabled === true,
+    notificationMovieStatusEnabled:
+      record.notification_movie_status_enabled !== false,
+    notificationWatchNextEnabled:
+      record.notification_watch_next_enabled !== false,
+    notificationCustomListsEnabled:
+      record.notification_custom_lists_enabled !== false,
+    notificationImportsEnabled:
+      record.notification_imports_enabled !== false,
   };
 }
 
@@ -148,6 +156,10 @@ export function toNotificationPreferencesRow(
     | "scheduleRemindersEnabled"
     | "reminderOffsetMinutes"
     | "weeklySummaryEnabled"
+    | "notificationMovieStatusEnabled"
+    | "notificationWatchNextEnabled"
+    | "notificationCustomListsEnabled"
+    | "notificationImportsEnabled"
   >,
 ) {
   return {
@@ -155,5 +167,11 @@ export function toNotificationPreferencesRow(
     schedule_reminders_enabled: preferences.scheduleRemindersEnabled,
     reminder_offset_minutes: preferences.reminderOffsetMinutes,
     weekly_summary_enabled: preferences.weeklySummaryEnabled,
+    notification_movie_status_enabled:
+      preferences.notificationMovieStatusEnabled,
+    notification_watch_next_enabled: preferences.notificationWatchNextEnabled,
+    notification_custom_lists_enabled:
+      preferences.notificationCustomListsEnabled,
+    notification_imports_enabled: preferences.notificationImportsEnabled,
   };
 }

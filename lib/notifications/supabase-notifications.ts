@@ -4,10 +4,15 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { LibraryMovieStatus } from "@/lib/movies/types";
+import { getTmdbImageUrl } from "@/lib/movies/images";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthContext } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import { logSupabaseError } from "@/lib/supabase/error-logging";
+import type { PushDeliveryPayload } from "@/lib/push/web-push-adapter";
+import { dispatchNotificationEvent } from "./dispatcher";
+import { notificationActionUrl } from "./presentation";
+import type { NotificationCategory } from "./types";
 
 import {
   NotificationsAuthenticationError,
@@ -17,6 +22,53 @@ import {
 import { mapNotifications } from "./mapping";
 
 const NOTIFICATION_PAGE_SIZE = 50;
+
+async function dispatchCreatedNotification(
+  created: boolean,
+  payload: PushDeliveryPayload,
+) {
+  if (!created) return;
+  try {
+    await dispatchNotificationEvent(payload);
+  } catch {
+    // The durable in-app notification already exists. Push remains best-effort.
+  }
+}
+
+const categoryPreferenceColumns: Record<NotificationCategory, string> = {
+  movie_status: "notification_movie_status_enabled",
+  watch_next: "notification_watch_next_enabled",
+  custom_lists: "notification_custom_lists_enabled",
+  imports: "notification_imports_enabled",
+};
+
+async function isNotificationCategoryEnabled(
+  verifiedUserId: string,
+  category: NotificationCategory,
+) {
+  const client = await createClient();
+  const {
+    data: { user },
+    error: authenticationError,
+  } = await client.auth.getUser();
+  if (authenticationError || !user || user.id !== verifiedUserId) return false;
+
+  const column = categoryPreferenceColumns[category];
+  const { data, error } = await client
+    .from("user_preferences")
+    .select(column)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (error) {
+    logSupabaseError("notification category preference read failed", error);
+    return false;
+  }
+
+  return (
+    !data ||
+    (data as unknown as Record<string, unknown>)[column] !== false
+  );
+}
 
 function deterministicNotificationId(namespace: string, ...parts: string[]) {
   const characters = createHash("sha256")
@@ -40,6 +92,7 @@ export type MovieStatusTransitionSnapshot = {
   status: LibraryMovieStatus;
   updatedAt: string;
   movieTitle: string;
+  moviePosterPath?: string | null;
 };
 
 export type MovieStatusNotificationEvent =
@@ -109,7 +162,7 @@ export async function readOwnedMovieStatusTransitionSnapshots(
 
   const { data, error } = await client
     .from("user_movies")
-    .select("id, status, updated_at, movies!inner(title)")
+    .select("id, status, updated_at, movies!inner(title, poster_path)")
     .eq("user_id", userId)
     .in("id", userMovieIds);
 
@@ -135,6 +188,8 @@ export async function readOwnedMovieStatusTransitionSnapshots(
       status: row.status as LibraryMovieStatus,
       updatedAt: row.updated_at,
       movieTitle: movie.title,
+      moviePosterPath:
+        typeof movie.poster_path === "string" ? movie.poster_path : null,
     }];
   });
 }
@@ -149,6 +204,11 @@ export async function createMovieStatusTransitionNotification(input: {
     input.nextStatus,
   );
   if (!event) return { id: null, created: false };
+  const category: NotificationCategory =
+    event === "added_to_watch_next" ? "watch_next" : "movie_status";
+  if (!(await isNotificationCategoryEnabled(input.verifiedUserId, category))) {
+    return { id: null, created: false };
+  }
 
   const notificationId = deterministicNotificationId(
     "movie-status-transition",
@@ -171,8 +231,11 @@ export async function createMovieStatusTransitionNotification(input: {
         action_path: content.actionPath,
         metadata: {
           source: "movie_status_transition",
+          category,
           event,
           user_movie_id: input.snapshot.userMovieId,
+          movie_title: input.snapshot.movieTitle,
+          movie_poster_path: input.snapshot.moviePosterPath ?? null,
         },
       },
       { onConflict: "id", ignoreDuplicates: true },
@@ -185,7 +248,21 @@ export async function createMovieStatusTransitionNotification(input: {
     throw new NotificationProducerError();
   }
 
-  return { id: notificationId, created: Boolean(data) };
+  const created = Boolean(data);
+  await dispatchCreatedNotification(created, {
+    notificationId,
+    category,
+    title: content.title,
+    body: content.body,
+    movieTitle: input.snapshot.movieTitle,
+    imageUrl: getTmdbImageUrl(input.snapshot.moviePosterPath ?? null, "w342"),
+    actionUrl: notificationActionUrl(
+      content.actionPath,
+      notificationId,
+      "push",
+    ),
+  });
+  return { id: notificationId, created };
 }
 
 export async function createCustomListMovieAddedNotification(input: {
@@ -195,13 +272,23 @@ export async function createCustomListMovieAddedNotification(input: {
   userMovieId: string;
   listName: string;
   movieTitle: string;
+  moviePosterPath?: string | null;
 }) {
+  const category: NotificationCategory = "custom_lists";
+  if (!(await isNotificationCategoryEnabled(input.verifiedUserId, category))) {
+    return { id: null, created: false };
+  }
   const notificationId = deterministicNotificationId(
     "custom-list-movie-added",
     input.verifiedUserId,
     input.listMovieId,
   );
   const admin = createAdminClient(input.verifiedUserId);
+  const content = {
+    title: "Added to custom list",
+    body: `${input.movieTitle} was added to ${input.listName}.`,
+    actionPath: `/lists/${input.listId}`,
+  };
   const { data, error } = await admin
     .from("notifications")
     .upsert(
@@ -209,15 +296,18 @@ export async function createCustomListMovieAddedNotification(input: {
         id: notificationId,
         user_id: input.verifiedUserId,
         type: "system",
-        title: "Added to custom list",
-        body: `${input.movieTitle} was added to ${input.listName}.`,
-        action_path: `/lists/${input.listId}`,
+        title: content.title,
+        body: content.body,
+        action_path: content.actionPath,
         metadata: {
           source: "custom_list_membership",
+          category,
           event: "movie_added",
           list_id: input.listId,
           list_movie_id: input.listMovieId,
           user_movie_id: input.userMovieId,
+          movie_title: input.movieTitle,
+          movie_poster_path: input.moviePosterPath ?? null,
         },
       },
       { onConflict: "id", ignoreDuplicates: true },
@@ -230,18 +320,41 @@ export async function createCustomListMovieAddedNotification(input: {
     throw new NotificationProducerError();
   }
 
-  return { id: notificationId, created: Boolean(data) };
+  const created = Boolean(data);
+  await dispatchCreatedNotification(created, {
+    notificationId,
+    category,
+    title: content.title,
+    body: content.body,
+    movieTitle: input.movieTitle,
+    imageUrl: getTmdbImageUrl(input.moviePosterPath ?? null, "w342"),
+    actionUrl: notificationActionUrl(
+      content.actionPath,
+      notificationId,
+      "push",
+    ),
+  });
+  return { id: notificationId, created };
 }
 
 export async function createCsvImportCompletedNotification(input: {
   verifiedUserId: string;
   completionId: string;
 }) {
+  const category: NotificationCategory = "imports";
+  if (!(await isNotificationCategoryEnabled(input.verifiedUserId, category))) {
+    return { id: null, created: false };
+  }
   const admin = createAdminClient(input.verifiedUserId);
   const notificationId = csvImportNotificationId(
     input.verifiedUserId,
     input.completionId,
   );
+  const content = {
+    title: "CSV import complete",
+    body: "Your CSV import completed successfully. Review your Library for imported movies.",
+    actionPath: "/library",
+  };
   const { data, error } = await admin
     .from("notifications")
     .upsert(
@@ -249,11 +362,12 @@ export async function createCsvImportCompletedNotification(input: {
         id: notificationId,
         user_id: input.verifiedUserId,
         type: "system",
-        title: "CSV import complete",
-        body: "Your CSV import completed successfully. Review your Library for imported movies.",
-        action_path: "/library",
+        title: content.title,
+        body: content.body,
+        action_path: content.actionPath,
         metadata: {
           source: "csv_import_v2",
+          category,
           completion_id: input.completionId,
         },
       },
@@ -267,7 +381,21 @@ export async function createCsvImportCompletedNotification(input: {
     throw new NotificationProducerError();
   }
 
-  return { id: notificationId, created: Boolean(data) };
+  const created = Boolean(data);
+  await dispatchCreatedNotification(created, {
+    notificationId,
+    category,
+    title: content.title,
+    body: content.body,
+    movieTitle: null,
+    imageUrl: null,
+    actionUrl: notificationActionUrl(
+      content.actionPath,
+      notificationId,
+      "push",
+    ),
+  });
+  return { id: notificationId, created };
 }
 
 export async function readOwnedNotifications(

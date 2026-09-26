@@ -25,6 +25,7 @@ const renderedPayloadExtensions = new Set([
 const serverSecretNames = [
   "SUPABASE_SECRET_KEY",
   "TMDB_READ_ACCESS_TOKEN",
+  "VAPID_PRIVATE_KEY",
 ];
 
 function extension(path) {

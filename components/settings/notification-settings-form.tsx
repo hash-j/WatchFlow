@@ -56,42 +56,72 @@ export function NotificationSettingsForm({
 
   return (
     <form action={action} className="space-y-6">
-      <div className="space-y-3">
+      <fieldset className="space-y-3">
+        <legend className="text-sm font-semibold">Notification categories</legend>
+        <p className="text-sm text-muted-foreground">
+          Choose which activity creates in-app and push notifications.
+        </p>
         <NotificationToggle
-          name="emailNotificationsEnabled"
-          label="Enable email notifications when delivery launches"
-          defaultChecked={preferences.emailNotificationsEnabled}
+          name="notificationMovieStatusEnabled"
+          label="Watching and watched status updates"
+          defaultChecked={preferences.notificationMovieStatusEnabled}
         />
         <NotificationToggle
-          name="scheduleRemindersEnabled"
-          label="Enable schedule reminders when delivery launches"
-          defaultChecked={preferences.scheduleRemindersEnabled}
+          name="notificationWatchNextEnabled"
+          label="Watch Next additions"
+          defaultChecked={preferences.notificationWatchNextEnabled}
         />
         <NotificationToggle
-          name="weeklySummaryEnabled"
-          label="Enable a weekly summary when delivery launches"
-          defaultChecked={preferences.weeklySummaryEnabled}
+          name="notificationCustomListsEnabled"
+          label="Custom list additions"
+          defaultChecked={preferences.notificationCustomListsEnabled}
         />
-      </div>
+        <NotificationToggle
+          name="notificationImportsEnabled"
+          label="CSV import completions"
+          defaultChecked={preferences.notificationImportsEnabled}
+        />
+      </fieldset>
 
-      <div className="max-w-sm space-y-2">
-        <Label htmlFor="reminder-offset">Reminder time</Label>
-        <Select
-          id="reminder-offset"
-          name="reminderOffsetMinutes"
-          defaultValue={String(preferences.reminderOffsetMinutes)}
-        >
-          {REMINDER_OFFSET_OPTIONS.map((offset) => (
-            <option key={offset} value={offset}>
-              {reminderLabels[offset]}
-            </option>
-          ))}
-        </Select>
-        <FieldError
-          errors={state.fieldErrors.reminderOffsetMinutes}
-          id="reminder-offset-error"
-        />
-      </div>
+      <fieldset className="space-y-3 border-t pt-6">
+        <legend className="text-sm font-semibold">Future delivery options</legend>
+        <div className="space-y-3">
+          <NotificationToggle
+            name="emailNotificationsEnabled"
+            label="Enable email notifications when delivery launches"
+            defaultChecked={preferences.emailNotificationsEnabled}
+          />
+          <NotificationToggle
+            name="scheduleRemindersEnabled"
+            label="Enable schedule reminders when delivery launches"
+            defaultChecked={preferences.scheduleRemindersEnabled}
+          />
+          <NotificationToggle
+            name="weeklySummaryEnabled"
+            label="Enable a weekly summary when delivery launches"
+            defaultChecked={preferences.weeklySummaryEnabled}
+          />
+        </div>
+
+        <div className="max-w-sm space-y-2">
+          <Label htmlFor="reminder-offset">Reminder time</Label>
+          <Select
+            id="reminder-offset"
+            name="reminderOffsetMinutes"
+            defaultValue={String(preferences.reminderOffsetMinutes)}
+          >
+            {REMINDER_OFFSET_OPTIONS.map((offset) => (
+              <option key={offset} value={offset}>
+                {reminderLabels[offset]}
+              </option>
+            ))}
+          </Select>
+          <FieldError
+            errors={state.fieldErrors.reminderOffsetMinutes}
+            id="reminder-offset-error"
+          />
+        </div>
+      </fieldset>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Button type="submit" disabled={isPending} className="w-full sm:w-auto">

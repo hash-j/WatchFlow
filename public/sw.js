@@ -93,14 +93,44 @@ function pushPayload(event) {
     typeof value.body === "string"
       ? value.body.trim().slice(0, 300)
       : "You have a new WatchFlow notification.";
-  const candidatePath =
-    typeof value.actionPath === "string" ? value.actionPath.trim() : "";
-  const actionPath =
-    candidatePath.startsWith("/") && !candidatePath.startsWith("//")
-      ? candidatePath
-      : "/notifications";
+  const candidateUrl =
+    typeof value.actionUrl === "string"
+      ? value.actionUrl.trim()
+      : typeof value.actionPath === "string"
+        ? value.actionPath.trim()
+        : "";
+  const actionUrl = internalNotificationUrl(candidateUrl);
+  const imageUrl =
+    typeof value.imageUrl === "string" &&
+    value.imageUrl.startsWith("https://image.tmdb.org/t/p/")
+      ? value.imageUrl
+      : undefined;
+  const notificationId =
+    typeof value.notificationId === "string"
+      ? value.notificationId.slice(0, 64)
+      : null;
 
-  return { title, body, actionPath };
+  return { title, body, actionUrl, imageUrl, notificationId };
+}
+
+function internalNotificationUrl(value) {
+  if (
+    typeof value !== "string" ||
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("\\")
+  ) {
+    return "/notifications";
+  }
+
+  try {
+    const resolved = new URL(value, self.location.origin);
+    return resolved.origin === self.location.origin
+      ? `${resolved.pathname}${resolved.search}${resolved.hash}`
+      : "/notifications";
+  } catch {
+    return "/notifications";
+  }
 }
 
 self.addEventListener("push", (event) => {
@@ -110,21 +140,23 @@ self.addEventListener("push", (event) => {
       body: payload.body,
       icon: "/icons/watchflow-192.png",
       badge: "/icons/watchflow-192.png",
-      data: { actionPath: payload.actionPath },
+      image: payload.imageUrl,
+      tag: payload.notificationId
+        ? `watchflow-${payload.notificationId}`
+        : undefined,
+      data: {
+        actionUrl: payload.actionUrl,
+        notificationId: payload.notificationId,
+      },
     }),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const candidatePath = event.notification.data?.actionPath;
-  const actionPath =
-    typeof candidatePath === "string" &&
-    candidatePath.startsWith("/") &&
-    !candidatePath.startsWith("//")
-      ? candidatePath
-      : "/notifications";
-  const targetUrl = new URL(actionPath, self.location.origin).href;
+  const candidateUrl = event.notification.data?.actionUrl;
+  const actionUrl = internalNotificationUrl(candidateUrl);
+  const targetUrl = new URL(actionUrl, self.location.origin).href;
 
   event.waitUntil(
     self.clients

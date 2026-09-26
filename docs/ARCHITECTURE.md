@@ -1,5 +1,113 @@
 # WatchFlow Architecture
 
+## Part 18H notification center experience
+
+Part 18H keeps the durable `notifications` row as the user-visible source of
+truth while adding category decisions and richer presentation at the existing
+trusted producer boundary.
+
+```text
+authenticated movie/list/import event
+  -> fresh auth.getUser() must match verified event owner
+  -> owner category preference read through SSR client + RLS
+  -> enabled: fixed producer persists notification -> Part 18F dispatcher
+  -> disabled/read failure: no notification or push; user mutation stays valid
+
+/notifications
+  -> authenticated bounded feed + unread count
+  -> category label + optional movie poster + internal contextual action
+  -> owner-only mark-one / mark-all security-invoker RPCs
+```
+
+The four categories are `movie_status`, `watch_next`, `custom_lists`, and
+`imports`. Their settings affect both durable in-app creation and the derived
+push attempt. Defaults are enabled so applying the migration preserves existing
+behavior. The browser submits booleans but never an owner ID; the Server Action
+uses the freshly authenticated settings session and existing owner RLS.
+
+Movie-related notification metadata includes a server-read title and optional
+TMDB poster path. The push payload maps that path through the fixed TMDB image
+origin and includes a server-generated action URL with notification/source
+context. Center links use the same internal URL builder. The service worker
+revalidates a single-slash, no-backslash, same-origin route before focusing or
+opening a WatchFlow window; malformed or external values fall back to
+`/notifications`.
+
+No email, scheduler, background delivery worker, service-role client, generic
+notification action, or client-side sender is introduced. The existing PWA
+service worker display/click handler is enhanced, but no new worker or
+background lifecycle is added.
+
+## Part 18G notification trigger integration
+
+Part 18G makes each existing fixed-payload notification producer the only
+delivery trigger. Application mutation adapters first commit their normal
+owner-scoped change, then invoke the appropriate producer. The producer first
+persists the deterministic in-app notification and invokes the dispatcher only
+when that insert returns a newly created row.
+
+```text
+successful authenticated mutation
+  -> trusted event-specific producer
+  -> deterministic notifications upsert
+  -> newly created row? yes -> Part 18F dispatcher -> Web Push
+                      no  -> stop (duplicate event)
+```
+
+This chain applies to Scheduled to Watching, Watching to Watched, entry into
+Watch Next, and new custom-list memberships. Unsupported status changes, Watch
+Next reorder/priority/removal, and custom-list removal/reorder do not enter the
+producer path.
+
+The durable notification row is the source of truth. Delivery is a
+best-effort side effect after persistence: dispatcher rejection, provider
+failure, missing VAPID configuration, or subscription failure cannot roll back
+the row or fail the originating mutation. The dispatcher independently derives
+the current user from fresh server Auth and accepts no owner identifier.
+Deterministic notification IDs plus conflict-ignore insertion provide the
+single delivery gate; there is no second trigger, client sender, outbox,
+worker, scheduler, or service-role path.
+
+## Part 18F request-driven notification delivery
+
+Part 18F connects the existing trusted notification producers to the browser
+Push API without adding asynchronous infrastructure. Delivery begins only after
+the deterministic in-app notification insert reports that a new row was
+created. Duplicate producer attempts therefore do not send duplicate pushes.
+
+```text
+authenticated application event
+  -> trusted fixed-payload notification producer
+  -> durable notifications row newly created
+  -> dispatcher re-verifies auth.getUser()
+  -> owner preference + owner push_subscriptions via SSR client and RLS
+  -> server-only Web Push adapter signs with VAPID
+  -> browser push service -> existing service-worker push handler
+```
+
+The dispatcher accepts notification presentation data but no user ID. It
+derives the current owner from the fresh Auth response, explicitly filters both
+subscription reads and cleanup writes by that owner, and relies on the existing
+RLS policies. It never constructs an admin/service-role client. The existing
+secret client remains limited to the fixed-payload notification producer insert
+described in the repository security guidance.
+
+`web-push` is isolated behind `lib/push/web-push-adapter.ts`. The browser-visible
+public VAPID key is paired with `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` only in
+that server-only module. A missing signing configuration skips/fails delivery
+safely and does not expose configuration details or invalidate a subscription.
+
+Each request fans out to the owner's current subscriptions. An expiration time
+already in the past is cleaned up without a send. HTTP 404/410 responses from a
+push service mark only that exact subscription permanently invalid; transient
+and unknown failures are retained. One failing subscription does not stop later
+subscriptions. The in-app row and originating application mutation remain
+successful regardless of push outcome.
+
+This is deliberately synchronous and event-driven. It adds no outbox, worker,
+scheduler, retry queue, cron, background job, client-side sender, email, or
+background sync.
+
 ## Part 18E browser push subscription boundary
 
 Part 18E adds subscription infrastructure, not notification delivery. The

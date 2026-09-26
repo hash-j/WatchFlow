@@ -1,5 +1,47 @@
 # WatchFlow Database
 
+## Part 18H notification category preferences
+
+Migration `202609260002_part_18h_notification_categories.sql` adds four
+non-null, default-true booleans to the existing private `user_preferences`
+table:
+
+- `notification_movie_status_enabled`;
+- `notification_watch_next_enabled`;
+- `notification_custom_lists_enabled`; and
+- `notification_imports_enabled`.
+
+The migration grants authenticated INSERT/UPDATE only on those columns. The
+existing `user_preferences` ownership policies and RLS remain unchanged and
+continue to require `user_id = auth.uid()`. It adds no table, policy, function,
+trigger, service-role grant, delivery record, worker, scheduler, or email data.
+
+Existing `notifications.metadata` stores the fixed producer category, movie
+title, and optional poster path where applicable; no notification schema change
+is required because metadata is already a bounded JSON object. Category
+preferences gate creation before the durable row and push attempt. Remote
+object inspection confirms all four columns are present on watchflow-dev. No
+direct migration-ledger credential was available, so this is object-level
+installation evidence rather than a migration-history claim. Production was
+not inspected or modified.
+
+## Part 18G notification trigger integration
+
+Part 18G adds no table, column, function, trigger, grant, policy, Auth, or RLS
+change. Existing deterministic notification primary keys and conflict-ignore
+upserts remain the idempotency boundary: only an upsert returning a newly
+created notification row invokes delivery. The database notification remains
+the authoritative event record, and push delivery state is not persisted as a
+second source of truth.
+
+## Part 18F notification delivery
+
+Part 18F adds no table, column, function, grant, policy, Auth, or RLS change.
+The request-driven dispatcher uses the authenticated SSR client to read the
+current owner's existing push preference/subscriptions and to delete only exact
+expired or provider-invalid subscription IDs under the Part 18E policies. No
+delivery, outbox, retry, worker, scheduler, or email table is introduced.
+
 ## Part 18E browser push subscriptions
 
 Migration `202609260001_part_18e_push_notification_foundation.sql` adds
@@ -182,7 +224,8 @@ The migration backfills every existing Auth user with `ON CONFLICT DO NOTHING`.
 
 Purpose: a private, durable in-app feed for trusted WatchFlow system updates.
 Part 18C-1 supports only `type = 'system'`; email delivery, reminder jobs,
-weekly summaries, push delivery, and an outbox are intentionally absent.
+weekly summaries, and an outbox remain absent. Part 18F may synchronously send a
+newly created system row through the owner-scoped Web Push dispatcher.
 
 Each row belongs to one Auth user through `user_id` with account-deletion
 cascade. It stores bounded `title` and `body` presentation text, an optional

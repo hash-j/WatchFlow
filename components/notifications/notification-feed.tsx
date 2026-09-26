@@ -6,7 +6,12 @@ import {
   MarkNotificationReadForm,
 } from "@/components/notifications/notification-actions";
 import { Button } from "@/components/ui/button";
+import { MoviePoster } from "@/components/movies/movie-poster";
 import { EmptyState } from "@/components/ui/responsive-layout";
+import {
+  NOTIFICATION_CATEGORY_LABELS,
+  notificationActionUrl,
+} from "@/lib/notifications/presentation";
 import type { NotificationItem } from "@/lib/notifications/types";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +37,7 @@ export function NotificationFeed({
       <EmptyState
         icon={<Bell className="size-6" aria-hidden="true" />}
         title="No notifications yet"
-        description="Important WatchFlow system updates will appear here. Email, scheduled reminders, summaries, and push delivery are not part of this release."
+        description="Movie activity, Watch Next, list, and import updates will appear here when their categories are enabled."
       />
     );
   }
@@ -66,6 +71,15 @@ export function NotificationFeed({
                   )}
                   aria-hidden="true"
                 />
+                {notification.moviePosterPath ? (
+                  <div className="w-14 shrink-0 sm:w-16">
+                    <MoviePoster
+                      path={notification.moviePosterPath}
+                      title={notification.movieTitle ?? notification.title}
+                      sizes="64px"
+                    />
+                  </div>
+                ) : null}
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 flex-col justify-between gap-1 sm:flex-row sm:gap-4">
                     <h2 className="break-words font-semibold">
@@ -78,13 +92,26 @@ export function NotificationFeed({
                       {formatCreatedAt(notification.createdAt, timeZone)}
                     </time>
                   </div>
+                  {notification.category ? (
+                    <p className="mt-1 text-xs font-medium text-primary">
+                      {NOTIFICATION_CATEGORY_LABELS[notification.category]}
+                    </p>
+                  ) : null}
                   <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
                     {notification.body}
                   </p>
                   <div className="mt-4 flex flex-wrap items-center gap-2">
                     {notification.actionPath ? (
                       <Button asChild size="sm">
-                        <Link href={notification.actionPath}>View details</Link>
+                        <Link
+                          href={notificationActionUrl(
+                            notification.actionPath,
+                            notification.id,
+                            "center",
+                          )}
+                        >
+                          View details
+                        </Link>
                       </Button>
                     ) : null}
                     {unread ? (

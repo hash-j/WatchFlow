@@ -77,6 +77,10 @@ export const notificationPreferencesSchema = z.object({
     "Choose 15 minutes, 30 minutes, 1 hour, 3 hours, or 1 day.",
   ),
   weeklySummaryEnabled: checkboxSchema,
+  notificationMovieStatusEnabled: checkboxSchema,
+  notificationWatchNextEnabled: checkboxSchema,
+  notificationCustomListsEnabled: checkboxSchema,
+  notificationImportsEnabled: checkboxSchema,
 });
 
 export const deleteLibrarySchema = z.object({

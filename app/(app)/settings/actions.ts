@@ -167,6 +167,16 @@ export async function updateNotificationPreferencesAction(
     scheduleRemindersEnabled: formData.get("scheduleRemindersEnabled"),
     reminderOffsetMinutes: value(formData, "reminderOffsetMinutes"),
     weeklySummaryEnabled: formData.get("weeklySummaryEnabled"),
+    notificationMovieStatusEnabled: formData.get(
+      "notificationMovieStatusEnabled",
+    ),
+    notificationWatchNextEnabled: formData.get(
+      "notificationWatchNextEnabled",
+    ),
+    notificationCustomListsEnabled: formData.get(
+      "notificationCustomListsEnabled",
+    ),
+    notificationImportsEnabled: formData.get("notificationImportsEnabled"),
   });
 
   if (!parsed.success) return validationError(flattenZodErrors(parsed.error));
@@ -180,7 +190,7 @@ export async function updateNotificationPreferencesAction(
     revalidatePath("/settings/notifications");
     return {
       status: "success",
-      message: "Notification preferences saved for future delivery.",
+      message: "Notification preferences saved.",
       fieldErrors: {},
     };
   } catch (error) {

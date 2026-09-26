@@ -486,6 +486,7 @@ type ListAdditionCandidate = {
   userMovieId: string;
   listName: string;
   movieTitle: string;
+  moviePosterPath: string | null;
 };
 
 async function readNewListAdditionCandidates(
@@ -503,7 +504,7 @@ async function readNewListAdditionCandidates(
       .in("id", listIds),
     client
       .from("user_movies")
-      .select("id, movies!inner(title)")
+      .select("id, movies!inner(title, poster_path)")
       .eq("user_id", user.id)
       .in("id", userMovieIds),
     client
@@ -526,11 +527,15 @@ async function readNewListAdditionCandidates(
         : [],
     ),
   );
-  const movieTitles = new Map(
+  const movieDetails = new Map(
     (moviesResult.data ?? []).flatMap((row) => {
       const movie = Array.isArray(row.movies) ? row.movies[0] : row.movies;
       return typeof row.id === "string" && movie && typeof movie.title === "string"
-        ? [[row.id, movie.title] as const]
+        ? [[row.id, {
+            title: movie.title,
+            posterPath:
+              typeof movie.poster_path === "string" ? movie.poster_path : null,
+          }] as const]
         : [];
     }),
   );
@@ -545,9 +550,15 @@ async function readNewListAdditionCandidates(
   return listIds.flatMap((listId) =>
     userMovieIds.flatMap((userMovieId) => {
       const listName = listNames.get(listId);
-      const movieTitle = movieTitles.get(userMovieId);
-      return listName && movieTitle && !existing.has(`${listId}:${userMovieId}`)
-        ? [{ listId, userMovieId, listName, movieTitle }]
+      const movie = movieDetails.get(userMovieId);
+      return listName && movie && !existing.has(`${listId}:${userMovieId}`)
+        ? [{
+            listId,
+            userMovieId,
+            listName,
+            movieTitle: movie.title,
+            moviePosterPath: movie.posterPath,
+          }]
         : [];
     }),
   );
@@ -601,6 +612,7 @@ async function produceListAdditionNotifications(
               userMovieId: candidate.userMovieId,
               listName: candidate.listName,
               movieTitle: candidate.movieTitle,
+              moviePosterPath: candidate.moviePosterPath,
             }),
           ]
         : [];

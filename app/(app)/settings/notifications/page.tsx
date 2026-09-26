@@ -15,14 +15,15 @@ export default async function NotificationSettingsPage() {
     <section className="rounded-xl border bg-card p-5 shadow-sm sm:p-6">
       <h2 className="text-xl font-semibold">Notifications</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Choose how you would like future reminders and summaries to work.
+        Control notification categories and delivery for your account.
       </p>
       <div className="mt-4 flex gap-3 rounded-lg border bg-muted/50 p-4 text-sm">
         <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <p>
-          Private in-app system notifications are available now. Browser push
-          subscriptions can be enabled below, but scheduled reminders, weekly
-          summaries, email, and automated push delivery are not currently sent.
+          Private in-app system notifications are available now. When push is
+          enabled, supported system events can also be delivered to subscribed
+          browsers. Scheduled reminders, weekly summaries, and email are not
+          currently sent.
         </p>
       </div>
       <div className="mt-6 border-t pt-6">

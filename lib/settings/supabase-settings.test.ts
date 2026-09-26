@@ -14,6 +14,7 @@ import {
   readProfileSettings,
   readUserPreferences,
   updateApplicationPreferences,
+  updateNotificationPreferences,
   updateOwnedProfile,
 } from "./supabase-settings";
 import { DEFAULT_USER_PREFERENCES } from "./types";
@@ -142,6 +143,32 @@ describe("authenticated settings persistence", () => {
       expect.objectContaining({
         user_id: "user-a",
         default_library_view: "list",
+      }),
+      { onConflict: "user_id" },
+    );
+  });
+
+  it("persists category preferences only for the verified owner row", async () => {
+    const write = builder();
+    const client = {
+      from: vi.fn().mockReturnValue(write),
+    } as unknown as SupabaseClient;
+
+    await updateNotificationPreferences(client, "user-a", {
+      ...DEFAULT_USER_PREFERENCES,
+      notificationMovieStatusEnabled: false,
+      notificationWatchNextEnabled: true,
+      notificationCustomListsEnabled: false,
+      notificationImportsEnabled: true,
+    });
+
+    expect(write.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: "user-a",
+        notification_movie_status_enabled: false,
+        notification_watch_next_enabled: true,
+        notification_custom_lists_enabled: false,
+        notification_imports_enabled: true,
       }),
       { onConflict: "user_id" },
     );

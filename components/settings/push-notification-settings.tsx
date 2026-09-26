@@ -144,8 +144,8 @@ export function PushNotificationSettings({
           Browser push notifications
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Store a secure subscription for this browser. Automated push delivery
-          is not included in this foundation.
+          Store a secure subscription for this browser. Supported system
+          notifications can be delivered here as they occur.
         </p>
       </div>
 

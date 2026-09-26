@@ -51,6 +51,10 @@ export type UserPreferences = {
   scheduleRemindersEnabled: boolean;
   reminderOffsetMinutes: number;
   weeklySummaryEnabled: boolean;
+  notificationMovieStatusEnabled: boolean;
+  notificationWatchNextEnabled: boolean;
+  notificationCustomListsEnabled: boolean;
+  notificationImportsEnabled: boolean;
 };
 
 export const DEFAULT_USER_PREFERENCES: UserPreferences = {
@@ -68,6 +72,10 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   scheduleRemindersEnabled: false,
   reminderOffsetMinutes: 60,
   weeklySummaryEnabled: false,
+  notificationMovieStatusEnabled: true,
+  notificationWatchNextEnabled: true,
+  notificationCustomListsEnabled: true,
+  notificationImportsEnabled: true,
 };
 
 export type ProfileSettings = {

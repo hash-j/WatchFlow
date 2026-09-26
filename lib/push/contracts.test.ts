@@ -45,13 +45,31 @@ describe("Part 18E browser push foundation", () => {
     expect(component).toContain("setThisBrowserSubscribed(true)");
   });
 
-  it("supports public VAPID configuration without exposing private keys", () => {
+  it("keeps VAPID signing credentials server-only", () => {
     const config = source("lib/push/config.ts");
+    const component = source(
+      "components/settings/push-notification-settings.tsx",
+    );
     const environment = source(".env.example");
 
+    expect(config).toContain('import "server-only"');
     expect(config).toContain("NEXT_PUBLIC_VAPID_PUBLIC_KEY");
+    expect(config).toContain("VAPID_PRIVATE_KEY");
     expect(environment).toContain("NEXT_PUBLIC_VAPID_PUBLIC_KEY=");
-    expect(config).not.toMatch(/PRIVATE|SECRET|service_role/);
+    expect(environment).toContain("VAPID_PRIVATE_KEY=");
+    expect(environment).not.toContain("NEXT_PUBLIC_VAPID_PRIVATE");
+    expect(component).not.toMatch(/VAPID_PRIVATE|privateKey|service_role/);
+  });
+
+  it("dispatches only through fresh authenticated RLS reads", () => {
+    const dispatcher = source("lib/notifications/dispatcher.ts");
+
+    expect(dispatcher).toContain("client.auth.getUser()");
+    expect(dispatcher).toContain('.from("push_subscriptions")');
+    expect(dispatcher).toContain('.eq("user_id", user.id)');
+    expect(dispatcher).not.toMatch(
+      /SUPABASE_SECRET_KEY|service_role|createAdminClient|p_user_id/,
+    );
   });
 
   it("shows bounded push payloads and opens only same-origin paths", () => {
@@ -60,9 +78,12 @@ describe("Part 18E browser push foundation", () => {
     expect(worker).toContain('addEventListener("push"');
     expect(worker).toContain("showNotification");
     expect(worker).toContain('addEventListener("notificationclick"');
-    expect(worker).toContain('candidatePath.startsWith("/")');
-    expect(worker).toContain('!candidatePath.startsWith("//")');
-    expect(worker).toContain('new URL(actionPath, self.location.origin)');
+    expect(worker).toContain('internalNotificationUrl(candidateUrl)');
+    expect(worker).toContain('!value.startsWith("/")');
+    expect(worker).toContain('value.startsWith("//")');
+    expect(worker).toContain('value.includes("\\\\")');
+    expect(worker).toContain('resolved.origin === self.location.origin');
+    expect(worker).toContain("notificationId: payload.notificationId");
     expect(worker).not.toMatch(
       /addEventListener\(["'](?:sync|periodicsync)["']/,
     );

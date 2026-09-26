@@ -33,6 +33,14 @@ let userBClient: SupabaseClient | null = null;
 let userAId = "";
 let userBId = "";
 let seeded: SeededNotification[] = [];
+let originalCategoryPreferences: Record<string, boolean> | null = null;
+
+const categoryPreferenceColumns = [
+  "notification_movie_status_enabled",
+  "notification_watch_next_enabled",
+  "notification_custom_lists_enabled",
+  "notification_imports_enabled",
+] as const;
 
 const importCandidates = [
   { title: "Inception", tmdbId: 27205, year: 2010 },
@@ -328,6 +336,22 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
     userBClient = userB.client;
     userAId = userA.userId;
     userBId = userB.userId;
+    const preferences = await userBClient
+      .from("user_preferences")
+      .select(categoryPreferenceColumns.join(","))
+      .eq("user_id", userBId)
+      .single();
+    if (preferences.error || !preferences.data) {
+      throw new Error("QA User B notification preferences could not be captured.");
+    }
+    originalCategoryPreferences = preferences.data as unknown as Record<string, boolean>;
+    const enableCategories = await userBClient
+      .from("user_preferences")
+      .update(Object.fromEntries(categoryPreferenceColumns.map((column) => [column, true])))
+      .eq("user_id", userBId);
+    if (enableCategories.error) {
+      throw new Error("QA User B notification categories could not be enabled for acceptance.");
+    }
     await cleanupStaleGuardedNotificationFixtures();
     await cleanupOrphanedControlledTransitionNotifications();
     await cleanupOrphanedControlledListNotifications();
@@ -337,6 +361,15 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
     await cleanupNotifications();
     await cleanupOrphanedControlledTransitionNotifications();
     await cleanupOrphanedControlledListNotifications();
+    if (userBClient && originalCategoryPreferences) {
+      const restore = await userBClient
+        .from("user_preferences")
+        .update(originalCategoryPreferences)
+        .eq("user_id", userBId);
+      if (restore.error) {
+        throw new Error("QA User B notification preferences could not be restored.");
+      }
+    }
     await Promise.all([
       userAClient?.auth.signOut(),
       userBClient?.auth.signOut(),
@@ -762,7 +795,7 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
       .getByRole("button", { name: "Save notification preferences" })
       .click();
     await expect(
-      qaUserBPage.getByText("Notification preferences saved for future delivery."),
+      qaUserBPage.getByText("Notification preferences saved."),
     ).toBeVisible();
     expectNoUnexpectedBrowserFailures(qaUserBAudit);
   });

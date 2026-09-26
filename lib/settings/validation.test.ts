@@ -97,6 +97,10 @@ describe("notification and destructive confirmation validation", () => {
       scheduleRemindersEnabled: false,
       reminderOffsetMinutes: 180,
       weeklySummaryEnabled: true,
+      notificationMovieStatusEnabled: false,
+      notificationWatchNextEnabled: false,
+      notificationCustomListsEnabled: false,
+      notificationImportsEnabled: false,
     });
   });
 
