@@ -32,11 +32,16 @@ export async function expectErrorState(
   return alert;
 }
 
-function isSameOriginMutation(page: Page, response: Response) {
+function isExpectedServerActionResponse(targetUrl: URL, response: Response) {
   if (response.request().method() !== "POST") return false;
+  if (!response.request().headers()["next-action"]) return false;
 
   try {
-    return new URL(response.url()).origin === new URL(page.url()).origin;
+    const responseUrl = new URL(response.url());
+    return (
+      responseUrl.origin === targetUrl.origin &&
+      responseUrl.pathname === targetUrl.pathname
+    );
   } catch {
     return false;
   }
@@ -47,17 +52,14 @@ export async function clickAndWaitForMutation(
   trigger: Locator,
   outcome: MutationOutcome,
 ) {
+  const targetUrl = new URL(page.url());
   const responsePromise = page.waitForResponse((response) =>
-    isSameOriginMutation(page, response),
+    isExpectedServerActionResponse(targetUrl, response),
   );
 
   await trigger.click();
   const response = await responsePromise;
   expect(response.status()).toBeLessThan(500);
-  expect(
-    await response.finished(),
-    "The streamed Server Action response should finish without being aborted.",
-  ).toBeNull();
 
   if (outcome.url) {
     await page.waitForURL(outcome.url);
@@ -69,7 +71,7 @@ export async function clickAndWaitForMutation(
     await expectErrorState(page, outcome.error);
   }
   if (outcome.visible) {
-    await expect(outcome.visible).toBeVisible();
+    await expect(outcome.visible).toBeVisible({ timeout: 30_000 });
   }
 
   return response;

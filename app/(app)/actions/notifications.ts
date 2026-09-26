@@ -9,7 +9,6 @@ import {
   type NotificationActionState,
 } from "@/lib/notifications/types";
 import { notificationIdSchema } from "@/lib/notifications/validation";
-import { revalidateNotificationViews } from "@/lib/revalidation/private-data";
 
 function result(
   previousState: NotificationActionState,
@@ -42,7 +41,6 @@ export async function markNotificationReadAction(
       );
     }
 
-    revalidateNotificationViews();
     return result(previousState, "success", "Notification marked as read.");
   } catch {
     return result(
@@ -58,7 +56,6 @@ export async function markAllNotificationsReadAction(
 ): Promise<NotificationActionState> {
   try {
     const updated = await markAllOwnedNotificationsRead();
-    revalidateNotificationViews();
     return result(
       previousState,
       "success",

@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Check, CheckCheck } from "lucide-react";
 
 import {
@@ -9,6 +10,25 @@ import {
 } from "@/app/(app)/actions/notifications";
 import { Button } from "@/components/ui/button";
 import { INITIAL_NOTIFICATION_ACTION_STATE } from "@/lib/notifications/types";
+
+function useRefreshAfterSuccessfulRead(
+  state: typeof INITIAL_NOTIFICATION_ACTION_STATE,
+) {
+  const router = useRouter();
+  const refreshedRequestId = useRef(0);
+
+  useEffect(() => {
+    if (
+      state.status !== "success" ||
+      state.requestId <= refreshedRequestId.current
+    ) {
+      return;
+    }
+
+    refreshedRequestId.current = state.requestId;
+    router.refresh();
+  }, [router, state.requestId, state.status]);
+}
 
 function ActionMessage({
   state,
@@ -38,6 +58,7 @@ export function MarkNotificationReadForm({
     markNotificationReadAction,
     INITIAL_NOTIFICATION_ACTION_STATE,
   );
+  useRefreshAfterSuccessfulRead(state);
 
   return (
     <form action={action} className="space-y-1">
@@ -62,6 +83,7 @@ export function MarkAllNotificationsReadForm() {
     markAllNotificationsReadAction,
     INITIAL_NOTIFICATION_ACTION_STATE,
   );
+  useRefreshAfterSuccessfulRead(state);
 
   return (
     <form action={action} className="space-y-1">

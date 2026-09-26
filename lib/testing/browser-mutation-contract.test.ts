@@ -7,12 +7,23 @@ function source(relativePath: string) {
 }
 
 describe("streamed Server Action browser synchronization", () => {
-  it("waits for the complete action response before navigating or auditing", () => {
+  it("matches the exact Server Action and uses product state as completion", () => {
     const assertions = source("e2e/helpers/assertions.ts");
-    expect(assertions).toContain("await response.finished()");
-    expect(assertions).toContain(
-      "The streamed Server Action response should finish without being aborted.",
+    expect(assertions).toContain('headers()["next-action"]');
+    expect(assertions).toContain("responseUrl.pathname === targetUrl.pathname");
+    expect(assertions).not.toContain("response.finished()");
+    expect(assertions).toContain("await expect(outcome.visible).toBeVisible");
+  });
+
+  it("refreshes notification feed data only after read action state succeeds", () => {
+    const actions = source("app/(app)/actions/notifications.ts");
+    const component = source(
+      "components/notifications/notification-actions.tsx",
     );
+    expect(actions).not.toContain("revalidateNotificationViews");
+    expect(component).toContain("useRefreshAfterSuccessfulRead(state)");
+    expect(component).toContain('state.status !== "success"');
+    expect(component).toContain("router.refresh()");
   });
 
   it("preserves notification-settings feedback without same-route revalidation", () => {

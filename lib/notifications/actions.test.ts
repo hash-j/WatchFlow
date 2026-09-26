@@ -3,16 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   markOne: vi.fn(),
   markAll: vi.fn(),
-  revalidate: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/notifications/supabase-notifications", () => ({
   markOwnedNotificationRead: mocks.markOne,
   markAllOwnedNotificationsRead: mocks.markAll,
-}));
-vi.mock("@/lib/revalidation/private-data", () => ({
-  revalidateNotificationViews: mocks.revalidate,
 }));
 
 import {
@@ -42,7 +38,6 @@ describe("notification read actions", () => {
 
     expect(mocks.markOne).toHaveBeenCalledWith(notificationId);
     expect(mocks.markOne.mock.calls[0]).not.toContain("browser-supplied-owner");
-    expect(mocks.revalidate).toHaveBeenCalledOnce();
     expect(state).toMatchObject({ status: "success", requestId: 1 });
   });
 
@@ -57,16 +52,14 @@ describe("notification read actions", () => {
 
     expect(state.status).toBe("error");
     expect(mocks.markOne).not.toHaveBeenCalled();
-    expect(mocks.revalidate).not.toHaveBeenCalled();
   });
 
-  it("marks all owned notifications and refreshes feed and shell", async () => {
+  it("marks all owned notifications and returns client-refresh state", async () => {
     const state = await markAllNotificationsReadAction(
       INITIAL_NOTIFICATION_ACTION_STATE,
     );
 
     expect(mocks.markAll).toHaveBeenCalledOnce();
-    expect(mocks.revalidate).toHaveBeenCalledOnce();
     expect(state).toMatchObject({
       status: "success",
       message: "2 notifications marked as read.",
@@ -87,6 +80,5 @@ describe("notification read actions", () => {
       "The notification could not be updated. Please try again.",
     );
     expect(state.message).not.toContain("private database");
-    expect(mocks.revalidate).not.toHaveBeenCalled();
   });
 });

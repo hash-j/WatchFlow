@@ -5,12 +5,53 @@ Last updated by: Codex / Part 18H Notification Center and User Experience
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18H adds the complete user-facing notification center experience, category controls, richer payload context, and safe push-click navigation.
 Current branch: `codex/part-18c-notifications`.
-Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. The manual GitHub Actions acceptance now passes preflight and every static/database gate, but its existing Part 18C browser suite exposed streamed Server Action/revalidation races plus one stale custom-list assertion. The root repairs are local and await an intentional commit/push and workflow rerun. Complete browser acceptance is still pending and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
+Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36250938521` passed every pre-browser gate but exposed one remaining notification read-action lifecycle defect. Its trace-proven repair is local and awaits an intentional commit/push and workflow rerun. Complete browser acceptance is still pending and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-26 Part 18H CI Read-Action Lifecycle Repair — LOCAL FIX
+
+- GitHub run `36250938521` executed commit `4308008` on the guarded Ubuntu/
+  Chrome watchflow-dev workflow. Target/schema preflight, focused tests, guarded
+  database integration, full Vitest, ESLint, TypeScript, diff check, production
+  build, client-secret scan, and Chrome installation all passed before the Part
+  18C serial browser step.
+- Retained traces prove the read-action POST itself returned HTTP 200 in roughly
+  half a second as a chunked `text/x-component` response with the expected
+  Next-Action revalidation marker and no network failure. Playwright's
+  `response.finished()` nevertheless remained unresolved until the page closed.
+  It is therefore not a valid completion primitive for this streamed Server
+  Action path.
+- The CSV import was not stalled: upload, mapping, TMDB match, confirmation,
+  import completion, notification-row inspection, and notification-page render
+  all completed in seconds. The first stalled operation was the subsequent
+  `Mark CSV import complete as read` call at the same `response.finished()`
+  helper line. The `removeControlledMovie` stack appeared only after the
+  300-second timeout closed the page and entered `finally` cleanup.
+- Browser mutation synchronization now matches the exact current-path POST with
+  a `Next-Action` request header, verifies its HTTP status, and uses the requested
+  product outcome (success/error UI, URL, or refreshed visible state) as the
+  deterministic completion signal. It no longer waits on Playwright's unreliable
+  streamed-response completion object. Network-abort diagnostics remain active
+  and strict.
+- Notification read actions no longer invalidate their own active Server
+  Component tree from inside the action response. After a successful owner-
+  scoped action state arrives, the client performs one guarded `router.refresh()`;
+  the fresh RLS reads update feed rows, unread count, and shell badge together.
+  Errors do not refresh, and request IDs prevent duplicate refreshes.
+- The fix changes no producer, CSV import, dispatcher, Web Push, migration,
+  schema, RLS/Auth policy, secret usage, target guard, or CI safety check.
+  Production was neither read nor modified.
+- Focused notification/lifecycle coverage passes 7 files/44 tests; full Vitest
+  passes 108 files/955 tests. ESLint, direct TypeScript, `git diff --check`, and
+  the 272-artifact client-secret scan pass. The production build compiles, then
+  this Windows host rejects Next's post-compile worker with `spawn EPERM`.
+  Local Part 18C and Part 18H Playwright attempts fail at the same host-level
+  process-launch boundary before browser discovery, so GitHub CI must provide
+  the final browser/build acceptance evidence.
 
 ## 2026-09-26 Part 18H CI Browser Failure Repair — LOCAL FIX
 
