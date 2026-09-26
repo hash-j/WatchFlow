@@ -72,4 +72,26 @@ describe("streamed Server Action browser synchronization", () => {
       'failure.category === "unused-font-preload-advice"',
     );
   });
+
+  it("allows only an explicitly confirmed completed Server Action abort", () => {
+    const diagnostics = source("e2e/helpers/diagnostics.ts");
+    const fixtures = source("e2e/fixtures/qa.ts");
+    const acceptance = source("e2e/part18c-notifications.spec.ts");
+
+    expect(diagnostics).toContain("confirmCompletedServerAction(");
+    expect(diagnostics).toContain('request.method() !== "POST"');
+    expect(diagnostics).toContain('request.resourceType() !== "fetch"');
+    expect(diagnostics).toContain('request.headers()["next-action"]');
+    expect(diagnostics).toContain('includes("text/x-component")');
+    expect(diagnostics).toContain("responseUrl.origin !== currentUrl.origin");
+    expect(diagnostics).toContain("responseUrl.pathname !== expectedPathname");
+    expect(diagnostics).toContain("failure.completedServerAction === true");
+    expect(fixtures).toContain('page.waitForLoadState("networkidle")');
+    expect(acceptance).toContain(
+      'confirmCompletedServerAction(\n      markOneResponse,\n      "/notifications"',
+    );
+    expect(acceptance).toContain(
+      'confirmCompletedServerAction(\n      saveResponse,\n      "/settings/notifications"',
+    );
+  });
 });

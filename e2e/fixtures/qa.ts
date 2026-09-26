@@ -58,6 +58,7 @@ async function provideQaSession(
 
   try {
     await login(page, getQaCredentials(kind));
+    await page.waitForLoadState("networkidle");
     audit = monitorBrowserFailures(page);
     await provideSession({ context, page, audit });
   } finally {

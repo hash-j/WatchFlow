@@ -431,7 +431,7 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
       qaUserBPage.locator('a[href="/notifications"] span[aria-label="2 unread notifications"]'),
     ).toHaveCount(2);
 
-    await clickAndWaitForMutation(
+    const markOneResponse = await clickAndWaitForMutation(
       qaUserBPage,
       qaUserBPage.getByRole("button", {
         name: `Mark ${userBFirstTitle} as read`,
@@ -444,6 +444,10 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
       qaUserBPage.locator('a[href="/notifications"] span[aria-label="1 unread notifications"]'),
     ).toHaveCount(2);
     await expectUserBFixtureReadState(1);
+    qaUserBAudit.confirmCompletedServerAction(
+      markOneResponse,
+      "/notifications",
+    );
 
     await qaUserBPage.reload();
     await expect(qaUserBPage.getByText("1 unread", { exact: true })).toBeVisible();
@@ -452,7 +456,7 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
     ).toHaveCount(0);
     await expectUserBFixtureReadState(1);
 
-    await clickAndWaitForMutation(
+    const markAllResponse = await clickAndWaitForMutation(
       qaUserBPage,
       qaUserBPage.getByRole("button", { name: "Mark all as read" }),
       {
@@ -463,6 +467,10 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
       qaUserBPage.locator('a[href="/notifications"] span[aria-label$="unread notifications"]'),
     ).toHaveCount(0);
     await expectUserBFixtureReadState(0);
+    qaUserBAudit.confirmCompletedServerAction(
+      markAllResponse,
+      "/notifications",
+    );
 
     await qaUserBPage.reload();
     await expect(qaUserBPage.getByText("0 unread", { exact: true })).toBeVisible();
@@ -856,12 +864,30 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
     await expect(
       qaUserBPage.getByRole("button", { name: "Save notification preferences" }),
     ).toBeVisible();
-    await clickAndWaitForMutation(
+    const beforeSave = await userBClient!
+      .from("user_preferences")
+      .select("updated_at")
+      .eq("user_id", userBId)
+      .single();
+    expect(beforeSave.error).toBeNull();
+
+    const saveResponse = await clickAndWaitForMutation(
       qaUserBPage,
       qaUserBPage.getByRole("button", {
         name: "Save notification preferences",
       }),
       { success: "Notification preferences saved." },
+    );
+    const afterSave = await userBClient!
+      .from("user_preferences")
+      .select("updated_at")
+      .eq("user_id", userBId)
+      .single();
+    expect(afterSave.error).toBeNull();
+    expect(afterSave.data?.updated_at).not.toBe(beforeSave.data?.updated_at);
+    qaUserBAudit.confirmCompletedServerAction(
+      saveResponse,
+      "/settings/notifications",
     );
     expectNoUnexpectedBrowserFailures(qaUserBAudit);
   });

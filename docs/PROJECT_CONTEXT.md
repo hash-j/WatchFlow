@@ -1,16 +1,71 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27
 Last updated by: Codex / Part 18H Notification Center and User Experience
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18H adds the complete user-facing notification center experience, category controls, richer payload context, and safe push-click navigation.
 Current branch: `codex/part-18c-notifications`.
-Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36261749310` passed all product-state and database assertions in the remaining notification read-action case, then exposed a Server Action transport cancellation caused by successful local reconciliation unmounting the active action form. Its trace-proven lifecycle repair is local and awaits an intentional commit/push and workflow rerun. Complete browser acceptance is still pending and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
+Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36264250792` passed every non-browser gate and all notification product-state/database assertions reached by the Part 18C suite. Its remaining read-action and notification-settings failures are strict diagnostics observing a trace-proven Next/React Server Action stream cancellation after a successful HTTP 200 action result has already been consumed. The local QA repair correlates only the exact successful action response after independent product/database proof and drains login navigation before scenario monitoring; it awaits an intentional commit/push and workflow rerun. Complete browser acceptance is still pending and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-27 Part 18H CI Completed-Action Diagnostic Correlation — LOCAL FIX
+
+- GitHub run `36264250792` executed commit `39eee9b` in the guarded Ubuntu/
+  Chrome watchflow-dev workflow. Target/schema preflight, focused Part 18H
+  coverage, guarded database integration, full Vitest, ESLint, TypeScript,
+  diff check, production build, client-secret scan, Chrome installation, the
+  notification empty state, and notification RLS all passed. The serial Part
+  18C browser step failed only its read-action and notification-settings final
+  diagnostic audits; later serial producer cases were skipped and are not
+  product failures.
+- All three read-action traces complete the exact `2 -> 1 -> 1 -> 0 -> 0`
+  owner-scoped database sequence, exact feed state, both navigation badges,
+  reload persistence, and two-user isolation. Mark-one and mark-all each issue
+  exactly one same-origin `Next-Action` POST. There is no duplicate submission,
+  `router.refresh()`, component teardown, or navigation before the abort. Each
+  affected response is HTTP 200 `text/x-component`; completed retries contain
+  the expected 144/146-byte action result while the complementary response may
+  be reported aborted after React has already applied the same result.
+- The settings traces independently disprove form unmount as the cause. Each
+  attempt sends exactly one POST, keeps the form mounted, performs no refresh
+  or navigation, renders `Notification preferences saved.`, and then records
+  the HTTP 200 action stream as aborted. The earlier mounted-form repair was
+  safe but could not control this framework-owned race between server EOF and
+  cancellation of the remaining Flight reader after the action return value is
+  decoded.
+- Diagnostics still record every browser failure. A failed request is eligible
+  for completed-action correlation only when the exact Playwright `Response`
+  object is explicitly confirmed after the expected UI and direct database
+  transition. Confirmation requires an aborted POST fetch, a `Next-Action`
+  request header, a 2xx `text/x-component` response, the expected exact route,
+  and the current same origin. Any other abort, route, response, request,
+  console error, or network failure remains unexpected; there is no generic
+  pathname or aborted-request whitelist.
+- The notification-settings case now additionally proves its owner-scoped row
+  changed by comparing `user_preferences.updated_at` immediately before and
+  after the successful save. The read case retains direct fixture-ID database
+  assertions at every stage before correlating either exact response.
+- One attempt also captured an aborted `GET /dashboard` initiated by the QA
+  login navigation before scenario monitoring began. The authenticated fixture
+  already excluded login itself from the scenario audit, but the late request
+  termination crossed that boundary. Waiting for post-login network idle before
+  attaching the monitor drains only that pre-scenario traffic; general scenario
+  diagnostics and browser coverage remain unchanged.
+- Focused notification coverage passes 18 files/101 tests. The ordinary full
+  Vitest launcher hit this Windows host's known config-process `spawn EPERM`;
+  the documented native-loader/single-worker equivalent passes 108 files/956
+  tests. ESLint, direct TypeScript, `git diff --check`, and the 272-artifact
+  client-secret scan pass. The production bundle compiles successfully before
+  the host rejects Next's post-compile TypeScript worker with `spawn EPERM`.
+  Focused local Playwright is likewise blocked before browser startup, so the
+  guarded GitHub workflow must provide final browser acceptance.
+- No application behavior, notification persistence, schema, migration, RLS/
+  Auth policy, target guard, CI secret mapping, timeout, deployment, commit,
+  push, merge, or Production state changed.
 
 ## 2026-09-26 Part 18H CI Server Action Transport Lifecycle Repair — LOCAL FIX
 

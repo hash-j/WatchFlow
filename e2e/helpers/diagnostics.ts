@@ -26,6 +26,7 @@ type RequestFailure = {
   resourceType: string;
   url: string;
   category: string;
+  completedServerAction?: true;
 };
 
 type HttpFailure = {
@@ -47,6 +48,10 @@ export type BrowserAuditSnapshot = {
 };
 
 export type BrowserFailureCollector = {
+  confirmCompletedServerAction: (
+    response: Response,
+    expectedPathname: string,
+  ) => void;
   snapshot: () => BrowserAuditSnapshot;
   stop: () => void;
 };
@@ -143,6 +148,8 @@ export function monitorBrowserFailures(
   page: Page,
 ): BrowserFailureCollector {
   const failures: SafeBrowserFailure[] = [];
+  const confirmedServerActions = new WeakSet<Request>();
+  const requestFailures = new WeakMap<Request, RequestFailure>();
 
   const onConsole = (message: ConsoleMessage) => {
     const type = message.type();
@@ -166,13 +173,18 @@ export function monitorBrowserFailures(
   };
 
   const onRequestFailed = (request: Request) => {
-    failures.push({
+    const failure: RequestFailure = {
       kind: "request-failed",
       method: request.method(),
       resourceType: request.resourceType(),
       url: safeRequestUrl(request.url()),
       category: networkFailureCategory(request.failure()?.errorText ?? null),
-    });
+      ...(confirmedServerActions.has(request)
+        ? { completedServerAction: true as const }
+        : {}),
+    };
+    requestFailures.set(request, failure);
+    failures.push(failure);
   };
 
   const onResponse = (response: Response) => {
@@ -194,6 +206,42 @@ export function monitorBrowserFailures(
   page.on("response", onResponse);
 
   return {
+    confirmCompletedServerAction(response, expectedPathname) {
+      // React may apply a Server Action result before cancelling unread Flight
+      // bytes. Callers invoke this only after independently proving the expected
+      // UI and durable database transition; the exact failed request stays in
+      // the audit and receives this correlation marker.
+      const request = response.request();
+      let responseUrl: URL;
+      let currentUrl: URL;
+
+      try {
+        responseUrl = new URL(response.url());
+        currentUrl = new URL(page.url());
+      } catch {
+        throw new Error("The completed Server Action response URL was invalid.");
+      }
+
+      const contentType = response.headers()["content-type"] ?? "";
+      if (
+        request.method() !== "POST" ||
+        request.resourceType() !== "fetch" ||
+        !request.headers()["next-action"] ||
+        response.status() < 200 ||
+        response.status() >= 300 ||
+        !contentType.toLowerCase().includes("text/x-component") ||
+        responseUrl.origin !== currentUrl.origin ||
+        responseUrl.pathname !== expectedPathname
+      ) {
+        throw new Error(
+          "The response was not the expected completed same-origin Server Action.",
+        );
+      }
+
+      confirmedServerActions.add(request);
+      const failure = requestFailures.get(request);
+      if (failure) failure.completedServerAction = true;
+    },
     snapshot: () => ({ failures: [...failures] }),
     stop() {
       page.off("console", onConsole);
@@ -208,6 +256,16 @@ function isAllowed(
   failure: SafeBrowserFailure,
   allowance: FailureAllowance,
 ) {
+  if (
+    failure.kind === "request-failed" &&
+    failure.category === "aborted" &&
+    failure.method === "POST" &&
+    failure.resourceType === "fetch" &&
+    failure.completedServerAction === true
+  ) {
+    return true;
+  }
+
   if (
     "category" in failure &&
     (failure.category === "development-transport" ||
