@@ -5,12 +5,56 @@ Last updated by: Codex / Part 18H Notification Center and User Experience
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18H adds the complete user-facing notification center experience, category controls, richer payload context, and safe push-click navigation.
 Current branch: `codex/part-18c-notifications`.
-Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36250938521` passed every pre-browser gate but exposed one remaining notification read-action lifecycle defect. Its trace-proven repair is local and awaits an intentional commit/push and workflow rerun. Complete browser acceptance is still pending and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
+Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36255874585` passed every non-browser gate and three existing notification browser cases, then exposed one remaining mounted-UI convergence defect in the read-action case. Its trace-proven repair is local and awaits an intentional commit/push and workflow rerun. Complete browser acceptance is still pending and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-26 Part 18H CI Notification Read Convergence Repair — LOCAL FIX
+
+- GitHub run `36255874585` executed commit `1cbf2ff` in the guarded Ubuntu/
+  Chrome watchflow-dev workflow. The pinned target/schema preflight, focused
+  Part 18H tests, guarded database integration, full Vitest, ESLint, TypeScript,
+  diff check, production build, client-secret scan, Chrome installation, empty-
+  state browser case, RLS browser case, and notification-settings browser case
+  passed. Only the serial read-action browser case failed; later producer cases
+  were skipped by Playwright's serial contract and are not product failures.
+- All three retained attempts prove fixture ordering was correct: the guarded
+  rows were inserted before the full `/notifications` navigation, and the first
+  rendered tree contained both QA User B rows and exactly two unread badges.
+  This was not a fixture-after-render race or an incorrect assertion target.
+- The mark-one Server Action returned `Notification marked as read.`. Its
+  immediately following `/notifications?_rsc=...` response contained the
+  durable updated row as `Read`, the other row unread, and both layout/feed
+  counts at one. React/Next did not merge that fresh streamed payload into the
+  mounted action/feed tree, whose DOM remained at two. On the complementary
+  retry, mark one converged, mark all returned `1 notification marked as read.`,
+  and the mounted DOM remained at one. The owner-scoped writes and fresh server
+  reads were correct; the unreliable boundary was client `router.refresh()`
+  reconciliation after a streamed `useActionState` response.
+- A successful read action now updates the mounted feed row and unread count
+  from its explicit action result, then broadcasts that exact count to both
+  desktop and mobile navigation badges. Error results make no optimistic state
+  change. Request IDs still prevent duplicate success callbacks. A hard reload
+  remains in acceptance as the independent durable database/RLS persistence
+  check; the fix does not replace persistence with browser-only state.
+- The guarded read-action browser case now also queries only its exact seeded
+  QA User B fixture IDs after seed, mark one, reload, mark all, and final reload.
+  It requires unread counts `2 -> 1 -> 1 -> 0 -> 0`, proving database state
+  separately from the exact feed and two navigation-badge assertions.
+- No producer, dispatcher, Web Push behavior, schema, migration, RLS/Auth
+  policy, service-role browser path, target guard, diagnostic, assertion,
+  timeout, credential mapping, deployment, or Production state changed.
+- Focused notification/lifecycle coverage passes 7 files/43 tests. The default
+  Vitest launcher was attempted and hit this Windows host's config-process
+  `spawn EPERM`; the native-loader fallback passes the full 108-file/955-test
+  suite. ESLint, direct TypeScript, `git diff --check`, and the 272-artifact
+  client-secret scan pass. The production bundle compiles successfully before
+  the host rejects Next's post-compile TypeScript worker with `spawn EPERM`.
+  Local Part 18C/18H Playwright is blocked at the same process-launch boundary,
+  so guarded GitHub CI must supply the final browser acceptance evidence.
 
 ## 2026-09-26 Part 18H CI Read-Action Lifecycle Repair — LOCAL FIX
 

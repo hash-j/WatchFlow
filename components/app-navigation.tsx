@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -95,6 +96,30 @@ export function AppNavigation({
   unreadCount?: number;
 }) {
   const pathname = usePathname();
+  const [visibleUnreadCount, setVisibleUnreadCount] = useState(unreadCount);
+
+  useEffect(() => {
+    const updateUnreadCount = (event: Event) => {
+      const nextUnreadCount = (event as CustomEvent<unknown>).detail;
+      if (
+        typeof nextUnreadCount === "number" &&
+        Number.isSafeInteger(nextUnreadCount) &&
+        nextUnreadCount >= 0
+      ) {
+        setVisibleUnreadCount(nextUnreadCount);
+      }
+    };
+
+    window.addEventListener(
+      "watchflow:notification-unread-count",
+      updateUnreadCount,
+    );
+    return () =>
+      window.removeEventListener(
+        "watchflow:notification-unread-count",
+        updateUnreadCount,
+      );
+  }, []);
 
   return (
     <nav
@@ -137,12 +162,12 @@ export function AppNavigation({
                   >
                     <Icon className="size-4 shrink-0" aria-hidden="true" />
                     <span className="min-w-0 flex-1 break-words">{label}</span>
-                    {href === "/notifications" && unreadCount > 0 ? (
+                    {href === "/notifications" && visibleUnreadCount > 0 ? (
                       <span
                         className="min-w-5 rounded-full bg-sidebar-active px-1.5 py-0.5 text-center text-[0.6875rem] font-semibold leading-none text-rating-foreground"
-                        aria-label={`${unreadCount} unread notifications`}
+                        aria-label={`${visibleUnreadCount} unread notifications`}
                       >
-                        {unreadCount > 99 ? "99+" : unreadCount}
+                        {visibleUnreadCount > 99 ? "99+" : visibleUnreadCount}
                       </span>
                     ) : null}
                   </Link>

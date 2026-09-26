@@ -38,6 +38,7 @@ export function AppShell({
           </div>
 
           <AppNavigation
+            key={`desktop-notifications-${unreadNotificationCount}`}
             className="flex-1 overflow-y-auto"
             unreadCount={unreadNotificationCount}
           />
@@ -57,6 +58,7 @@ export function AppShell({
 
       <div className="min-w-0">
         <MobileAppNavigation
+          key={`mobile-notifications-${unreadNotificationCount}`}
           identity={identity}
           email={email}
           unreadCount={unreadNotificationCount}

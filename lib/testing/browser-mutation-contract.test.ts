@@ -15,15 +15,22 @@ describe("streamed Server Action browser synchronization", () => {
     expect(assertions).toContain("await expect(outcome.visible).toBeVisible");
   });
 
-  it("refreshes notification feed data only after read action state succeeds", () => {
+  it("converges notification UI only after read action state succeeds", () => {
     const actions = source("app/(app)/actions/notifications.ts");
     const component = source(
       "components/notifications/notification-actions.tsx",
     );
+    const feed = source("components/notifications/notification-feed.tsx");
+    const navigation = source("components/app-navigation.tsx");
     expect(actions).not.toContain("revalidateNotificationViews");
-    expect(component).toContain("useRefreshAfterSuccessfulRead(state)");
+    expect(component).toContain("useNotifyAfterSuccessfulRead(");
     expect(component).toContain('state.status !== "success"');
-    expect(component).toContain("router.refresh()");
+    expect(component).not.toContain("router.refresh()");
+    expect(feed).toContain("setVisibleUnreadCount(nextUnreadCount)");
+    expect(feed).toContain("publishUnreadCount(nextUnreadCount)");
+    expect(navigation).toContain(
+      '"watchflow:notification-unread-count"',
+    );
   });
 
   it("preserves notification-settings feedback without same-route revalidation", () => {

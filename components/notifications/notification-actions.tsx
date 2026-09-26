@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { Check, CheckCheck } from "lucide-react";
 
 import {
@@ -11,23 +10,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { INITIAL_NOTIFICATION_ACTION_STATE } from "@/lib/notifications/types";
 
-function useRefreshAfterSuccessfulRead(
+function useNotifyAfterSuccessfulRead(
   state: typeof INITIAL_NOTIFICATION_ACTION_STATE,
+  onSuccess: (() => void) | undefined,
 ) {
-  const router = useRouter();
-  const refreshedRequestId = useRef(0);
+  const notifiedRequestId = useRef(0);
 
   useEffect(() => {
     if (
       state.status !== "success" ||
-      state.requestId <= refreshedRequestId.current
+      state.requestId <= notifiedRequestId.current
     ) {
       return;
     }
 
-    refreshedRequestId.current = state.requestId;
-    router.refresh();
-  }, [router, state.requestId, state.status]);
+    notifiedRequestId.current = state.requestId;
+    onSuccess?.();
+  }, [onSuccess, state.requestId, state.status]);
 }
 
 function ActionMessage({
@@ -50,15 +49,17 @@ function ActionMessage({
 export function MarkNotificationReadForm({
   notificationId,
   title,
+  onRead,
 }: {
   notificationId: string;
   title: string;
+  onRead?: () => void;
 }) {
   const [state, action, isPending] = useActionState(
     markNotificationReadAction,
     INITIAL_NOTIFICATION_ACTION_STATE,
   );
-  useRefreshAfterSuccessfulRead(state);
+  useNotifyAfterSuccessfulRead(state, onRead);
 
   return (
     <form action={action} className="space-y-1">
@@ -78,12 +79,16 @@ export function MarkNotificationReadForm({
   );
 }
 
-export function MarkAllNotificationsReadForm() {
+export function MarkAllNotificationsReadForm({
+  onReadAll,
+}: {
+  onReadAll?: () => void;
+}) {
   const [state, action, isPending] = useActionState(
     markAllNotificationsReadAction,
     INITIAL_NOTIFICATION_ACTION_STATE,
   );
-  useRefreshAfterSuccessfulRead(state);
+  useNotifyAfterSuccessfulRead(state, onReadAll);
 
   return (
     <form action={action} className="space-y-1">

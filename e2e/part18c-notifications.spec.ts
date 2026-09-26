@@ -109,6 +109,27 @@ async function seedNotifications() {
   seeded = data;
 }
 
+async function expectUserBFixtureReadState(expectedUnreadCount: number) {
+  if (!admin || !userBId) {
+    throw new Error("Guarded notification read-state inspection is unavailable.");
+  }
+
+  const userBNotificationIds = seeded
+    .filter(({ user_id }) => user_id === userBId)
+    .map(({ id }) => id);
+  const result = await admin
+    .from("notifications")
+    .select("id, read_at")
+    .eq("user_id", userBId)
+    .in("id", userBNotificationIds);
+
+  expect(result.error).toBeNull();
+  expect(result.data).toHaveLength(userBNotificationIds.length);
+  expect(result.data?.filter(({ read_at }) => read_at === null)).toHaveLength(
+    expectedUnreadCount,
+  );
+}
+
 async function cleanupNotifications() {
   if (!admin || seeded.length === 0) return;
   const ids = seeded.map(({ id }) => id);
@@ -400,6 +421,7 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
     qaUserBAudit,
   }) => {
     await seedNotifications();
+    await expectUserBFixtureReadState(2);
 
     await qaUserBPage.goto("/notifications");
     await expect(qaUserBPage.getByRole("heading", { name: userBFirstTitle })).toBeVisible();
@@ -421,12 +443,14 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
     await expect(
       qaUserBPage.locator('a[href="/notifications"] span[aria-label="1 unread notifications"]'),
     ).toHaveCount(2);
+    await expectUserBFixtureReadState(1);
 
     await qaUserBPage.reload();
     await expect(qaUserBPage.getByText("1 unread", { exact: true })).toBeVisible();
     await expect(
       qaUserBPage.getByRole("button", { name: `Mark ${userBFirstTitle} as read` }),
     ).toHaveCount(0);
+    await expectUserBFixtureReadState(1);
 
     await clickAndWaitForMutation(
       qaUserBPage,
@@ -438,9 +462,11 @@ test.describe("Part 18C-1 guarded notification acceptance", () => {
     await expect(
       qaUserBPage.locator('a[href="/notifications"] span[aria-label$="unread notifications"]'),
     ).toHaveCount(0);
+    await expectUserBFixtureReadState(0);
 
     await qaUserBPage.reload();
     await expect(qaUserBPage.getByText("0 unread", { exact: true })).toBeVisible();
+    await expectUserBFixtureReadState(0);
 
     await qaUserAPage.goto("/notifications");
     await expect(qaUserAPage.getByRole("heading", { name: userATitle })).toBeVisible();

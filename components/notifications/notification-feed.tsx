@@ -1,3 +1,6 @@
+"use client";
+
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Bell, Circle } from "lucide-react";
 
@@ -14,6 +17,14 @@ import {
 } from "@/lib/notifications/presentation";
 import type { NotificationItem } from "@/lib/notifications/types";
 import { cn } from "@/lib/utils";
+
+const UNREAD_COUNT_EVENT = "watchflow:notification-unread-count";
+
+function publishUnreadCount(unreadCount: number) {
+  window.dispatchEvent(
+    new CustomEvent(UNREAD_COUNT_EVENT, { detail: unreadCount }),
+  );
+}
 
 function formatCreatedAt(value: string, timeZone: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -32,7 +43,46 @@ export function NotificationFeed({
   unreadCount: number;
   timeZone: string;
 }) {
-  if (notifications.length === 0) {
+  const [visibleNotifications, setVisibleNotifications] = useState(notifications);
+  const [visibleUnreadCount, setVisibleUnreadCount] = useState(unreadCount);
+
+  const markRead = useCallback(
+    (notificationId: string) => {
+      const target = visibleNotifications.find(
+        ({ id }) => id === notificationId,
+      );
+      if (!target || target.readAt !== null) return;
+
+      const nextUnreadCount = Math.max(0, visibleUnreadCount - 1);
+      setVisibleNotifications((current) =>
+        current.map((notification) =>
+          notification.id === notificationId
+            ? { ...notification, readAt: new Date().toISOString() }
+            : notification,
+        ),
+      );
+      setVisibleUnreadCount(nextUnreadCount);
+      publishUnreadCount(nextUnreadCount);
+    },
+    [visibleNotifications, visibleUnreadCount],
+  );
+
+  const markAllRead = useCallback(() => {
+    if (visibleUnreadCount === 0) return;
+
+    const readAt = new Date().toISOString();
+    setVisibleNotifications((current) =>
+      current.map((notification) =>
+        notification.readAt === null
+          ? { ...notification, readAt }
+          : notification,
+      ),
+    );
+    setVisibleUnreadCount(0);
+    publishUnreadCount(0);
+  }, [visibleUnreadCount]);
+
+  if (visibleNotifications.length === 0) {
     return (
       <EmptyState
         icon={<Bell className="size-6" aria-hidden="true" />}
@@ -46,13 +96,15 @@ export function NotificationFeed({
     <div className="space-y-5">
       <div className="flex min-w-0 flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <p className="text-sm text-muted-foreground" aria-live="polite">
-          {unreadCount} unread
+          {visibleUnreadCount} unread
         </p>
-        {unreadCount > 0 ? <MarkAllNotificationsReadForm /> : null}
+        {visibleUnreadCount > 0 ? (
+          <MarkAllNotificationsReadForm onReadAll={markAllRead} />
+        ) : null}
       </div>
 
       <ol className="space-y-3" aria-label="Notification feed">
-        {notifications.map((notification) => {
+        {visibleNotifications.map((notification) => {
           const unread = notification.readAt === null;
 
           return (
@@ -118,6 +170,7 @@ export function NotificationFeed({
                       <MarkNotificationReadForm
                         notificationId={notification.id}
                         title={notification.title}
+                        onRead={() => markRead(notification.id)}
                       />
                     ) : (
                       <span className="text-xs font-medium text-muted-foreground">

@@ -14,7 +14,12 @@ describe("Part 18C-1 notification UI contracts", () => {
 
     expect(proxy).toContain('"/notifications"');
     expect(navigation).toContain('href: "/notifications"');
-    expect(navigation).toContain("unreadCount > 99 ? \"99+\" : unreadCount");
+    expect(navigation).toContain(
+      '"watchflow:notification-unread-count"',
+    );
+    expect(navigation).toContain(
+      'aria-label={`${visibleUnreadCount} unread notifications`}',
+    );
     expect(page).toContain("getNotificationFeed()");
     expect(page).toContain("<NotificationFeed {...feed} />");
   });
@@ -32,6 +37,8 @@ describe("Part 18C-1 notification UI contracts", () => {
     expect(feed).toContain("notificationActionUrl(");
     expect(feed).toContain("MarkNotificationReadForm");
     expect(feed).toContain("MarkAllNotificationsReadForm");
+    expect(feed).toContain("setVisibleNotifications");
+    expect(feed).toContain("publishUnreadCount(nextUnreadCount)");
     expect(loading).toContain("Loading notifications");
     expect(loading).toContain("<Skeleton");
   });
