@@ -5,12 +5,51 @@ Last updated by: Codex / Part 18H Notification Center and User Experience
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18H adds the complete user-facing notification center experience, category controls, richer payload context, and safe push-click navigation.
 Current branch: `codex/part-18c-notifications`.
-Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36255874585` passed every non-browser gate and three existing notification browser cases, then exposed one remaining mounted-UI convergence defect in the read-action case. Its trace-proven repair is local and awaits an intentional commit/push and workflow rerun. Complete browser acceptance is still pending and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
+Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36261749310` passed all product-state and database assertions in the remaining notification read-action case, then exposed a Server Action transport cancellation caused by successful local reconciliation unmounting the active action form. Its trace-proven lifecycle repair is local and awaits an intentional commit/push and workflow rerun. Complete browser acceptance is still pending and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-26 Part 18H CI Server Action Transport Lifecycle Repair — LOCAL FIX
+
+- GitHub run `36261749310` executed commit `2cb62a0` in the guarded Ubuntu/
+  Chrome watchflow-dev workflow. Every non-browser gate and the notification
+  empty-state, RLS, settings, exact read/unread, badge, reload-persistence,
+  owner-isolation, and direct database-state assertions passed. The remaining
+  failure was solely the strict browser audit recording one aborted HTTP 200
+  `POST /notifications` Server Action stream on each of three attempts.
+- Traces contain exactly one POST per click and no client `router.refresh()`.
+  Both mark-one and mark-all mutate successfully, return an action result, and
+  reconcile the expected UI before the test's later database check and reload.
+  There is no duplicate submission and the reload is not the cancellation
+  source.
+- The two stable Next-Action IDs identify the sequence precisely. On attempts
+  zero and two, mark-one returned HTTP 200 but its response body was truncated
+  after success while mark-all completed normally. On retry one, mark-one
+  completed normally and mark-all's HTTP 200 body was truncated after success.
+  In each case the truncated action was the one whose successful callback made
+  the feed immediately replace and unmount that action's `useActionState` form.
+  Chromium then reported the still-streaming fetch as aborted even though the
+  owner-scoped database write and product state had completed.
+- Notification reconciliation still occurs only after a successful Server
+  Action. The per-row and mark-all action components and form elements now stay
+  mounted after success; they become hidden and disabled while the canonical
+  `Read` label, feed count, and both navigation badges update. This lets React/
+  Next finish consuming the action stream without retaining an interactive
+  duplicate control. Error behavior is unchanged.
+- Strict general request-failure diagnostics remain unchanged. There is no
+  `/notifications` exception, aborted-request whitelist, timeout increase,
+  skipped test, weakened assertion, router refresh, schema/RLS/Auth change, or
+  Production access.
+- Focused notification/lifecycle coverage passes 7 files/43 tests. The default
+  Vitest config subprocess is blocked by this Windows host's `spawn EPERM`; the
+  native-loader fallback passes 108 files/955 tests. ESLint, direct TypeScript,
+  `git diff --check`, and the 272-artifact client-secret scan pass. The
+  production bundle compiles successfully before the same host blocks Next's
+  post-compile TypeScript worker. Local Playwright is blocked before browser
+  launch, so guarded GitHub CI must supply final transport/browser acceptance.
 
 ## 2026-09-26 Part 18H CI Notification Read Convergence Repair — LOCAL FIX
 

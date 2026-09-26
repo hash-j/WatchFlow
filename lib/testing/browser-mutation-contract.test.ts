@@ -26,8 +26,14 @@ describe("streamed Server Action browser synchronization", () => {
     expect(component).toContain("useNotifyAfterSuccessfulRead(");
     expect(component).toContain('state.status !== "success"');
     expect(component).not.toContain("router.refresh()");
+    expect(component).toContain("hidden={read}");
+    expect(component).toContain("hidden={hideWhenComplete}");
+    expect(component).toContain("disabled={isPending || read}");
+    expect(component).toContain("disabled={isPending || hideWhenComplete}");
     expect(feed).toContain("setVisibleUnreadCount(nextUnreadCount)");
     expect(feed).toContain("publishUnreadCount(nextUnreadCount)");
+    expect(feed).toContain("hideWhenComplete={visibleUnreadCount === 0}");
+    expect(feed).toContain("read={!unread}");
     expect(navigation).toContain(
       '"watchflow:notification-unread-count"',
     );

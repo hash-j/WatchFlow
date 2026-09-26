@@ -98,9 +98,10 @@ export function NotificationFeed({
         <p className="text-sm text-muted-foreground" aria-live="polite">
           {visibleUnreadCount} unread
         </p>
-        {visibleUnreadCount > 0 ? (
-          <MarkAllNotificationsReadForm onReadAll={markAllRead} />
-        ) : null}
+        <MarkAllNotificationsReadForm
+          onReadAll={markAllRead}
+          hideWhenComplete={visibleUnreadCount === 0}
+        />
       </div>
 
       <ol className="space-y-3" aria-label="Notification feed">
@@ -166,17 +167,12 @@ export function NotificationFeed({
                         </Link>
                       </Button>
                     ) : null}
-                    {unread ? (
-                      <MarkNotificationReadForm
-                        notificationId={notification.id}
-                        title={notification.title}
-                        onRead={() => markRead(notification.id)}
-                      />
-                    ) : (
-                      <span className="text-xs font-medium text-muted-foreground">
-                        Read
-                      </span>
-                    )}
+                    <MarkNotificationReadForm
+                      notificationId={notification.id}
+                      title={notification.title}
+                      onRead={() => markRead(notification.id)}
+                      read={!unread}
+                    />
                   </div>
                 </div>
               </article>

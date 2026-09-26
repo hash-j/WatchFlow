@@ -50,10 +50,12 @@ export function MarkNotificationReadForm({
   notificationId,
   title,
   onRead,
+  read = false,
 }: {
   notificationId: string;
   title: string;
   onRead?: () => void;
+  read?: boolean;
 }) {
   const [state, action, isPending] = useActionState(
     markNotificationReadAction,
@@ -62,27 +64,34 @@ export function MarkNotificationReadForm({
   useNotifyAfterSuccessfulRead(state, onRead);
 
   return (
-    <form action={action} className="space-y-1">
-      <input type="hidden" name="notificationId" value={notificationId} />
-      <Button
-        type="submit"
-        size="sm"
-        variant="outline"
-        disabled={isPending}
-        aria-label={`Mark ${title} as read`}
-      >
-        <Check className="size-4" aria-hidden="true" />
-        {isPending ? "Marking..." : "Mark as read"}
-      </Button>
-      <ActionMessage state={state} />
-    </form>
+    <>
+      <form action={action} className="space-y-1" hidden={read}>
+        <input type="hidden" name="notificationId" value={notificationId} />
+        <Button
+          type="submit"
+          size="sm"
+          variant="outline"
+          disabled={isPending || read}
+          aria-label={`Mark ${title} as read`}
+        >
+          <Check className="size-4" aria-hidden="true" />
+          {isPending ? "Marking..." : "Mark as read"}
+        </Button>
+        <ActionMessage state={state} />
+      </form>
+      {read ? (
+        <span className="text-xs font-medium text-muted-foreground">Read</span>
+      ) : null}
+    </>
   );
 }
 
 export function MarkAllNotificationsReadForm({
   onReadAll,
+  hideWhenComplete = false,
 }: {
   onReadAll?: () => void;
+  hideWhenComplete?: boolean;
 }) {
   const [state, action, isPending] = useActionState(
     markAllNotificationsReadAction,
@@ -91,8 +100,16 @@ export function MarkAllNotificationsReadForm({
   useNotifyAfterSuccessfulRead(state, onReadAll);
 
   return (
-    <form action={action} className="space-y-1">
-      <Button type="submit" variant="outline" disabled={isPending}>
+    <form
+      action={action}
+      className="space-y-1"
+      hidden={hideWhenComplete}
+    >
+      <Button
+        type="submit"
+        variant="outline"
+        disabled={isPending || hideWhenComplete}
+      >
         <CheckCheck className="size-4" aria-hidden="true" />
         {isPending ? "Marking all..." : "Mark all as read"}
       </Button>
