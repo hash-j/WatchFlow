@@ -63,6 +63,7 @@ jobs:
           lib/notifications/presentation.test.ts
           lib/notifications/ui-contract.test.ts
           lib/notifications/part18h-migration-contract.test.ts
+          lib/release/part18h-ci-preflight.test.ts
           lib/settings/actions.test.ts
           lib/settings/security-contract.test.ts
           lib/settings/supabase-settings.test.ts

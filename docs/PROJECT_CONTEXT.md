@@ -5,12 +5,47 @@ Last updated by: Codex / Part 18H Notification Center and User Experience
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18H adds the complete user-facing notification center experience, category controls, richer payload context, and safe push-click navigation.
 Current branch: `codex/part-18c-notifications`.
-Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. A manual, watchflow-dev-pinned GitHub Actions browser-acceptance workflow is ready locally, but it cannot run until these uncommitted files are intentionally committed/pushed and the required GitHub Environment secrets are configured. Complete browser acceptance is therefore still blocked and is not claimed. No deployment, merge, push, or Production change occurred.
+Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. The manual GitHub Actions acceptance reached its preflight, where an invalid publishable-key Bearer header blocked the schema check. A sanitized, server-secret, direct-column preflight repair is now local and awaits an intentional commit/push and workflow rerun. Complete browser acceptance is still blocked and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-26 Part 18H CI Preflight Repair — LOCAL FIX
+
+- Root cause: the original CI preflight placed the opaque Supabase publishable
+  key in both `apikey` and `Authorization: Bearer`. The Bearer header is an Auth
+  token/JWT position, so the request could be rejected before PostgREST returned
+  the development OpenAPI document. This was a preflight credential-transport
+  defect, not evidence of a missing Part 18H migration.
+- The workflow mappings were already correct: the development URL feeds both
+  the configured and independently expected URL variables, the development
+  publishable key remains available to the application/browser tests, and the
+  development secret maps only to server-side `SUPABASE_SECRET_KEY`. The pinned
+  project ref remains unchanged.
+- The preflight now sends only `SUPABASE_SECRET_KEY` in the server-side
+  `apikey` header and performs four zero-row `user_preferences` selects, one for
+  each Part 18H column. It no longer depends on OpenAPI visibility for the anon
+  role and does not add an Authorization header, read user rows, mutate data,
+  bypass application ownership checks, or change RLS/schema/migrations.
+- Failure output is deliberately bounded and sanitized: missing variable,
+  invalid URL, wrong project, authentication failure, permission failure,
+  missing named Part 18H column, unavailable REST table, upstream server
+  failure, unexpected status, and network failure. Provider response bodies,
+  URLs, credentials, and private data are never printed.
+- A focused contract suite verifies the eight GitHub secret mappings and pinned
+  development ref, fail-closed environment behavior, exact secret-only request
+  headers, the four direct column probes, sanitized HTTP categories, and
+  sanitized network errors. It passes 1 file/10 tests. ESLint, direct
+  TypeScript, and `git diff --check` pass.
+- A local live rerun was not possible because this workspace process does not
+  have `SUPABASE_SECRET_KEY`; the script failed safely before making a request.
+  GitHub Environment secrets remain the intended execution source. No secret
+  rename or value change is required if the existing
+  `WATCHFLOW_DEV_SUPABASE_SECRET_KEY` is the current watchflow-dev secret.
+- Production was not contacted or modified. No migration, RLS/Auth policy,
+  deployment, commit, merge, or push occurred.
 
 ## 2026-09-26 Part 18H CI Browser Acceptance Handoff — BLOCKED PENDING RUN
 
