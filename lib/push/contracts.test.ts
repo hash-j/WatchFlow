@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 
 function source(path: string) {
@@ -86,6 +87,37 @@ describe("Part 18E browser push foundation", () => {
     expect(worker).toContain("notificationId: payload.notificationId");
     expect(worker).not.toMatch(
       /addEventListener\(["'](?:sync|periodicsync)["']/,
+    );
+
+    const start = worker.indexOf("function internalNotificationUrl");
+    const end = worker.indexOf('self.addEventListener("push"', start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const normalize = runInNewContext(
+      `${worker.slice(start, end)}; internalNotificationUrl`,
+      {
+        self: { location: { origin: "https://watchflow.test" } },
+        URL,
+      },
+      { timeout: 1_000 },
+    ) as (value: unknown) => string;
+    expect(normalize("/watch-next?notification=qa#context")).toBe(
+      "/watch-next?notification=qa#context",
+    );
+    expect(normalize("https://example.com/escape")).toBe("/notifications");
+    expect(normalize("//example.com/escape")).toBe("/notifications");
+  });
+
+  it("tests the shipped URL guard without weakening the application CSP", () => {
+    const acceptance = source("e2e/part18h-notification-center.spec.ts");
+    const config = source("next.config.ts");
+
+    expect(acceptance).toContain('from "node:vm"');
+    expect(acceptance).toContain("runInNewContext(");
+    expect(acceptance).not.toContain("new Function(");
+    expect(acceptance).not.toContain("test.skip(!movie");
+    expect(config).toContain(
+      'process.env.NODE_ENV === "development" ? " \'unsafe-eval\'" : ""',
     );
   });
 });

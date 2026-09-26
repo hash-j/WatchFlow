@@ -1,3 +1,5 @@
+import { runInNewContext } from "node:vm";
+
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Page } from "@playwright/test";
 
@@ -28,7 +30,20 @@ const categoryColumns = [
   "notification_custom_lists_enabled",
   "notification_imports_enabled",
 ] as const;
-const movieCandidates = ["Inception", "Arrival", "Interstellar", "The Matrix"];
+const movieCandidates = [
+  "Inception",
+  "Arrival",
+  "Interstellar",
+  "The Matrix",
+  "Moon",
+  "Coherence",
+  "Primer",
+  "Gattaca",
+  "Contact",
+  "Ex Machina",
+  "The Prestige",
+  "Memento",
+];
 
 type CategoryPreferences = Record<(typeof categoryColumns)[number], boolean>;
 
@@ -208,7 +223,10 @@ test.describe("Part 18H guarded notification-center acceptance", () => {
           break;
         }
       }
-      test.skip(!movie, "Every controlled Part 18H movie already belongs to QA User B.");
+      expect(
+        movie,
+        "At least one controlled Part 18H movie must be isolated from QA User B's existing library.",
+      ).not.toBeNull();
       if (!admin || !movie) throw new Error("Guarded Part 18H fixture setup is unavailable.");
 
       const sharedMovie = await admin
@@ -337,31 +355,34 @@ test.describe("Part 18H guarded notification-center acceptance", () => {
       { timeout: 15_000 },
     ).toBe(true);
 
-    const result = await qaUserBPage.evaluate(async () => {
-      const source = await fetch("/sw.js", { cache: "no-store" }).then((response) => {
-        if (!response.ok) throw new Error("Service worker could not be loaded.");
-        return response.text();
-      });
-      const start = source.indexOf("function internalNotificationUrl");
-      const end = source.indexOf('self.addEventListener("push"', start);
-      if (start < 0 || end < 0) throw new Error("Push URL guard is missing.");
-      const implementation = source.slice(start, end);
-      const normalize = new Function(
-        "self",
-        "value",
-        `${implementation}; return internalNotificationUrl(value);`,
-      );
-      const workerSelf = { location: { origin: window.location.origin } };
-      return {
-        internal: normalize(workerSelf, "/watch-next?notification=qa#context"),
-        external: normalize(workerSelf, "https://example.com/escape"),
-        protocolRelative: normalize(workerSelf, "//example.com/escape"),
-        clickUsesGuard:
-          source.includes('self.addEventListener("notificationclick"') &&
-          source.includes("const actionUrl = internalNotificationUrl(candidateUrl)") &&
-          source.includes("new URL(actionUrl, self.location.origin).href"),
-      };
-    });
+    const applicationOrigin = new URL(qaUserBPage.url()).origin;
+    const workerResponse = await qaUserBPage.context().request.get(
+      new URL("/sw.js", applicationOrigin).href,
+      { headers: { "cache-control": "no-store" } },
+    );
+    expect(workerResponse.ok()).toBe(true);
+    const source = await workerResponse.text();
+    const start = source.indexOf("function internalNotificationUrl");
+    const end = source.indexOf('self.addEventListener("push"', start);
+    if (start < 0 || end < 0) throw new Error("Push URL guard is missing.");
+    const implementation = source.slice(start, end);
+    const normalize = runInNewContext(
+      `${implementation}; internalNotificationUrl`,
+      {
+        self: { location: { origin: applicationOrigin } },
+        URL,
+      },
+      { timeout: 1_000 },
+    ) as (value: unknown) => string;
+    const result = {
+      internal: normalize("/watch-next?notification=qa#context"),
+      external: normalize("https://example.com/escape"),
+      protocolRelative: normalize("//example.com/escape"),
+      clickUsesGuard:
+        source.includes('self.addEventListener("notificationclick"') &&
+        source.includes("const actionUrl = internalNotificationUrl(candidateUrl)") &&
+        source.includes("new URL(actionUrl, self.location.origin).href"),
+    };
 
     expect(result).toEqual({
       internal: "/watch-next?notification=qa#context",

@@ -5,12 +5,49 @@ Last updated by: Codex / Part 18H Notification Center and User Experience
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18H adds the complete user-facing notification center experience, category controls, richer payload context, and safe push-click navigation.
 Current branch: `codex/part-18c-notifications`.
-Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36264250792` passed every non-browser gate and all notification product-state/database assertions reached by the Part 18C suite. Its remaining read-action and notification-settings failures are strict diagnostics observing a trace-proven Next/React Server Action stream cancellation after a successful HTTP 200 action result has already been consumed. The local QA repair correlates only the exact successful action response after independent product/database proof and drains login navigation before scenario monitoring; it awaits an intentional commit/push and workflow rerun. Complete browser acceptance is still pending and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
+Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36267633251` advanced through the guarded Part 18C producer acceptance into the Part 18H notification-center suite. Its empty-state case passed; its category case runtime-skipped because all four original controlled movies already belonged to QA User B; and its push-click case was blocked only because the test invoked `new Function` inside the production-CSP page. The local QA repair executes the exact shipped URL guard in the trusted Node runner, preserves the CSP, and turns unavailable category fixture coverage into an explicit failure after a wider non-destructive candidate search. Complete browser acceptance is still pending and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-27 Part 18H CI Push-Click CSP-Compatible Acceptance — LOCAL FIX
+
+- GitHub run `36267633251` reached the guarded Part 18H notification-center
+  browser suite. The loading/empty-state case passed. The push-click case failed
+  identically on all three attempts before any URL assertion because its
+  `page.evaluate` callback constructed the fetched service-worker function with
+  `new Function`.
+- Production correctly sends `script-src 'self' 'unsafe-inline'` without
+  `unsafe-eval`. Chromium therefore rejected the test's dynamic code generation
+  with `EvalError`. This is a QA implementation defect, not a service-worker,
+  push-navigation, CSP, browser, or application defect. The CSP remains
+  unchanged and is not weakened.
+- Acceptance still waits for the registered service worker, then retrieves the
+  exact shipped `/sw.js` from the same application origin. It now evaluates only
+  the extracted `internalNotificationUrl` implementation in a time-bounded,
+  isolated Node VM and retains the source assertions proving the notification-
+  click handler passes its candidate through that guard before navigation.
+  Internal path/query/hash context must remain unchanged; absolute and protocol-
+  relative external URLs must resolve to `/notifications`.
+- The supplied timestamps also show the category case was not skipped by the
+  later push-click failure. It ran for about 18 seconds and invoked its own
+  runtime skip after finding all four original movie candidates already in QA
+  User B's library. The candidate set is now wider, touches no pre-existing
+  owned movie, and removes only a movie added by this test. If no isolated
+  candidate exists, the case fails explicitly instead of silently weakening
+  browser coverage.
+- Focused push/PWA/browser-lifecycle coverage passes 3 files/18 tests. The
+  ordinary full Vitest launcher hit this Windows host's known config-process
+  `spawn EPERM`; the documented native-loader/single-worker equivalent passes
+  108 files/957 tests. ESLint, direct TypeScript, `git diff --check`, and the
+  272-artifact client-secret scan pass. The production bundle compiles before
+  the host blocks Next's post-compile TypeScript worker with `spawn EPERM`, and
+  local Playwright is blocked before browser startup by the same restriction.
+  Guarded GitHub CI must supply final browser/build proof. No application code,
+  service worker, CSP, schema, migration, RLS/Auth policy, target guard,
+  deployment, push, merge, or Production state changed.
 
 ## 2026-09-27 Part 18H CI Completed-Action Diagnostic Correlation — LOCAL FIX
 
