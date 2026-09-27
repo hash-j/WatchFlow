@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { after } from "next/server";
 
 import type { LibraryMovieStatus } from "@/lib/movies/types";
 import { getTmdbImageUrl } from "@/lib/movies/images";
@@ -23,16 +24,15 @@ import { mapNotifications } from "./mapping";
 
 const NOTIFICATION_PAGE_SIZE = 50;
 
-async function dispatchCreatedNotification(
+function dispatchCreatedNotification(
   created: boolean,
   payload: PushDeliveryPayload,
 ) {
   if (!created) return;
-  try {
-    await dispatchNotificationEvent(payload);
-  } catch {
-    // The durable in-app notification already exists. Push remains best-effort.
-  }
+  const delivery = dispatchNotificationEvent(payload).catch(() => undefined);
+  // The durable in-app notification is already committed. Retain best-effort
+  // delivery without making the user-facing mutation wait for push transport.
+  after(() => delivery);
 }
 
 const categoryPreferenceColumns: Record<NotificationCategory, string> = {
@@ -249,7 +249,7 @@ export async function createMovieStatusTransitionNotification(input: {
   }
 
   const created = Boolean(data);
-  await dispatchCreatedNotification(created, {
+  dispatchCreatedNotification(created, {
     notificationId,
     category,
     title: content.title,
@@ -321,7 +321,7 @@ export async function createCustomListMovieAddedNotification(input: {
   }
 
   const created = Boolean(data);
-  await dispatchCreatedNotification(created, {
+  dispatchCreatedNotification(created, {
     notificationId,
     category,
     title: content.title,
@@ -382,7 +382,7 @@ export async function createCsvImportCompletedNotification(input: {
   }
 
   const created = Boolean(data);
-  await dispatchCreatedNotification(created, {
+  dispatchCreatedNotification(created, {
     notificationId,
     category,
     title: content.title,

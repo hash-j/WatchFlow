@@ -1,16 +1,60 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-27
+Last updated: 2026-09-28
 Last updated by: Codex / Part 18H Notification Center and User Experience
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18H adds the complete user-facing notification center experience, category controls, richer payload context, and safe push-click navigation.
 Current branch: `codex/part-18c-notifications`.
-Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36267633251` advanced through the guarded Part 18C producer acceptance into the Part 18H notification-center suite. Its empty-state case passed; its category case runtime-skipped because all four original controlled movies already belonged to QA User B; and its push-click case was blocked only because the test invoked `new Function` inside the production-CSP page. The local QA repair executes the exact shipped URL guard in the trusted Node runner, preserves the CSP, and turns unavailable category fixture coverage into an explicit failure after a wider non-destructive candidate search. Complete browser acceptance is still pending and is not claimed. No deployment, merge, push, or Production change occurred during this repair.
+Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36274427993` passed the notification-producer suite and the Part 18H loading/empty-state case, then exposed a movie-management Server Action result-stream cancellation in the category case. Trace and fresh-page evidence prove the database mutations committed, disabled-category suppression created no notification, and the UI alone remained pending. Notification-route invalidation and best-effort push retention are now deferred outside the mutation response, and guarded QA directly verifies each persisted movie status. Complete browser acceptance is still pending a GitHub rerun and is not claimed. No deployment, merge, push, Production change, schema change, or RLS change occurred during this repair.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-28 Part 18H CI Movie-Action Stream Lifecycle Repair — LOCAL FIX
+
+- GitHub run `36274427993` passed the pinned watchflow-dev preflight, guarded
+  database integration, full static/unit/build gates, the Part 18C producer
+  acceptance, and the Part 18H loading/empty-state case. The category case then
+  failed deterministically because `Movie details saved.` never rendered and
+  the form remained disabled at `Saving...`.
+- All five captured movie-management Server Action requests returned HTTP 200
+  headers in 0.5–1.2 seconds. Fresh library renders after the failed assertions
+  showed the exact requested durable status (`Saved`/`want_to_watch` or `Watch
+  Next`), proving the mutations committed. The action owner remained mounted;
+  the streamed action response was cancelled before `useActionState` consumed
+  its success result. This is a product response-lifecycle defect, not a slow
+  database, stale success copy, duplicate submission, invalid fixture state,
+  or timeout defect.
+- The shared notification invalidator synchronously invalidated
+  `/notifications`, causing every affected movie response to advertise action
+  revalidation and race the returned action state. Both notification-feed and
+  root-layout invalidation now run through `after()`, matching the existing
+  deferred private-data revalidation design and allowing the current response
+  to finish before future reads are invalidated.
+- Durable notification insertion remains synchronous and authoritative.
+  Best-effort Web Push delivery now starts with the authenticated request
+  context but is retained by `after()` without being awaited by the user
+  mutation. Immediate rejection is handled, and no worker, scheduler, service
+  role, client sender, RLS/policy, or schema change was introduced.
+- The disabled Watch Next category was persisted across reload and a guarded
+  post-run watchflow-dev read found zero matching `movie_status_transition`
+  rows for the controlled movie. Category suppression therefore worked and no
+  push dispatch was reached in the failing transition. The browser test now
+  polls the exact owner-scoped `user_movies.status` after every controlled
+  transition while retaining its exact feedback, suppression, resumption,
+  duplicate, badge, isolation, and diagnostics assertions.
+- Focused Part 18H/notification/revalidation coverage passes 14 files/97 tests;
+  the narrower changed-area suite passes 4 files/35 tests. ESLint, direct
+  TypeScript, `git diff --check`, and the 272-artifact client-secret scan pass;
+  the documented native-loader fallback passes the full 108-file/960-test
+  suite. The ordinary full Vitest launcher and local Playwright runner remain
+  blocked at process startup by this Windows host's `spawn EPERM`. The
+  production bundle compiles successfully before the same host restriction
+  blocks Next's post-compile TypeScript worker. GitHub CI must rerun the exact
+  full-suite command, production build, and guarded browser acceptance for
+  final evidence.
 
 ## 2026-09-27 Part 18H CI Push-Click CSP-Compatible Acceptance — LOCAL FIX
 

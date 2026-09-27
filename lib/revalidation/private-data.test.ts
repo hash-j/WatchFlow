@@ -84,7 +84,7 @@ describe("private-data revalidation architecture", () => {
     expect(revalidatePath.mock.calls).toEqual([["/lists"]]);
   });
 
-  it("refreshes the feed immediately and defers broad shell invalidation", () => {
+  it("defers notification feed and shell invalidation until after the response", () => {
     revalidateNotificationViews();
 
     expect(revalidatePath.mock.calls).toEqual([
@@ -92,6 +92,21 @@ describe("private-data revalidation architecture", () => {
       ["/", "layout"],
     ]);
     expect(after).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps every notification invalidation inside the deferred callback", () => {
+    const source = readFileSync(
+      new URL("./private-data.ts", import.meta.url),
+      "utf8",
+    );
+    const notificationHelper = source.slice(
+      source.indexOf("export function revalidateNotificationViews"),
+      source.indexOf("export function revalidateOnboardingPreferenceViews"),
+    );
+
+    expect(notificationHelper).toMatch(
+      /after\(\(\) => \{\s*revalidatePath\("\/notifications"\);\s*revalidatePath\("\/", "layout"\);\s*\}\);/,
+    );
   });
 
   it("keeps profile/preference freshness scoped to their consumers", () => {

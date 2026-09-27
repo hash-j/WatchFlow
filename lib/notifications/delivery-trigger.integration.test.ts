@@ -6,9 +6,11 @@ const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
   sendWebPush: vi.fn(),
   logSupabaseError: vi.fn(),
+  after: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
+vi.mock("next/server", () => ({ after: mocks.after }));
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: mocks.createAdminClient,
 }));
@@ -26,6 +28,12 @@ import {
 } from "./supabase-notifications";
 
 const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+type DeferredCallback = () => void | Promise<void>;
+const deferredCallbacks: DeferredCallback[] = [];
+
+async function runDeferredCallbacks() {
+  await Promise.all(deferredCallbacks.splice(0).map((callback) => callback()));
+}
 
 function notificationWriter(createdResults: boolean[]) {
   const maybeSingle = vi.fn();
@@ -90,6 +98,10 @@ function authenticatedDeliveryClient() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  deferredCallbacks.length = 0;
+  mocks.after.mockImplementation((callback: DeferredCallback) => {
+    deferredCallbacks.push(callback);
+  });
   mocks.sendWebPush.mockResolvedValue({ outcome: "delivered" });
   mocks.createClient.mockResolvedValue(authenticatedDeliveryClient().client);
 });
@@ -111,6 +123,7 @@ describe("notification producer delivery triggers", () => {
 
     const created = await createMovieStatusTransitionNotification(input);
     const duplicate = await createMovieStatusTransitionNotification(input);
+    await runDeferredCallbacks();
 
     expect(created.created).toBe(true);
     expect(duplicate.created).toBe(false);
@@ -147,6 +160,7 @@ describe("notification producer delivery triggers", () => {
       },
       nextStatus: "watch_next",
     });
+    await runDeferredCallbacks();
 
     expect(result.created).toBe(true);
     expect(mocks.createAdminClient).toHaveBeenCalledWith(userId);
@@ -178,6 +192,7 @@ describe("notification producer delivery triggers", () => {
 
     const created = await createCustomListMovieAddedNotification(input);
     const duplicate = await createCustomListMovieAddedNotification(input);
+    await runDeferredCallbacks();
 
     expect(created.created).toBe(true);
     expect(duplicate.created).toBe(false);
@@ -211,6 +226,7 @@ describe("notification producer delivery triggers", () => {
         movieTitle: "Moonlight",
       }),
     ).resolves.toMatchObject({ created: true });
+    await runDeferredCallbacks();
     expect(writer.upsert).toHaveBeenCalledOnce();
     expect(mocks.sendWebPush).toHaveBeenCalledOnce();
   });

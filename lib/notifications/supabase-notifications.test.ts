@@ -6,9 +6,11 @@ const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
   logSupabaseError: vi.fn(),
   dispatchNotificationEvent: vi.fn(),
+  after: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
+vi.mock("next/server", () => ({ after: mocks.after }));
 vi.mock("@/lib/supabase/auth", () => ({
   getAuthContext: mocks.getAuthContext,
 }));
@@ -48,6 +50,13 @@ const row = {
   read_at: null,
   created_at: "2026-09-25T09:00:00.000Z",
 };
+
+type DeferredCallback = () => void | Promise<void>;
+const deferredCallbacks: DeferredCallback[] = [];
+
+async function runDeferredCallbacks() {
+  await Promise.all(deferredCallbacks.splice(0).map((callback) => callback()));
+}
 
 function feedClient(result: { data: unknown; error: unknown }) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
@@ -91,6 +100,10 @@ function categoryPreferenceClient(ownerId = userId, enabled = true) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  deferredCallbacks.length = 0;
+  mocks.after.mockImplementation((callback: DeferredCallback) => {
+    deferredCallbacks.push(callback);
+  });
   mocks.dispatchNotificationEvent.mockResolvedValue({ status: "delivered" });
   mocks.createClient.mockResolvedValue(categoryPreferenceClient());
 });
@@ -215,6 +228,7 @@ describe("trusted CSV import notification producer", () => {
       verifiedUserId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       completionId: notificationId,
     });
+    await runDeferredCallbacks();
 
     expect(first.created).toBe(true);
     expect(duplicate.created).toBe(false);
@@ -277,10 +291,49 @@ describe("trusted CSV import notification producer", () => {
         completionId: notificationId,
       }),
     ).resolves.toMatchObject({ created: true });
+    await runDeferredCallbacks();
   });
 });
 
 describe("trusted movie status transition notification producer", () => {
+  it("returns after the durable insert without waiting for deferred delivery", async () => {
+    let completeDelivery: (() => void) | undefined;
+    mocks.dispatchNotificationEvent.mockReturnValueOnce(
+      new Promise((resolve) => {
+        completeDelivery = () => resolve({ status: "delivered" });
+      }),
+    );
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: { id: "created" },
+      error: null,
+    });
+    const upsert = vi.fn(() => ({
+      select: vi.fn(() => ({ maybeSingle })),
+    }));
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn(() => ({ upsert })),
+    });
+
+    const result = await createMovieStatusTransitionNotification({
+      verifiedUserId: userId,
+      snapshot: {
+        userMovieId: "11111111-1111-4111-8111-111111111111",
+        status: "want_to_watch",
+        updatedAt: "2026-09-28T08:00:00.000Z",
+        movieTitle: "Moon",
+      },
+      nextStatus: "watch_next",
+    });
+
+    expect(result.created).toBe(true);
+    expect(upsert).toHaveBeenCalledOnce();
+    expect(mocks.dispatchNotificationEvent).toHaveBeenCalledOnce();
+    expect(deferredCallbacks).toHaveLength(1);
+
+    completeDelivery?.();
+    await runDeferredCallbacks();
+  });
+
   const snapshot = {
     userMovieId: "22222222-2222-4222-8222-222222222222",
     status: "scheduled" as const,
@@ -366,6 +419,7 @@ describe("trusted movie status transition notification producer", () => {
       snapshot,
       nextStatus: "currently_watching",
     });
+    await runDeferredCallbacks();
 
     expect(first.created).toBe(true);
     expect(duplicate.created).toBe(false);
@@ -462,6 +516,7 @@ describe("trusted custom-list notification producer", () => {
       ...input,
       verifiedUserId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     });
+    await runDeferredCallbacks();
 
     expect(first.created).toBe(true);
     expect(duplicate.created).toBe(false);

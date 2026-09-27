@@ -53,11 +53,27 @@ describe("streamed Server Action browser synchronization", () => {
     );
   });
 
-  it("defers broad notification-layout invalidation until after the response", () => {
+  it("defers all notification invalidation until after the response", () => {
     const revalidation = source("lib/revalidation/private-data.ts");
-    expect(revalidation).toContain('revalidatePath("/notifications")');
-    expect(revalidation).toContain(
-      'after(() => revalidatePath("/", "layout"))',
+    const notificationHelper = revalidation.slice(
+      revalidation.indexOf("export function revalidateNotificationViews"),
+      revalidation.indexOf("export function revalidateOnboardingPreferenceViews"),
+    );
+    expect(notificationHelper).toMatch(
+      /after\(\(\) => \{\s*revalidatePath\("\/notifications"\);\s*revalidatePath\("\/", "layout"\);\s*\}\);/,
+    );
+  });
+
+  it("schedules best-effort push only after the durable notification result", () => {
+    const notifications = source(
+      "lib/notifications/supabase-notifications.ts",
+    );
+    expect(notifications).toContain('import { after } from "next/server"');
+    expect(notifications).toMatch(
+      /function dispatchCreatedNotification[\s\S]*?const delivery = dispatchNotificationEvent\(payload\)\.catch\(\(\) => undefined\);[\s\S]*?after\(\(\) => delivery\)/,
+    );
+    expect(notifications).not.toContain(
+      "await dispatchCreatedNotification(created",
     );
   });
 

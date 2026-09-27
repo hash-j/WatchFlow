@@ -100,14 +100,36 @@ async function openControlledMovie(page: Page, movie: ControlledMovie) {
 
 async function saveMovieStatus(
   page: Page,
+  userMovieId: string,
   status: "want_to_watch" | "watch_next",
 ) {
   await page.getByLabel("Status", { exact: true }).selectOption(status);
-  await clickAndWaitForMutation(
+  const mutation = clickAndWaitForMutation(
     page,
     page.getByRole("button", { name: "Save changes" }),
     { success: "Movie details saved." },
   );
+  await expectStoredMovieStatus(userMovieId, status);
+  await mutation;
+}
+
+async function expectStoredMovieStatus(
+  userMovieId: string,
+  status: "want_to_watch" | "watch_next",
+) {
+  if (!admin) throw new Error("Guarded Part 18H database verification is unavailable.");
+  await expect.poll(async () => {
+    const stored = await admin!
+      .from("user_movies")
+      .select("status")
+      .eq("id", userMovieId)
+      .eq("user_id", userBId)
+      .single();
+    if (stored.error) {
+      throw new Error("Guarded Part 18H movie-state verification failed.");
+    }
+    return stored.data.status;
+  }).toBe(status);
 }
 
 async function removeRunNotifications() {
@@ -245,7 +267,7 @@ test.describe("Part 18H guarded notification-center acceptance", () => {
       userMovieId = ownedMovie.data!.id;
 
       await openControlledMovie(qaUserBPage, movie);
-      await saveMovieStatus(qaUserBPage, "want_to_watch");
+      await saveMovieStatus(qaUserBPage, userMovieId, "want_to_watch");
       await qaUserBPage.goto("/settings/notifications");
       for (const label of categoryLabels) {
         await expect(qaUserBPage.getByRole("checkbox", { name: label })).toBeVisible();
@@ -257,7 +279,7 @@ test.describe("Part 18H guarded notification-center acceptance", () => {
       }
 
       await openControlledMovie(qaUserBPage, movie);
-      await saveMovieStatus(qaUserBPage, "watch_next");
+      await saveMovieStatus(qaUserBPage, userMovieId, "watch_next");
       const suppressed = await admin
         .from("notifications")
         .select("id")
@@ -267,7 +289,7 @@ test.describe("Part 18H guarded notification-center acceptance", () => {
       expect(suppressed.data).toEqual([]);
 
       await openControlledMovie(qaUserBPage, movie);
-      await saveMovieStatus(qaUserBPage, "want_to_watch");
+      await saveMovieStatus(qaUserBPage, userMovieId, "want_to_watch");
       await qaUserBPage.goto("/settings/notifications");
       await setCategoryToggles(qaUserBPage, true);
       await qaUserBPage.reload();
@@ -276,7 +298,7 @@ test.describe("Part 18H guarded notification-center acceptance", () => {
       }
 
       await openControlledMovie(qaUserBPage, movie);
-      await saveMovieStatus(qaUserBPage, "watch_next");
+      await saveMovieStatus(qaUserBPage, userMovieId, "watch_next");
       const resumed = await admin
         .from("notifications")
         .select("id, metadata")
@@ -287,7 +309,7 @@ test.describe("Part 18H guarded notification-center acceptance", () => {
       notificationIds.push(resumed.data![0].id);
 
       await openControlledMovie(qaUserBPage, movie);
-      await saveMovieStatus(qaUserBPage, "watch_next");
+      await saveMovieStatus(qaUserBPage, userMovieId, "watch_next");
       const afterDuplicateAttempt = await admin
         .from("notifications")
         .select("id")
