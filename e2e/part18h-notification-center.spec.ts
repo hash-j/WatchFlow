@@ -301,11 +301,12 @@ test.describe("Part 18H guarded notification-center acceptance", () => {
       await saveMovieStatus(qaUserBPage, userMovieId, "watch_next");
       const resumed = await admin
         .from("notifications")
-        .select("id, metadata")
+        .select("id, action_path, metadata")
         .eq("user_id", userBId)
         .eq("metadata->>user_movie_id", userMovieId);
       expect(resumed.error).toBeNull();
       expect(resumed.data).toHaveLength(1);
+      expect(resumed.data![0].action_path).toBe("/watch-next");
       notificationIds.push(resumed.data![0].id);
 
       await openControlledMovie(qaUserBPage, movie);
@@ -329,6 +330,12 @@ test.describe("Part 18H guarded notification-center acceptance", () => {
       expect(href).toContain(`/watch-next?notification=${notificationIds[0]}`);
       expect(href).toContain("notificationSource=center");
       await contextLink.click();
+      await expect(qaUserBPage).toHaveURL(
+        new URL(
+          `/watch-next?notification=${notificationIds[0]}&notificationSource=center`,
+          requiredEnvironment("E2E_BASE_URL"),
+        ).href,
+      );
       const destination = new URL(qaUserBPage.url());
       expect(destination.origin).toBe(new URL(requiredEnvironment("E2E_BASE_URL")).origin);
       expect(destination.pathname).toBe("/watch-next");

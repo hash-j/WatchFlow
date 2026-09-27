@@ -5,12 +5,45 @@ Last updated by: Codex / Part 18H Notification Center and User Experience
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18H adds the complete user-facing notification center experience, category controls, richer payload context, and safe push-click navigation.
 Current branch: `codex/part-18c-notifications`.
-Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36274427993` passed the notification-producer suite and the Part 18H loading/empty-state case, then exposed a movie-management Server Action result-stream cancellation in the category case. Trace and fresh-page evidence prove the database mutations committed, disabled-category suppression created no notification, and the UI alone remained pending. Notification-route invalidation and best-effort push retention are now deferred outside the mutation response, and guarded QA directly verifies each persisted movie status. Complete browser acceptance is still pending a GitHub rerun and is not claimed. No deployment, merge, push, Production change, schema change, or RLS change occurred during this repair.
+Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36351659127` passed the notification-producer suite and the Part 18H loading/empty-state case; its category case reached contextual navigation and then checked `page.url()` before the clicked Next.js link completed its route transition. The guarded QA now waits for the exact contextual URL and verifies the notification's stored action path. Complete browser acceptance remains pending a GitHub rerun. No deployment, merge, Production, schema, migration, or RLS change occurred during this repair.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-28 Part 18H Contextual Link Browser Synchronization — LOCAL FIX
+
+- GitHub run `36351659127` used branch commit `0b06a9b`. The notification
+  producer acceptance and Part 18H loading/empty-state browser case passed.
+  The category case completed preference persistence, disabled-category
+  suppression, status mutation, and resumed notification creation before its
+  contextual link pathname assertion failed on all three attempts.
+- The Playwright trace resolves the clicked `View details` element to an anchor
+  with `/watch-next?notification=<id>&notificationSource=center`. There is no
+  enclosing form or card click handler. The click started a same-origin
+  `/watch-next` React Server Component fetch with both context parameters; the
+  fetch returned HTTP 200. In the first attempt, the click completed at trace
+  time 55795 ms, the pathname was read at 55797 ms, and the contextual fetch
+  completed later. Test cleanup then navigated to the library, cancelling the
+  opportunity to observe the completed route. This is a QA synchronization
+  defect; the trace does not show an incorrect database path, presentation
+  mapping, rendered anchor, click target, or intercepted click.
+- The guarded test now selects and asserts the notification row's exact
+  `action_path` (`/watch-next`), retains its exact rendered href checks, and
+  waits for the complete same-origin contextual URL after the click before
+  reading the pathname. It preserves the existing origin, pathname, query,
+  read-state, category, isolation, and browser diagnostic assertions. No
+  timeout, browser skip, application behavior, schema, migration, or RLS change
+  was made. Final guarded browser acceptance awaits a CI rerun.
+- Focused Part 18H tests pass 10 files/62 tests. The full documented Windows
+  native-loader fallback passes 108 files/960 tests. ESLint, direct TypeScript,
+  `git diff --check`, and the 272-artifact client-secret scan pass. The exact
+  `npm test` command is blocked before loading tests by the Windows host's
+  `spawn EPERM`; the production bundle compiles before the same restriction
+  blocks Next's post-compile worker, and local Playwright is blocked before
+  browser startup. GitHub CI remains the final full-command, build, and guarded
+  browser acceptance gate.
 
 ## 2026-09-28 Part 18H CI Movie-Action Stream Lifecycle Repair — LOCAL FIX
 
