@@ -5,7 +5,7 @@ Last updated by: Codex / Part 18I Notification Scheduling and Background Deliver
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18I implements scheduled movie reminders with durable jobs, bounded claim/finalize leases, retry-safe Web Push delivery, and a separately authenticated manual executor.
 Current branch: `codex/part-18i-notification-scheduling`.
-Current status: Parts 18A through 18H are complete and Part 18H is tagged at `3ab970b` (`part-18h-notifications-verified`). Part 18I migration `202609280001_part_18i_scheduled_reminders.sql` is installed on watchflow-dev. Guarded integration exposed SQLSTATE `42702` in its installed claim RPC; forward-only corrective migration `202609280002_part_18i_fix_subscription_id_ambiguity.sql` is implemented locally and awaits watchflow-dev application. Production has not been touched. No corrective commit, push, deployment, or external cron configuration has occurred.
+Current status: Parts 18A through 18H are complete and Part 18H is tagged at `3ab970b` (`part-18h-notifications-verified`). Part 18I migrations `202609280001_part_18i_scheduled_reminders.sql` and `202609280002_part_18i_fix_subscription_id_ambiguity.sql` are installed on watchflow-dev. Guarded database integration now passes and browser acceptance reaches the final notification-card scenario; its unsupported standalone movie-title expectation is corrected locally and awaits one CI rerun. Production has not been touched. No current commit, push, deployment, or external cron configuration has occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
@@ -13,6 +13,23 @@ isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
 
 ## 2026-09-28 Part 18I Guarded Acceptance — CI REQUIRED
+
+- The latest guarded browser run created and rendered the scheduled reminder,
+  found its exact body and `Schedule reminders` category, and failed only
+  because the test expected the metadata movie title as a second standalone
+  text node. The notification-card contract renders the notification title as
+  its heading, category as its label, and body as its copy; `movieTitle` is
+  mapped separately for poster context, not rendered as duplicate prose.
+- The Part 18I browser test now asserts the exact `Scheduled movie reminder`
+  heading, exact `<movie title> is coming up on your schedule.` body, and exact
+  category label. It removes only the unsupported duplicate-title assertion;
+  unread count, contextual navigation, read/reload persistence, isolation,
+  cleanup, and strict diagnostics remain unchanged. This is a QA expectation
+  correction, not a product behavior change.
+- Current local verification passes the combined focused Part 18I plus
+  notification presentation/UI set at 10 files/48 tests and the full
+  native-loader fallback at 115 files/998 tests. ESLint, direct TypeScript,
+  `git diff --check`, and the 276-artifact client-secret scan also pass.
 
 - The first guarded CI database execution reached
   `watchflow_claim_scheduled_reminders(integer, integer)` and failed with
@@ -33,9 +50,9 @@ Preview acceptance status. Older dated milestone sections are historical.
   finalization behavior changes. Static regression coverage constructs the
   effective claim definition and rejects any remaining conflict target that
   contains an unqualified `subscription_id` output-variable name.
-- The corrective migration has not been applied by Codex. Guarded integration
-  cannot pass until `202609280002` is applied to watchflow-dev and CI is rerun;
-  Production remains untouched.
+- The corrective migration was applied to watchflow-dev outside Codex; the
+  guarded database integration subsequently passed and execution reached the
+  browser notification rendering scenario. Production remains untouched.
 
 - The linked Supabase ref, configured Supabase URL, and exact CI guard all pin
   `watchflow-dev` (`ckwadpmvxieekjlsfcks`). A server-only, zero-row REST

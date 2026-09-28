@@ -263,12 +263,19 @@ test.describe("Part 18I guarded scheduled reminder acceptance", () => {
     });
 
     await qaUserBPage.goto("/notifications");
+    const expectedBody = `${title} is coming up on your schedule.`;
     const article = qaUserBPage.locator("article").filter({
-      hasText: `${title} is coming up on your schedule.`,
+      has: qaUserBPage.getByText(expectedBody, { exact: true }),
     });
     await expect(article).toBeVisible();
+    await expect(
+      article.getByRole("heading", {
+        name: "Scheduled movie reminder",
+        exact: true,
+      }),
+    ).toBeVisible();
     await expect(article.getByText("Schedule reminders", { exact: true })).toBeVisible();
-    await expect(article.getByText(title, { exact: true })).toBeVisible();
+    await expect(article.getByText(expectedBody, { exact: true })).toBeVisible();
     await expect(qaUserBPage.getByText(`${baselineUnread + 1} unread`, { exact: true })).toBeVisible();
     const link = article.getByRole("link", { name: "View details" });
     await link.click();
