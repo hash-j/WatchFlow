@@ -5,7 +5,7 @@ Last updated by: Codex / Part 18I Notification Scheduling and Background Deliver
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18I implements scheduled movie reminders with durable jobs, bounded claim/finalize leases, retry-safe Web Push delivery, and a separately authenticated manual executor.
 Current branch: `codex/part-18i-notification-scheduling`.
-Current status: Parts 18A through 18H are complete and Part 18H is tagged at `3ab970b` (`part-18h-notifications-verified`). Part 18I is implemented locally and migration `202609280001_part_18i_scheduled_reminders.sql` is installed on watchflow-dev; its relations, preference columns, and claim/finalize RPCs pass the exact pinned remote schema preflight. Guarded live mutation/browser acceptance is blocked locally by absent QA target credentials and the Windows process-launch restriction, so the manual GitHub workflow remains the acceptance gate. Production has not been touched. No commit, push, deployment, or external cron configuration has occurred.
+Current status: Parts 18A through 18H are complete and Part 18H is tagged at `3ab970b` (`part-18h-notifications-verified`). Part 18I migration `202609280001_part_18i_scheduled_reminders.sql` is installed on watchflow-dev. Guarded integration exposed SQLSTATE `42702` in its installed claim RPC; forward-only corrective migration `202609280002_part_18i_fix_subscription_id_ambiguity.sql` is implemented locally and awaits watchflow-dev application. Production has not been touched. No corrective commit, push, deployment, or external cron configuration has occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
@@ -13,6 +13,29 @@ isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
 
 ## 2026-09-28 Part 18I Guarded Acceptance — CI REQUIRED
+
+- The first guarded CI database execution reached
+  `watchflow_claim_scheduled_reminders(integer, integer)` and failed with
+  SQLSTATE `42702`. The claim function's `RETURNS TABLE` declaration creates a
+  PL/pgSQL output variable named `subscription_id`; the delivery insert used
+  the same unqualified identifier in
+  `ON CONFLICT (schedule_key, subscription_id) DO NOTHING`, so PostgreSQL could
+  not choose between the variable and table column.
+- The installed `202609280001` history is unchanged. New forward-only migration
+  `202609280002_part_18i_fix_subscription_id_ambiguity.sql` discovers and gives
+  the existing two-column unique constraint a stable explicit name, obtains
+  the installed claim definition, replaces exactly the ambiguous inference
+  target with `ON CONFLICT ON CONSTRAINT`, and reasserts the original
+  service-role-only privilege. It fails closed if the expected constraint or
+  exact installed statement is absent.
+- No table data, function signature, return shape, RLS policy, trigger,
+  ownership boundary, idempotency identity, lease, retry, batching, or
+  finalization behavior changes. Static regression coverage constructs the
+  effective claim definition and rejects any remaining conflict target that
+  contains an unqualified `subscription_id` output-variable name.
+- The corrective migration has not been applied by Codex. Guarded integration
+  cannot pass until `202609280002` is applied to watchflow-dev and CI is rerun;
+  Production remains untouched.
 
 - The linked Supabase ref, configured Supabase URL, and exact CI guard all pin
   `watchflow-dev` (`ckwadpmvxieekjlsfcks`). A server-only, zero-row REST
@@ -45,9 +68,11 @@ Preview acceptance status. Older dated milestone sections are historical.
   the existing `watchflow-dev` GitHub Environment secrets plus one new manual
   secret, `WATCHFLOW_DEV_SCHEDULER_SECRET`, and runs pinned preflight, focused
   contracts, guarded database integration, full static gates/build/secret scan,
-  and the browser suite serially. The workflow is uncommitted and has not run.
-- Validation: focused Part 18I/preflight coverage passes 7 files/36 tests; the
-  native-loader full equivalent passes 115 files/996 tests; ESLint, direct
+  and the browser suite serially. It is committed at `540a59d`; its first live
+  run passed target setup and reached the guarded database integration before
+  the installed claim function raised SQLSTATE `42702`.
+- Validation: focused Part 18I/preflight coverage passes 7 files/38 tests; the
+  native-loader full equivalent passes 115 files/998 tests; ESLint, direct
   TypeScript, `git diff --check`, the guarded remote schema preflight, and the
   276-artifact client-secret scan pass. Exact `npm test` is blocked before
   config load by Windows `spawn EPERM`. The production bundle compiles, then

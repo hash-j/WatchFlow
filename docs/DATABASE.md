@@ -13,6 +13,16 @@ limit, availability/lease fields, safe HTTP/result status, and terminal audit
 state. Auth-user, movie relationship, job, and subscription foreign keys use
 safe cascade or `SET NULL` behavior.
 
+Migration `202609280002_part_18i_fix_subscription_id_ambiguity.sql` is a
+forward-only correction for the already-installed claim RPC. Its
+`RETURNS TABLE` column `subscription_id` was also a PL/pgSQL output variable,
+which made the original unqualified
+`ON CONFLICT (schedule_key, subscription_id)` target ambiguous at execution.
+The corrective migration gives the existing uniqueness constraint a stable
+name and replaces only that clause with an explicit `ON CONSTRAINT` target.
+It changes no table data, RLS policy, grant boundary, idempotency rule, lease,
+retry, or delivery behavior and reasserts the service-role-only RPC grant.
+
 Both tables have RLS enabled. Authenticated users receive owner-scoped SELECT
 only; they receive no INSERT, UPDATE, or DELETE grant. The existing
 `user_preferences` and `user_movies` ownership policies are unchanged. Trigger

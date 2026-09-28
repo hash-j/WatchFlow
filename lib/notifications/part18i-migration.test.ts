@@ -6,6 +6,13 @@ const migration = readFileSync(
   join(process.cwd(), "supabase/migrations/202609280001_part_18i_scheduled_reminders.sql"),
   "utf8",
 ).toLowerCase();
+const ambiguityFix = readFileSync(
+  join(
+    process.cwd(),
+    "supabase/migrations/202609280002_part_18i_fix_subscription_id_ambiguity.sql",
+  ),
+  "utf8",
+).toLowerCase();
 
 describe("Part 18I scheduled reminder migration contract", () => {
   it("creates owner-scoped job and delivery ledgers without user writes", () => {
@@ -66,5 +73,44 @@ describe("Part 18I scheduled reminder migration contract", () => {
     expect(migration).toMatch(/grant execute on function public\.watchflow_claim_scheduled_reminders\(integer, integer\)\s+to service_role/);
     expect(migration).toMatch(/grant execute on function public\.watchflow_finalize_scheduled_reminder\(uuid, uuid, jsonb\)\s+to service_role/);
     expect(migration).toContain("from public, anon, authenticated");
+  });
+
+  it("removes the claim output-variable ambiguity through an explicit constraint target", () => {
+    const ambiguous = "on conflict (schedule_key, subscription_id) do nothing";
+    const qualified =
+      "on conflict on constraint watchflow_scheduled_delivery_schedule_subscription_key do nothing";
+    const effectiveClaim = migration.replace(ambiguous, qualified);
+    const claimStart = effectiveClaim.indexOf(
+      "create or replace function public.watchflow_claim_scheduled_reminders",
+    );
+    const claimEnd = effectiveClaim.indexOf(
+      "create or replace function public.watchflow_finalize_scheduled_reminder",
+    );
+    const effectiveClaimBody = effectiveClaim.slice(claimStart, claimEnd);
+
+    expect(migration.match(new RegExp(ambiguous.replace(/[()]/g, "\\$&"), "g")))
+      .toHaveLength(1);
+    expect(ambiguityFix).toContain(`v_ambiguous_statement constant text :=\n    '${ambiguous}'`);
+    expect(ambiguityFix).toContain(`v_qualified_statement constant text :=\n    '${qualified}'`);
+    expect(ambiguityFix).toContain("pg_catalog.pg_get_functiondef(");
+    expect(ambiguityFix).toContain("execute v_function_definition");
+    expect(effectiveClaimBody).toContain(qualified);
+    expect(effectiveClaimBody).not.toContain(ambiguous);
+    expect(effectiveClaimBody).not.toMatch(
+      /on conflict\s*\([^)]*\bsubscription_id\b[^)]*\)/,
+    );
+  });
+
+  it("preserves the service-role-only claim boundary in the corrective migration", () => {
+    expect(ambiguityFix).toContain(
+      "alter table public.scheduled_notification_deliveries rename constraint %i to watchflow_scheduled_delivery_schedule_subscription_key",
+    );
+    expect(ambiguityFix).toMatch(
+      /revoke all on function public\.watchflow_claim_scheduled_reminders\(integer, integer\)\s+from public, anon, authenticated/,
+    );
+    expect(ambiguityFix).toMatch(
+      /grant execute on function public\.watchflow_claim_scheduled_reminders\(integer, integer\)\s+to service_role/,
+    );
+    expect(ambiguityFix).not.toMatch(/grant execute[\s\S]*to (anon|authenticated)/);
   });
 });
