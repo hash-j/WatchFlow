@@ -1,16 +1,103 @@
 # WatchFlow Project Context
 
 Last updated: 2026-09-28
-Last updated by: Codex / Part 18H Notification Center and User Experience
+Last updated by: Codex / Part 18I Notification Scheduling and Background Delivery
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18H adds the complete user-facing notification center experience, category controls, richer payload context, and safe push-click navigation.
-Current branch: `codex/part-18c-notifications`.
-Current status: Parts 18A through 18G are complete locally. Part 18B is committed/tagged at `c263f1a` (`part-18b-priority-list-ordering-verified`), and the Part 18C/18E migrations are installed on watchflow-dev. Part 18H is implemented locally; all four objects from migration `202609260002_part_18h_notification_categories.sql` are verified remotely on watchflow-dev. Live database acceptance passes. GitHub run `36351659127` passed the notification-producer suite and the Part 18H loading/empty-state case; its category case reached contextual navigation and then checked `page.url()` before the clicked Next.js link completed its route transition. The guarded QA now waits for the exact contextual URL and verifies the notification's stored action path. Complete browser acceptance remains pending a GitHub rerun. No deployment, merge, Production, schema, migration, or RLS change occurred during this repair.
+Current phase: Part 18I implements scheduled movie reminders with durable jobs, bounded claim/finalize leases, retry-safe Web Push delivery, and a separately authenticated manual executor.
+Current branch: `codex/part-18i-notification-scheduling`.
+Current status: Parts 18A through 18H are complete and Part 18H is tagged at `3ab970b` (`part-18h-notifications-verified`). Part 18I is implemented locally and migration `202609280001_part_18i_scheduled_reminders.sql` is installed on watchflow-dev; its relations, preference columns, and claim/finalize RPCs pass the exact pinned remote schema preflight. Guarded live mutation/browser acceptance is blocked locally by absent QA target credentials and the Windows process-launch restriction, so the manual GitHub workflow remains the acceptance gate. Production has not been touched. No commit, push, deployment, or external cron configuration has occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-28 Part 18I Guarded Acceptance — CI REQUIRED
+
+- The linked Supabase ref, configured Supabase URL, and exact CI guard all pin
+  `watchflow-dev` (`ckwadpmvxieekjlsfcks`). A server-only, zero-row REST
+  preflight confirms both Part 18I ledgers, all three reminder preference
+  columns, and both claim/finalize RPCs are installed remotely. No Production
+  URL/ref was accepted or contacted.
+- Local server configuration contains a strong scheduler secret and a Supabase
+  server credential. VAPID public/private configuration exists; a VAPID subject
+  is absent, but the guarded browser path deliberately verifies push-disabled
+  durable notification behavior and the database suite exercises transient and
+  permanent delivery finalization without making external push calls.
+- Added a guarded sequential live-database suite for exact owner/RLS isolation,
+  non-UTC timezone arithmetic, deterministic notification identity,
+  idempotency, disabled reminders, rescheduling/status exit/deletion, transient
+  retries, 410 subscription cleanup, exclusive/expired leases, and attempt
+  limits. It refuses to claim anything if any pre-existing active due job is
+  present and removes only its generated IDs before restoring both QA users'
+  captured preferences.
+- Added a serial browser suite for missing/malformed/wrong/correct scheduler
+  authentication, one controlled QA User B reminder, repeated execution,
+  durable push-disabled notification rendering, contextual `/schedule`
+  navigation, read/reload/badge persistence, QA User A isolation, diagnostics,
+  exact cleanup, and preference restoration.
+- Local authenticated execution is unavailable because the local acceptance
+  target pin and both QA credential pairs are absent. The guarded integration
+  therefore loaded with five explicit skips and no live fixture was inserted.
+  The browser file discovers its two intended cases, but no browser acceptance
+  PASS is claimed.
+- Added manual workflow `.github/workflows/part18i-live-acceptance.yml`. It uses
+  the existing `watchflow-dev` GitHub Environment secrets plus one new manual
+  secret, `WATCHFLOW_DEV_SCHEDULER_SECRET`, and runs pinned preflight, focused
+  contracts, guarded database integration, full static gates/build/secret scan,
+  and the browser suite serially. The workflow is uncommitted and has not run.
+- Validation: focused Part 18I/preflight coverage passes 7 files/36 tests; the
+  native-loader full equivalent passes 115 files/996 tests; ESLint, direct
+  TypeScript, `git diff --check`, the guarded remote schema preflight, and the
+  276-artifact client-secret scan pass. Exact `npm test` is blocked before
+  config load by Windows `spawn EPERM`. The production bundle compiles, then
+  the same host blocks Next's TypeScript child with `spawn EPERM`, so no local
+  full build PASS is claimed. Acceptance remains blocked pending the guarded
+  GitHub workflow; no commit, push, deploy, Production change, or data cleanup
+  was needed.
+
+## 2026-09-28 Part 18I Notification Scheduling — LOCAL IMPLEMENTATION
+
+- The first watchflow-dev application attempt failed transactionally with
+  SQLSTATE `42601` while parsing `watchflow_sync_scheduled_reminder(uuid)`.
+  PostgreSQL `EXTRACT(field FROM source)` is special SQL grammar and cannot be
+  invoked as `pg_catalog.extract(...)`; the parser therefore stopped at
+  `FROM`. Both invalid occurrences in the migration now use unqualified
+  `extract(...)`, including the later expired-subscription comparison. No
+  architecture, schema contract, behavior, privilege, RLS policy, or remote
+  data changed. The corrected migration was subsequently installed on
+  watchflow-dev and passes the guarded object/RPC schema preflight; it was not
+  applied to Production.
+- The first scheduled event is an in-app and optional Web Push reminder before
+  an owned movie's existing `scheduled_for` instant. It uses the existing
+  `schedule_reminders_enabled`, `reminder_offset_minutes`, schedule timezone,
+  push preference, subscription model, notification center, and Web Push
+  adapter. Email and weekly summaries remain out of scope.
+- Migration `202609280001_part_18i_scheduled_reminders.sql` adds owner-readable,
+  non-user-writable job and per-subscription delivery ledgers. Trigger-owned
+  synchronization handles create/reschedule/status exit, preference enable/
+  disable, offset changes, and existing-row backfill. Schedule-version,
+  notification, and delivery identities are deterministic.
+- Only service role can execute the bounded `SKIP LOCKED` claim and exact-lease
+  finalize RPCs. The server-only background client performs no direct table
+  operations. The manual POST endpoint fails closed behind the separate
+  `WATCHFLOW_SCHEDULER_SECRET`; normal authenticated application flows and RLS
+  are unchanged.
+- Claims recheck the current owner, future schedule, exact instant/timezone,
+  reminder preference, push preference, and active subscriptions. Jobs use
+  bounded batches, leases, five job claims, and three delivery attempts.
+  Confirmed 404/410 subscriptions are removed; transient responses use bounded
+  backoff; ambiguous outcomes stop to avoid duplicate push. Deleted owners/
+  movies cascade and changed/disabled schedules skip safely.
+- Focused Part 18I coverage passes 10 files/49 tests. The exact `npm test`
+  launcher is blocked during config loading by this Windows host's known
+  `spawn EPERM`; the documented native-loader, single-worker full equivalent
+  passes 114 files/985 tests. ESLint, direct TypeScript, `git diff --check`, and
+  the 276-artifact client-secret scan pass. The production bundle compiles
+  successfully before the host blocks Next's post-compile TypeScript worker
+  with the same `spawn EPERM`; the build is therefore not recorded as fully
+  passed. The migration and manual watchflow-dev executor acceptance remain
+  pending and must not be represented as applied or passed.
 
 ## 2026-09-28 Part 18H Contextual Link Browser Synchronization — LOCAL FIX
 

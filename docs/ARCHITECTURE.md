@@ -1,5 +1,47 @@
 # WatchFlow Architecture
 
+## Part 18I scheduled reminder execution
+
+Part 18I adds one narrow background use case: a reminder before an owned movie's
+existing `scheduled_for` instant. Database notifications remain the source of
+truth. There is no browser scheduler, email, weekly summary, external cron
+configuration, or general-purpose job runner.
+
+```text
+owned scheduled user_movie / reminder preference change
+  -> trigger synchronizes one deterministic owner job
+
+authorized POST /api/internal/notifications/scheduled-reminders
+  -> separate scheduler bearer secret (fail closed)
+  -> server-only Supabase secret client
+  -> service-role-only bounded claim RPC (SKIP LOCKED + lease)
+  -> recheck owner, schedule version, future instant, reminder preference
+  -> deterministic durable notification (source of truth)
+  -> if push enabled: claim per-subscription delivery rows
+  -> existing bounded Web Push adapter
+  -> service-role-only finalize RPC (delivered/retry/skipped/failed)
+```
+
+The privileged TypeScript client is isolated in `lib/supabase/background.ts`
+and is consumed only by the scheduled-reminder executor. That executor performs
+no direct table operations: it can call only the Part 18I claim/finalize RPCs.
+Normal pages, Server Actions, producers, notification reads, preference writes,
+and subscription flows continue to use authenticated SSR clients and unchanged
+RLS. The internal endpoint requires the distinct
+`WATCHFLOW_SCHEDULER_SECRET`; missing, weak, or invalid authorization returns
+401 before the background client is constructed.
+
+The schedule version key includes the owner relationship ID, absolute
+microsecond instant, stored IANA timezone, and reminder offset. It deterministically
+derives the notification ID and each subscription-delivery ID. Claims are
+bounded to 25 jobs and 20 deliveries per job, use `FOR UPDATE SKIP LOCKED`, and
+lease for 30–300 seconds. Jobs allow at most five claims; subscription delivery
+allows at most three attempts with bounded database backoff. Confirmed 404/410
+subscriptions are removed. HTTP 429/5xx and missing VAPID configuration retry;
+ambiguous transport/expired-lease outcomes stop rather than risk duplicate push.
+Deleted owners/movies cascade safely, while changed schedules and disabled
+reminders become explicit skipped states.
+
 ## Part 18H notification center experience
 
 Part 18H keeps the durable `notifications` row as the user-visible source of

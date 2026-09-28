@@ -8,6 +8,7 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<
   watch_next: "Watch Next",
   custom_lists: "Custom lists",
   imports: "Imports",
+  schedule_reminders: "Schedule reminders",
 };
 
 export function notificationActionUrl(

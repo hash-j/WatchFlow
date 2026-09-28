@@ -7,6 +7,7 @@ export const NOTIFICATION_CATEGORIES = [
   "watch_next",
   "custom_lists",
   "imports",
+  "schedule_reminders",
 ] as const;
 
 export type NotificationCategory =

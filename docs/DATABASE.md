@@ -1,5 +1,38 @@
 # WatchFlow Database
 
+## Part 18I scheduled movie reminders
+
+Migration `202609280001_part_18i_scheduled_reminders.sql` adds two private
+relations. `scheduled_notification_jobs` has one deterministic row per
+`user_movies.id`; it records the schedule version, notification identity,
+absolute scheduled/reminder instants, IANA timezone, offset, bounded attempts,
+lease, availability, terminal result, and audit timestamps.
+`scheduled_notification_deliveries` is the per-schedule-version,
+per-subscription delivery ledger. It has deterministic IDs, a three-attempt
+limit, availability/lease fields, safe HTTP/result status, and terminal audit
+state. Auth-user, movie relationship, job, and subscription foreign keys use
+safe cascade or `SET NULL` behavior.
+
+Both tables have RLS enabled. Authenticated users receive owner-scoped SELECT
+only; they receive no INSERT, UPDATE, or DELETE grant. The existing
+`user_preferences` and `user_movies` ownership policies are unchanged. Trigger
+functions synchronize jobs after schedule/status changes and after reminder
+enabled/offset changes. The schedule key contains `user_movies.id`, the exact
+UTC instant in microseconds, stored timezone, and offset, so rescheduling
+creates a new idempotency version. Existing scheduled rows are backfilled by
+the same helper when the migration runs.
+
+Only `service_role` may execute
+`watchflow_claim_scheduled_reminders(integer, integer)` and
+`watchflow_finalize_scheduled_reminder(uuid, uuid, jsonb)`; `PUBLIC`, `anon`,
+and `authenticated` are explicitly revoked. Claiming is bounded and uses
+`FOR UPDATE SKIP LOCKED`. It rechecks the owner, current scheduled row, exact
+schedule version, future instant, reminder preference, push preference, and
+subscriptions before deterministically inserting the durable notification.
+Finalization accepts only results owned by the exact job lease, applies bounded
+backoff, deletes confirmed 404/410 subscriptions, and writes explicit terminal
+states. No external cron provider or Production application is included.
+
 ## Part 18H notification category preferences
 
 Migration `202609260002_part_18h_notification_categories.sql` adds four
@@ -117,7 +150,8 @@ auth.users
   |-- 1:many user_movies -- many:1 movies
   |-- 1:many lists -- 1:many list_movies -- many:1 user_movies
   |-- 1:many notifications
-  `-- 1:many push_subscriptions
+  |-- 1:many push_subscriptions
+  `-- 1:many scheduled_notification_jobs -- 1:many scheduled_notification_deliveries
 ```
 
 ## Tables

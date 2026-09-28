@@ -31,12 +31,13 @@ describe("settings security boundaries", () => {
     expect(controls).toContain("admin.auth.admin.deleteUser(user.id)");
   });
 
-  it("distinguishes the active system feed from deferred delivery channels", () => {
+  it("distinguishes active reminders from deferred delivery channels", () => {
     const page = source("app/(app)/settings/notifications/page.tsx");
     expect(page).toContain("in-app system notifications are available now");
     expect(page).toContain("supported system events");
     expect(page).toContain("subscribed");
-    expect(page).toMatch(/are not\s+currently sent/);
+    expect(page).toContain("Scheduled movie reminders use your selected reminder time");
+    expect(page).toMatch(/Weekly summaries and email are not\s+currently sent/);
   });
 
   it("uses private no-store attachment responses for both exports", () => {

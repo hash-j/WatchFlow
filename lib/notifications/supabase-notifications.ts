@@ -40,6 +40,7 @@ const categoryPreferenceColumns: Record<NotificationCategory, string> = {
   watch_next: "notification_watch_next_enabled",
   custom_lists: "notification_custom_lists_enabled",
   imports: "notification_imports_enabled",
+  schedule_reminders: "schedule_reminders_enabled",
 };
 
 async function isNotificationCategoryEnabled(

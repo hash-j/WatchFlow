@@ -312,9 +312,10 @@ use the authenticated member's default status and priority. Search passes adult,
 release, and language choices to the server-only TMDB provider.
 
 Notification choices store email, schedule-reminder, reminder-offset, and
-weekly-summary preferences for a future delivery system. WatchFlow does not send
-email, reminders, or summaries in this milestone and the interface states that
-clearly.
+weekly-summary preferences. Part 18I uses the schedule-reminder toggle and
+offset to create one deterministic in-app reminder before a movie's existing
+timezone-aware schedule; enabled push subscriptions also receive best-effort,
+retry-bounded Web Push. WatchFlow does not send email or weekly summaries.
 
 Members can download an on-demand UTF-8 CSV of their movie library or a
 versioned JSON export of their profile, preferences, personal library, private
@@ -334,7 +335,9 @@ boundary. User-owned rows cascade from `auth.users`; shared movies remain.
 
 - Avatar upload is deferred because no reviewed Supabase Storage bucket or
   ownership policies are versioned; profile initials are shown instead.
-- Notification preferences are stored but delivery is not implemented.
+- Email and weekly-summary preferences are stored but those channels are not
+  implemented. Scheduled movie reminders require the Part 18I migration and a
+  separately authenticated server-side executor invocation.
 - Date/time preferences are applied to settings and schedule-oriented displays;
   native HTML date inputs retain their required ISO input representation.
 - The recent-login check uses the trusted Auth `last_sign_in_at` value. A

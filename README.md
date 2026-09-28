@@ -12,10 +12,11 @@ recommendations. The current uncommitted Part 15.1 work also adds protected,
 server-calculated personal viewing statistics at `/statistics`.
 
 Payments, public profiles/lists, social or collaborative features, AI
-recommendations, notification delivery, calendar sync, and production
-deployment are out of scope. Statistics are private to the signed-in member;
-WatchFlow does not provide public, social, global, predictive, or third-party
-analytics.
+recommendations, email/weekly-summary delivery, external calendar sync, and
+production deployment are out of scope. The implemented notification system
+provides a private center, browser push, and manually invoked scheduled movie
+reminders. Statistics are private to the signed-in member; WatchFlow does not
+provide public, social, global, predictive, or third-party analytics.
 
 ## Repository orientation
 
@@ -59,9 +60,10 @@ without committing their values.
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Browser-safe public | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser-safe public | Supabase publishable/legacy anon key |
-| `SUPABASE_SECRET_KEY` | Server-only secret | Shared movie metadata and final verified Auth-user deletion |
+| `SUPABASE_SECRET_KEY` | Server-only secret | Narrow trusted metadata/notification operations and the Part 18I claim/finalize executor |
 | `TMDB_READ_ACCESS_TOKEN` | Server-only secret | Server-side TMDB search/details/import |
 | `NEXT_PUBLIC_APP_URL` | Browser-safe public, currently optional | Reserved application origin name; current source does not consume it |
+| `WATCHFLOW_SCHEDULER_SECRET` | Server-only secret | Separate bearer credential for the internal scheduled-reminder endpoint |
 
 The E2E and integration names are documented in `.env.example` and
 `docs/TESTING.md`. Real QA emails/passwords, cookies, Auth storage state,

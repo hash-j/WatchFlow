@@ -22,8 +22,8 @@ export default async function NotificationSettingsPage() {
         <p>
           Private in-app system notifications are available now. When push is
           enabled, supported system events can also be delivered to subscribed
-          browsers. Scheduled reminders, weekly summaries, and email are not
-          currently sent.
+          browsers. Scheduled movie reminders use your selected reminder time.
+          Weekly summaries and email are not currently sent.
         </p>
       </div>
       <div className="mt-6 border-t pt-6">

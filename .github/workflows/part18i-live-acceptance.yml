@@ -1,0 +1,109 @@
+name: Part 18I live acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_watchflow_dev:
+        description: Run guarded Part 18I acceptance against watchflow-dev
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: part18i-watchflow-dev
+  cancel-in-progress: false
+
+jobs:
+  guarded-watchflow-dev:
+    if: ${{ inputs.confirm_watchflow_dev == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    environment: watchflow-dev
+    env:
+      CI: true
+      E2E_TARGET_ENV: development
+      E2E_EXPECTED_SUPABASE_PROJECT_REF: ckwadpmvxieekjlsfcks
+      E2E_BASE_URL: http://127.0.0.1:3000
+      E2E_WEB_SERVER_COMMAND: npm run start
+      RUN_PART18I_INTEGRATION_TESTS: true
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.WATCHFLOW_DEV_SUPABASE_URL }}
+      E2E_EXPECTED_SUPABASE_URL: ${{ secrets.WATCHFLOW_DEV_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.WATCHFLOW_DEV_SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_SECRET_KEY: ${{ secrets.WATCHFLOW_DEV_SUPABASE_SECRET_KEY }}
+      TMDB_READ_ACCESS_TOKEN: ${{ secrets.WATCHFLOW_DEV_TMDB_READ_ACCESS_TOKEN }}
+      E2E_USER_A_EMAIL: ${{ secrets.WATCHFLOW_DEV_QA_USER_A_EMAIL }}
+      E2E_USER_A_PASSWORD: ${{ secrets.WATCHFLOW_DEV_QA_USER_A_PASSWORD }}
+      E2E_USER_B_EMAIL: ${{ secrets.WATCHFLOW_DEV_QA_USER_B_EMAIL }}
+      E2E_USER_B_PASSWORD: ${{ secrets.WATCHFLOW_DEV_QA_USER_B_PASSWORD }}
+      WATCHFLOW_SCHEDULER_SECRET: ${{ secrets.WATCHFLOW_DEV_SCHEDULER_SECRET }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify pinned development target and Part 18I schema
+        run: node scripts/verify-part18i-ci-target.mjs
+
+      - name: Run focused Part 18I tests
+        run: >-
+          npx vitest run
+          lib/notifications/part18i-migration.test.ts
+          lib/notifications/part18i-security-contract.test.ts
+          lib/notifications/scheduled-reminder-route.test.ts
+          lib/notifications/scheduled-reminders.test.ts
+          lib/notifications/scheduler-auth.test.ts
+          lib/supabase/background.test.ts
+          lib/release/part18i-ci-preflight.test.ts
+
+      - name: Run guarded Part 18I database integration
+        run: >-
+          npx vitest run
+          --config vitest.integration.config.ts
+          integration/part18i-scheduled-reminders.integration.test.ts
+
+      - name: Run full Vitest suite
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Check whitespace errors
+        run: git diff --check
+
+      - name: Build production application
+        run: npm run build
+
+      - name: Scan browser artifacts for server secrets
+        run: npm run scan:client-secrets
+
+      - name: Install Chrome for guarded browser acceptance
+        run: npx playwright install --with-deps chrome
+
+      - name: Run Part 18I browser acceptance serially
+        run: npx playwright test e2e/part18i-scheduled-reminders.spec.ts --workers=1
+
+      - name: Upload redacted browser diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: part18i-browser-diagnostics
+          path: |
+            qa-artifacts/playwright-report
+            qa-artifacts/playwright-test-results
+          if-no-files-found: ignore
+          retention-days: 7

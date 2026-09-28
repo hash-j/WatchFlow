@@ -8,7 +8,12 @@ const WEB_PUSH_TIMEOUT_MS = 5_000;
 
 export type PushDeliveryPayload = {
   notificationId: string;
-  category: "movie_status" | "watch_next" | "custom_lists" | "imports";
+  category:
+    | "movie_status"
+    | "watch_next"
+    | "custom_lists"
+    | "imports"
+    | "schedule_reminders";
   title: string;
   body: string;
   movieTitle: string | null;

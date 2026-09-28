@@ -84,7 +84,7 @@ export function NotificationSettingsForm({
       </fieldset>
 
       <fieldset className="space-y-3 border-t pt-6">
-        <legend className="text-sm font-semibold">Future delivery options</legend>
+        <legend className="text-sm font-semibold">Delivery options</legend>
         <div className="space-y-3">
           <NotificationToggle
             name="emailNotificationsEnabled"
@@ -93,7 +93,7 @@ export function NotificationSettingsForm({
           />
           <NotificationToggle
             name="scheduleRemindersEnabled"
-            label="Enable schedule reminders when delivery launches"
+            label="Remind me before scheduled movies"
             defaultChecked={preferences.scheduleRemindersEnabled}
           />
           <NotificationToggle
