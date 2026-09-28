@@ -1,11 +1,11 @@
 # WatchFlow Project Context
 
 Last updated: 2026-09-29
-Last updated by: Codex / Part 18I Notification Read Acceptance Stabilization
+Last updated by: Codex / Part 18I Deterministic Notification ID Read Fix
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18I implements scheduled movie reminders with durable jobs, bounded claim/finalize leases, retry-safe Web Push delivery, and a separately authenticated manual executor.
 Current branch: `codex/part-18i-notification-scheduling`.
-Current status: Parts 18A through 18H are complete and Part 18H is tagged at `3ab970b` (`part-18h-notifications-verified`). Part 18I migrations `202609280001_part_18i_scheduled_reminders.sql` and `202609280002_part_18i_fix_subscription_id_ambiguity.sql` are installed on watchflow-dev. Guarded database integration passes; the final browser read-action case is stabilized locally with durable-state proof, explicit refresh, and the existing narrow completed-Server-Action abort correlation, and awaits one CI rerun. Production has not been touched. No current commit, push, deployment, or external cron configuration has occurred.
+Current status: Parts 18A through 18H are complete and Part 18H is tagged at `3ab970b` (`part-18h-notifications-verified`). Part 18I migrations `202609280001_part_18i_scheduled_reminders.sql` and `202609280002_part_18i_fix_subscription_id_ambiguity.sql` are installed on watchflow-dev. Guarded database integration passes. The latest browser trace proved scheduled-reminder read actions were rejected before their RPC because the application validator required RFC version/variant bits while Part 18I intentionally stores deterministic PostgreSQL UUID values. The notification-ID boundary now accepts PostgreSQL's canonical UUID text form while retaining malformed-input rejection and owner-scoped RLS mutation. One guarded CI rerun is required. Production has not been touched. No current commit, push, deployment, or external cron configuration has occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
@@ -13,6 +13,30 @@ isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
 
 ## 2026-09-29 Part 18I Notification Read Acceptance — LOCAL QA FIX
+
+- Latest guarded trace evidence supersedes the earlier conclusion below for
+  the failed scheduled-reminder action. The exact reminder article, hidden
+  input, contextual URL, Server Action multipart payload, and database poll
+  all used the same notification ID. The POST occurred, but
+  `notificationIdSchema` rejected the deterministic Part 18I ID before fresh
+  authentication or the owner-scoped mark-read RPC ran: Zod's `.uuid()`
+  validator requires RFC version and variant bits, whereas PostgreSQL's `uuid`
+  type accepts the canonical 8-4-4-4-12 hexadecimal representation generated
+  by `watchflow_part18i_uuid`.
+- The application boundary now validates notification IDs using that exact
+  canonical PostgreSQL representation. Malformed values remain rejected;
+  owner identity is still derived server-side and the existing RLS RPC remains
+  the only mutation path. No schema, migration, scheduler, claim/finalize,
+  lease, retry, service-role, or authentication behavior changed. Regression
+  coverage submits a deterministic scheduled-reminder ID whose bits reproduce
+  the CI failure and proves it reaches the owner-scoped service.
+- Validation after the fix: focused Part 18I/action/browser-contract coverage
+  passes 9 files/63 tests; the guarded watchflow-dev owner/RLS mutation suite
+  passes 1 file/2 tests with controlled cleanup; and the full native-loader
+  fallback passes 115 files/1000 tests. ESLint, TypeScript, `git diff --check`,
+  and the 276-artifact client-secret scan pass. The exact `npm test` launcher
+  was attempted first and remains blocked during Vite config loading by this
+  Windows host's known `spawn EPERM`; no browser rerun was claimed locally.
 
 - CI proved the scheduled reminder read mutation commits, but reported an
   aborted same-origin `POST /notifications` fetch after the action response.

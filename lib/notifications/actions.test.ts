@@ -18,6 +18,8 @@ import {
 import { INITIAL_NOTIFICATION_ACTION_STATE } from "./types";
 
 const notificationId = "11111111-1111-4111-8111-111111111111";
+const deterministicReminderNotificationId =
+  "98d1be2d-b66d-2501-10bf-01de97fcb389";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -38,6 +40,21 @@ describe("notification read actions", () => {
 
     expect(mocks.markOne).toHaveBeenCalledWith(notificationId);
     expect(mocks.markOne.mock.calls[0]).not.toContain("browser-supplied-owner");
+    expect(state).toMatchObject({ status: "success", requestId: 1 });
+  });
+
+  it("accepts deterministic PostgreSQL UUIDs used by scheduled reminders", async () => {
+    const formData = new FormData();
+    formData.set("notificationId", deterministicReminderNotificationId);
+
+    const state = await markNotificationReadAction(
+      INITIAL_NOTIFICATION_ACTION_STATE,
+      formData,
+    );
+
+    expect(mocks.markOne).toHaveBeenCalledWith(
+      deterministicReminderNotificationId,
+    );
     expect(state).toMatchObject({ status: "success", requestId: 1 });
   });
 
