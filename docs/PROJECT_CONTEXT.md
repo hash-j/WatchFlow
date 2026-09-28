@@ -1,16 +1,42 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-28
-Last updated by: Codex / Part 18I Notification Scheduling and Background Delivery
+Last updated: 2026-09-29
+Last updated by: Codex / Part 18I Notification Read Acceptance Stabilization
 Purpose: Canonical project handoff and single source of truth for coding agents  
 Current phase: Part 18I implements scheduled movie reminders with durable jobs, bounded claim/finalize leases, retry-safe Web Push delivery, and a separately authenticated manual executor.
 Current branch: `codex/part-18i-notification-scheduling`.
-Current status: Parts 18A through 18H are complete and Part 18H is tagged at `3ab970b` (`part-18h-notifications-verified`). Part 18I migrations `202609280001_part_18i_scheduled_reminders.sql` and `202609280002_part_18i_fix_subscription_id_ambiguity.sql` are installed on watchflow-dev. Guarded database integration now passes and browser acceptance reaches the final notification-card scenario; its unsupported standalone movie-title expectation is corrected locally and awaits one CI rerun. Production has not been touched. No current commit, push, deployment, or external cron configuration has occurred.
+Current status: Parts 18A through 18H are complete and Part 18H is tagged at `3ab970b` (`part-18h-notifications-verified`). Part 18I migrations `202609280001_part_18i_scheduled_reminders.sql` and `202609280002_part_18i_fix_subscription_id_ambiguity.sql` are installed on watchflow-dev. Guarded database integration passes; the final browser read-action case is stabilized locally with durable-state proof, explicit refresh, and the existing narrow completed-Server-Action abort correlation, and awaits one CI rerun. Production has not been touched. No current commit, push, deployment, or external cron configuration has occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-29 Part 18I Notification Read Acceptance — LOCAL QA FIX
+
+- CI proved the scheduled reminder read mutation commits, but reported an
+  aborted same-origin `POST /notifications` fetch after the action response.
+  This matches the already-established Next/React lifecycle in which a 2xx
+  `text/x-component` Server Action result can be applied or durably committed
+  before unread Flight bytes are cancelled. No generic request exception was
+  added: the Part 18I test now calls the existing correlation API only after
+  exact owner/id read-state and unread-count database proof; that API still
+  requires POST, fetch, `next-action`, 2xx, Flight content type, same origin,
+  and exact `/notifications` pathname.
+- The product feed does render literal `0 unread` while notifications remain.
+  At zero, the navigation badge and mark-all control disappear. The retry
+  timed out because it waited for client `useActionState` reconciliation that
+  is not deterministic after the proven stream cancellation, not because the
+  database mutation failed or because zero is represented only by absence.
+- Acceptance now waits for the exact notification's `read_at`, proves its own
+  unread count is zero and the owner's total returns to the captured baseline,
+  correlates the completed action, explicitly reloads, then asserts the literal
+  baseline/zero feed text, absent zero badge, absent read button, visible
+  `Read` state, contextual navigation, isolation, cleanup, and strict remaining
+  diagnostics. Product code, schema, migrations, RPCs, RLS, auth, scheduler,
+  lease, retry, and service-role boundaries are unchanged.
+- Focused Part 18I/browser-helper/presentation coverage passes 11 files/56
+  tests. The full native-loader fallback passes 115 files/999 tests.
 
 ## 2026-09-28 Part 18I Guarded Acceptance — CI REQUIRED
 

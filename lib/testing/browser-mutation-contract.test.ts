@@ -96,6 +96,9 @@ describe("streamed Server Action browser synchronization", () => {
     const diagnostics = source("e2e/helpers/diagnostics.ts");
     const fixtures = source("e2e/fixtures/qa.ts");
     const acceptance = source("e2e/part18c-notifications.spec.ts");
+    const scheduledAcceptance = source(
+      "e2e/part18i-scheduled-reminders.spec.ts",
+    );
 
     expect(diagnostics).toContain("confirmCompletedServerAction(");
     expect(diagnostics).toContain('request.method() !== "POST"');
@@ -112,5 +115,36 @@ describe("streamed Server Action browser synchronization", () => {
     expect(acceptance).toContain(
       'confirmCompletedServerAction(\n      saveResponse,\n      "/settings/notifications"',
     );
+    expect(scheduledAcceptance).toContain(
+      'confirmCompletedServerAction(\n      markReadResponse,\n      "/notifications"',
+    );
+    expect(scheduledAcceptance.indexOf("expect(fixtureUnread).toMatchObject"))
+      .toBeLessThan(
+        scheduledAcceptance.indexOf(
+          "qaUserBAudit.confirmCompletedServerAction(\n      markReadResponse",
+        ),
+      );
+  });
+
+  it("preserves the zero-unread feed and navigation presentation contracts", () => {
+    const feed = source("components/notifications/notification-feed.tsx");
+    const navigation = source("components/app-navigation.tsx");
+    const acceptance = source("e2e/part18i-scheduled-reminders.spec.ts");
+
+    expect(feed).toContain("{visibleUnreadCount} unread");
+    expect(feed).toContain("hideWhenComplete={visibleUnreadCount === 0}");
+    expect(navigation).toContain(
+      'href === "/notifications" && visibleUnreadCount > 0',
+    );
+    expect(acceptance).toContain(
+      'getByText(`${baselineUnread} unread`, { exact: true })',
+    );
+    expect(acceptance).toContain(
+      'span[aria-label$="unread notifications"]',
+    );
+    expect(acceptance).toContain(
+      'getByRole("button", { name: "Mark all as read" })',
+    );
+    expect(acceptance).toContain("expect(ownerUnread).toMatchObject");
   });
 });

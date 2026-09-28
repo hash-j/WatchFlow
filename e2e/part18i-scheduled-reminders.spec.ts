@@ -162,6 +162,7 @@ test.describe("Part 18I guarded scheduled reminder acceptance", () => {
     if (!admin || !userAClient || !userBClient) {
       throw new Error("Part 18I guarded browser setup is unavailable.");
     }
+    const guardedAdmin = admin;
     const title = `Part 18I browser movie ${runId}`;
     const tmdbId = 1_500_000_000 + Math.floor(Math.random() * 500_000_000);
     const unreadBefore = await userBClient
@@ -284,20 +285,57 @@ test.describe("Part 18I guarded scheduled reminder acceptance", () => {
     ));
 
     await qaUserBPage.goto("/notifications");
-    await clickAndWaitForMutation(
+    const markReadResponse = await clickAndWaitForMutation(
       qaUserBPage,
       article.getByRole("button", { name: "Mark Scheduled movie reminder as read" }),
-      { visible: qaUserBPage.getByText(`${baselineUnread} unread`, { exact: true }) },
+      {},
     );
-    await qaUserBPage.reload();
-    await expect(qaUserBPage.getByText(`${baselineUnread} unread`, { exact: true })).toBeVisible();
-    const persisted = await admin
+    await expect.poll(async () => {
+      const persisted = await guardedAdmin
+        .from("notifications")
+        .select("read_at")
+        .eq("id", notificationId)
+        .eq("user_id", userBId)
+        .single();
+      expect(persisted.error).toBeNull();
+      return persisted.data?.read_at;
+    }).toEqual(expect.any(String));
+    const fixtureUnread = await userBClient
       .from("notifications")
-      .select("read_at")
+      .select("id", { count: "exact", head: true })
       .eq("id", notificationId)
-      .single();
-    expect(persisted.error).toBeNull();
-    expect(persisted.data?.read_at).toEqual(expect.any(String));
+      .eq("user_id", userBId)
+      .is("read_at", null);
+    expect(fixtureUnread).toMatchObject({ count: 0, error: null });
+    const ownerUnread = await userBClient
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userBId)
+      .is("read_at", null);
+    expect(ownerUnread).toMatchObject({ count: baselineUnread, error: null });
+    qaUserBAudit.confirmCompletedServerAction(
+      markReadResponse,
+      "/notifications",
+    );
+
+    await qaUserBPage.reload();
+    await expect(
+      qaUserBPage.getByText(`${baselineUnread} unread`, { exact: true }),
+    ).toBeVisible();
+    await expect(
+      qaUserBPage.locator(
+        'a[href="/notifications"] span[aria-label$="unread notifications"]',
+      ),
+    ).toHaveCount(baselineUnread > 0 ? 2 : 0);
+    await expect(
+      qaUserBPage.getByRole("button", { name: "Mark all as read" }),
+    ).toHaveCount(baselineUnread > 0 ? 1 : 0);
+    await expect(
+      article.getByRole("button", {
+        name: "Mark Scheduled movie reminder as read",
+      }),
+    ).toHaveCount(0);
+    await expect(article.getByText("Read", { exact: true })).toBeVisible();
 
     await qaUserAPage.goto("/notifications");
     await expect(qaUserAPage.getByText(title)).toHaveCount(0);
