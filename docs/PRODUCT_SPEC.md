@@ -346,6 +346,19 @@ boundary. User-owned rows cascade from `auth.users`; shared movies remain.
   documented for user-owned tables and must be exercised with two test accounts
   before production rollout.
 
+## Part 18J-B: Google Calendar connection management
+
+Part 18J-B lets an authenticated owner connect exactly one Google account to
+WatchFlow's primary-calendar integration, see safe connection metadata, pause
+or enable future outbound sync, reconnect, and disconnect. It requests only
+OpenID identity/email plus Google Calendar event access and requires offline
+consent so future background sync can refresh access server-side.
+
+This subpart stores no access token, exposes no refresh credential, and creates
+no Google Calendar event. Event create/update/delete behavior and background
+transport remain Part 18J-C. Multiple providers, multiple accounts, calendar
+selection, inbound synchronization, and ICS export remain deferred.
+
 ## Part 18J-A: calendar integration foundation
 
 Part 18J-A prepares the approved calendar MVP without exposing a user-facing

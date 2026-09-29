@@ -1,5 +1,30 @@
 # WatchFlow Architecture
 
+## Part 18J-B Google Calendar OAuth and connection management
+
+Part 18J-B adds the authenticated connection lifecycle but deliberately does
+not send calendar event requests. `/api/calendar/google/start` validates a
+fresh Supabase user, creates independent high-entropy state/binding/PKCE
+values, stores only SHA-256 hashes through a narrow server-only RPC, and sets
+the binding plus PKCE verifier in an HttpOnly, SameSite=Lax, callback-scoped
+cookie. The callback atomically consumes the owner-bound, expiring state before
+exchanging the code and accepting a verified Google identity.
+
+The access token is used only to read Google OpenID user info and is never
+persisted. The refresh token is encrypted using AES-256-GCM with a fresh nonce,
+an authentication tag, key version, and owner-bound additional authenticated
+data. Only ciphertext is sent to the database. Connection metadata remains
+owner-readable under the Part 18J-A RLS policy; credentials and OAuth state
+have no browser policy or grants.
+
+The service-role client is limited to named OAuth state, connection credential,
+and disconnect RPCs after a fresh authenticated user check. The only normal
+user mutation is an authenticated RPC that derives ownership from `auth.uid()`
+to pause or enable sync. Disconnect attempts provider revocation server-side,
+then authoritatively removes the local connection and cascaded credential.
+Part 18J-C will implement outbound primary-calendar event transport and queue
+execution; no Google Calendar event API call occurs in Part 18J-B.
+
 ## Part 18J-A calendar synchronization foundation
 
 Part 18J-A establishes contracts only for the approved Google Calendar MVP:

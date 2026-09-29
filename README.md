@@ -64,6 +64,11 @@ without committing their values.
 | `TMDB_READ_ACCESS_TOKEN` | Server-only secret | Server-side TMDB search/details/import |
 | `NEXT_PUBLIC_APP_URL` | Browser-safe public, currently optional | Reserved application origin name; current source does not consume it |
 | `WATCHFLOW_SCHEDULER_SECRET` | Server-only secret | Separate bearer credential for the internal scheduled-reminder endpoint |
+| `GOOGLE_CALENDAR_CLIENT_ID` | Server-only configuration | Google OAuth client identifier used only by the connection routes |
+| `GOOGLE_CALENDAR_CLIENT_SECRET` | Server-only secret | Google OAuth token exchange |
+| `GOOGLE_CALENDAR_REDIRECT_URI` | Server-only configuration | Exact Google OAuth callback URI ending in `/api/calendar/google/callback` |
+| `CALENDAR_TOKEN_ENCRYPTION_KEY` | Server-only secret | Base64-encoded 32-byte AES key for refresh-token encryption |
+| `CALENDAR_TOKEN_ENCRYPTION_KEY_VERSION` | Server-only configuration | Positive key version stored with encrypted credentials |
 
 The E2E and integration names are documented in `.env.example` and
 `docs/TESTING.md`. Real QA emails/passwords, cookies, Auth storage state,

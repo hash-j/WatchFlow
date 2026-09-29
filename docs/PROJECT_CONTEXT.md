@@ -1,12 +1,120 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-29
-Last updated by: Codex / Part 18J-A Service-Role Boundary Repair
+Last updated: 2026-09-30
+Last updated by: Codex / Part 18J-B Final Guarded Acceptance
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18J-A defines the Google Calendar synchronization data, security, idempotency, and queue contracts only.
-Current branch: `codex/part-18j-calendar-integration`.
-Current status: Parts 18A through 18I are verified and Part 18I is tagged at `ce89657` (`part-18i-notification-scheduling-verified`). Part 18J-A migration objects are installed on watchflow-dev. Guarded acceptance found one service-role helper privilege defect; forward-only corrective migration `202609290002_part_18j_restrict_helper_execution.sql` is now implemented locally but is not yet applied remotely. It explicitly removes service-role access from all seven internal helpers and reasserts claim/finalize as the only service-role calendar entrypoints without changing behavior or RLS. All other live Part 18J-A checks passed. Production remains untouched. OAuth, Google transport, settings UI, and Part 18J-B have not started. No commit, push, or deployment has occurred.
+Current phase: Part 18J-B Google Calendar OAuth and owner connection management is complete and accepted; Part 18J-C event synchronization is next.
+Current branch: `codex/part-18j-b-google-oauth`.
+Current status: Parts 18A through 18I and Part 18J-A are verified. Part 18J-B implementation, real Google smoke, durable database/security audit, and final guarded two-user isolation all pass against watchflow-dev. Migration `202609290003` is installed there. Exact fixture cleanup restored the single unrelated connected account and credential. Production remains untouched. No commit, push, or deployment has occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-09-30 Part 18J-B Final Two-User Acceptance — PASS
+
+- The fail-closed guard verified `development`, matching configured/expected
+  Supabase origins, the exact pinned watchflow-dev project ref, distinct QA A/B
+  identities, and explicit Part 18J integration opt-in before mutation. No
+  Production endpoint was contacted.
+- The existing connected Google account belongs to neither disposable QA
+  identity, so acceptance preserved it as an unrelated baseline. The harness
+  created one exact disposable connection/credential for each QA owner and one
+  hashed OAuth state for QA A. QA A saw only A metadata; QA B saw only B
+  metadata; neither saw the unrelated connected account. Direct cross-owner
+  updates/deletes failed.
+- QA B's authenticated sync-toggle RPC changed only QA B's fixture. QA A and
+  the unrelated baseline remained enabled and unchanged. Authenticated reads
+  of credentials and direct read-credential/disconnect/consume-state RPC calls
+  failed. QA B could not consume QA A's state or disconnect/mutate QA A.
+- Part 18J-A private helper execution remained denied to both authenticated
+  users and service role. A bounded invalid claim proved the service-role claim
+  entrypoint remains callable without leasing work; finalize with random exact
+  identifiers returned false without mutation, proving its entrypoint remains
+  callable.
+- Cleanup deleted only the two fixture connection IDs and one fixture state ID;
+  credential/job rows cascaded from those disposable connections. A complete
+  post-cleanup snapshot exactly matched the pre-test connection metadata,
+  credential count, and state count: one unrelated connection, one credential,
+  zero OAuth states, and no QA A/B connection remained. No Google Calendar
+  event API was called.
+- Minimum regression validation passes: focused Part 18J-B/J-A and relevant
+  Part 18I coverage 14 files/66 tests; full native-loader fallback 124
+  files/1041 tests; ESLint; direct TypeScript; `git diff --check`; and the
+  291-artifact client-secret scan. No product defect was found and no product
+  code, schema, RLS, privilege, scope, cron, deployment, commit, or push was
+  added by the final isolation acceptance. Part 18J-C is safe to begin after
+  Part 18J-B is committed/tagged through the user's normal release workflow.
+
+## 2026-09-29 Part 18J-B Guarded Live Acceptance — BLOCKED
+
+- The linked project ref, configured Supabase origin, and exact pinned hostname
+  resolve only to watchflow-dev. The new state table, all Part 18J-B columns,
+  and all six Part 18J-B RPC contracts are live. The Supabase CLI migration
+  ledger command was blocked before execution by the known local npm-cache
+  `EPERM`; the installed object surface and successful live behavior establish
+  schema installation independently. Production was not contacted.
+- The final durable state contains exactly one Google connection and one
+  credential row for that owner, with provider `google`, primary calendar,
+  connected status, sync enabled, approved calendar-events scope, safe account
+  metadata, and no duplicate owner connection/credential. The credential has
+  nonempty ciphertext, a 12-byte nonce, 16-byte GCM tag, and key version; it
+  authenticates/decrypts only with the configured owner-bound AES-256-GCM key.
+  No plaintext or access-token column exists and the 291-artifact client-secret
+  scan is clean.
+- The stored OAuth state from the manual smoke was hashed, owner/session-bound,
+  bounded to at most 15 minutes, consumed, and returned false when replayed.
+  Anonymous reads of connections, credentials, and state fail, as do anonymous
+  consume/read-credential/disconnect/sync-toggle RPC calls. Service role still
+  cannot call Part 18J-A private helpers. Exactly that one consumed state row
+  was then removed; a second audit confirms zero OAuth-state rows while the
+  connection and credential remain unchanged.
+- User-provided manual evidence covers real Google connect, fixed callback,
+  account display, pause/resume, disconnect with reported provider revocation,
+  reconnect, same account reuse, and final connected/sync-enabled UI. Durable
+  live state corroborates the final result and uniqueness, but no real OAuth
+  step was repeated by Codex.
+- Final acceptance is BLOCKED, not failed: local ignored configuration has no
+  QA A/B email/password values and Computer Use found no reusable authenticated
+  browser tab. Therefore an independent live authenticated two-user check of
+  the Part 18J-B sync-toggle/disconnect boundaries cannot be claimed. Existing
+  Part 18J-A owner RLS evidence and Part 18J-B source contracts remain green,
+  and no product defect was found.
+- Focused Part 18J-B/J-A and relevant Part 18I coverage passes 14 files/66
+  tests; the full native-loader fallback passes 124 files/1041 tests. ESLint,
+  direct TypeScript, `git diff --check`, and client-secret scanning pass. The
+  production bundle compiles, then the known Windows `spawn EPERM` blocks
+  Next's post-compile TypeScript worker, so a fully completed local build is not
+  claimed. No commit, push, deployment, calendar event API, or Production
+  operation occurred.
+
+## 2026-09-29 Part 18J-B Google OAuth and Connection Management — LOCAL IMPLEMENTATION
+
+- Added forward migration `202609290003_part_18j_b_google_oauth.sql`. Private,
+  RLS-enabled `calendar_oauth_states` stores only one-time SHA-256 hashes. Five
+  named OAuth/credential RPCs are service-role-only; the normal sync toggle is
+  authenticated and derives ownership from `auth.uid()`. Existing Part 18J-A
+  tables, RLS, queue, leases, retries, and event-sync contracts are unchanged.
+- OAuth start uses fresh Supabase authentication, independent random state and
+  browser binding, PKCE S256, a callback-scoped HttpOnly SameSite=Lax cookie,
+  offline consent, and the minimal OpenID/email/calendar-events scopes. Callback
+  consumes state once before token exchange, validates verified Google identity,
+  stores safe metadata, and never persists the access token.
+- Refresh credentials use AES-256-GCM with random 12-byte nonce, 16-byte tag,
+  explicit key version, and owner-bound AAD. Connect/reconnect atomically enforce
+  one Google connection per owner. Disconnect attempts Google revocation and
+  then removes local connection/credentials even when provider revocation cannot
+  be confirmed. No token or secret reaches a Client Component.
+- Added `/settings/calendar` with connect/reconnect, safe connected-account
+  metadata, pause/enable, and disconnect controls. No event create/update/delete,
+  calendar selection, Google Calendar API transport, external cron, inbound
+  sync, email, or Production operation is included.
+- Focused Part 18J-B and Part 18J-A regression coverage passes 6 files/23
+  tests; the full native-loader single-worker suite passes 124 files/1041
+  tests. ESLint, direct TypeScript, `git diff --check`, and the 291-artifact
+  client-secret scan pass. The exact `npm test` launcher remains blocked at
+  Vite config loading by this Windows host's known `spawn EPERM`; the native
+  fallback is the full equivalent. The production bundle compiles, then the
+  same host blocks Next's post-compile TypeScript worker with `spawn EPERM`, so
+  a fully completed build is not claimed. Migration application and guarded
+  watchflow-dev/Google OAuth acceptance remain manual next steps.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed

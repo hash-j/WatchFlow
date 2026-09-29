@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Database, SlidersHorizontal, UserRound } from "lucide-react";
+import { Bell, CalendarDays, Database, SlidersHorizontal, UserRound } from "lucide-react";
 
 const sections = [
   {
@@ -19,6 +19,12 @@ const sections = [
     title: "Notifications",
     description: "Store reminder and summary choices for future delivery.",
     icon: Bell,
+  },
+  {
+    href: "/settings/calendar",
+    title: "Calendar",
+    description: "Connect Google Calendar and control outbound schedule sync.",
+    icon: CalendarDays,
   },
   {
     href: "/settings/data",

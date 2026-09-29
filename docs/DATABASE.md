@@ -1,5 +1,26 @@
 # WatchFlow Database
 
+## Part 18J-B Google OAuth connection state and credential operations
+
+Migration `202609290003_part_18j_b_google_oauth.sql` adds private
+`calendar_oauth_states`. It stores only 32-byte hashes of OAuth state and the
+browser binding, expires within at most 15 minutes, is one-time consumable, has
+RLS enabled, and grants no table access to `PUBLIC`, `anon`, or
+`authenticated`.
+
+Five SECURITY DEFINER operations are explicitly service-role-only: create and
+consume OAuth state, atomically upsert the Google connection plus encrypted
+credential, read that credential for server-side revocation, and disconnect
+the owner's Google connection. They are not generic table APIs. One separate
+authenticated RPC, `watchflow_set_calendar_sync_enabled(boolean)`, derives the
+owner from `auth.uid()` and changes only that owner's Google connection.
+
+The migration does not change Part 18J-A queue/mapping/RLS behavior, does not
+store access tokens, and does not grant direct provider-state writes to
+browser roles. The existing `(user_id, provider)` unique constraint preserves
+one Google connection per owner; reconnect replaces the encrypted refresh
+credential atomically.
+
 ## Part 18J-A Google Calendar foundation
 
 Corrective migration

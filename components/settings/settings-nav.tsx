@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Database, SlidersHorizontal, UserRound } from "lucide-react";
+import { Bell, CalendarDays, Database, SlidersHorizontal, UserRound } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ const links = [
     icon: SlidersHorizontal,
   },
   { href: "/settings/notifications", label: "Notifications", icon: Bell },
+  { href: "/settings/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/settings/data", label: "Data & Account", icon: Database },
 ] as const;
 
@@ -23,7 +24,7 @@ export function SettingsNav() {
   return (
     <nav
       aria-label="Settings sections"
-      className="grid min-w-0 grid-cols-2 gap-1 rounded-xl border bg-card p-2 shadow-sm sm:grid-cols-4 lg:grid-cols-1"
+      className="grid min-w-0 grid-cols-2 gap-1 rounded-xl border bg-card p-2 shadow-sm sm:grid-cols-5 lg:grid-cols-1"
     >
       {links.map(({ href, label, icon: Icon }) => (
         <Link

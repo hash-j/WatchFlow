@@ -4,6 +4,21 @@ Last reviewed: 2026-09-29
 
 ## Current release evidence
 
+## Part 18J-B Google OAuth coverage
+
+Part 18J-B unit/contract tests cover OAuth URL scope/offline/PKCE parameters,
+missing refresh access, verified identity, high-entropy independent state,
+malformed cookies, AES-256-GCM round trips, owner-bound AAD, tampering, invalid
+keys, one-time hashed-state SQL, the narrow RPC privilege model, absence of
+access-token persistence, and absence of calendar event transport. Provider
+network tests use injected `fetch` responses and never contact Google.
+
+Live acceptance remains required after applying migration `202609290003` to
+watchflow-dev and configuring a development Google OAuth client plus encryption
+key. Acceptance must verify connect/reconnect, denial, state replay/expiry,
+pause/enable, disconnect/revocation behavior, two-user isolation, RLS, secret
+non-exposure, and exact fixture cleanup. It must not use Production.
+
 Part 18J-A adds source-only contract coverage in `lib/calendar`. It verifies
 deterministic source/version/event identifiers, the four-table migration,
 credential isolation, owner-read-only RLS/grants, desired-state coalescing,
@@ -96,9 +111,15 @@ Application/build names:
 - `WATCHFLOW_SCHEDULER_SECRET`
 - `TMDB_READ_ACCESS_TOKEN`
 - `NEXT_PUBLIC_APP_URL`
+- `GOOGLE_CALENDAR_CLIENT_ID`
+- `GOOGLE_CALENDAR_CLIENT_SECRET`
+- `GOOGLE_CALENDAR_REDIRECT_URI`
+- `CALENDAR_TOKEN_ENCRYPTION_KEY`
+- `CALENDAR_TOKEN_ENCRYPTION_KEY_VERSION`
 
 Only public Supabase configuration and the public app origin may enter browser
-code. The Supabase secret and TMDB token are server-only.
+code. Supabase/TMDB secrets and every Google Calendar OAuth/encryption setting
+are server-only.
 
 Guarded browser/integration names:
 
