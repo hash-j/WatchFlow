@@ -12,7 +12,7 @@ const ambiguityFix = readFileSync(
     "supabase/migrations/202609280002_part_18i_fix_subscription_id_ambiguity.sql",
   ),
   "utf8",
-).toLowerCase();
+).replaceAll("\r\n", "\n").toLowerCase();
 
 describe("Part 18I scheduled reminder migration contract", () => {
   it("creates owner-scoped job and delivery ledgers without user writes", () => {

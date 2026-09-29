@@ -1,8 +1,28 @@
 # WatchFlow Testing Guide
 
-Last reviewed: 2026-08-30
+Last reviewed: 2026-09-29
 
 ## Current release evidence
+
+Part 18J-A adds source-only contract coverage in `lib/calendar`. It verifies
+deterministic source/version/event identifiers, the four-table migration,
+credential isolation, owner-read-only RLS/grants, desired-state coalescing,
+bounded `SKIP LOCKED` claims, exact lease/version finalization, retries, and
+mapping cleanup. These tests do not claim an installed watchflow-dev migration,
+working OAuth, Google API delivery, or browser acceptance.
+
+The clean PostgreSQL 18 release job also runs
+`supabase/testing/part18j_calendar_foundation.sql` after rebuilding every
+migration. That rollback-only check exercises enqueue/claim exclusivity,
+identical-work lease preservation, stale-finalization rejection, mapping
+upsert/delete convergence, owner isolation, and the service-role grant boundary
+without Google or retained fixtures.
+
+Focused local command:
+
+```text
+npx vitest run lib/calendar --configLoader native --pool threads --maxWorkers=1 --no-file-parallelism
+```
 
 The final Part 15.5E evidence is in `docs/RELEASE_EVIDENCE.md`.
 

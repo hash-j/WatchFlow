@@ -1,5 +1,58 @@
 # WatchFlow Database
 
+## Part 18J-A Google Calendar foundation
+
+Corrective migration
+`202609290002_part_18j_restrict_helper_execution.sql` closes the only defect
+found by guarded watchflow-dev acceptance. Supabase retained explicit/default
+`service_role` EXECUTE privileges on internal Part 18J functions even though
+the foundation migration revoked `PUBLIC`, `anon`, and `authenticated`.
+The correction explicitly revokes `service_role` as well as all browser roles
+from the seven deterministic/enqueue/trigger helpers, then revokes and
+re-grants only the bounded claim and exact finalize RPCs to `service_role`.
+Function owners retain internal SECURITY DEFINER call access. No function body,
+signature, table data, RLS policy, queue state, ownership rule, lease, retry,
+or idempotency behavior changes.
+
+Migration `202609290001_part_18j_calendar_foundation.sql` adds four private
+relations without connecting to Google:
+
+- `calendar_connections` stores one owner-visible Google connection per user,
+  fixed to the primary calendar, with scopes, enablement/status, and sanitized
+  operational timestamps/errors;
+- `calendar_credentials` stores only an encrypted refresh-token envelope
+  (ciphertext, 12-byte nonce, 16-byte authentication tag, and key version);
+- `calendar_event_mappings` maps one opaque, deletion-surviving WatchFlow
+  source key to one deterministic provider event ID; and
+- `calendar_sync_jobs` coalesces one desired `upsert`, `delete`, or
+  `connection_cleanup` operation per connection/source.
+
+All four tables have RLS enabled. Authenticated users receive owner-scoped
+SELECT only on connections, mappings, and jobs; they receive no direct writes.
+`calendar_credentials` has no anon/authenticated policy or table grant.
+Provider state can therefore be changed only through future narrow trusted
+flows, not a browser-supplied owner ID. Existing tables and policies are not
+changed.
+
+Schedule/status changes invoke a private trigger helper that derives the owner,
+creates an opaque deterministic source key, and upserts desired queue state.
+The upsert version includes the absolute scheduled instant, saved IANA
+timezone, title, and runtime. Deletion uses a stable tombstone version. A
+deterministic Google-compatible event ID lets retries converge on the same
+provider event.
+
+Only `service_role` can execute
+`watchflow_claim_calendar_sync_jobs(integer, integer)` and
+`watchflow_finalize_calendar_sync_job(uuid, uuid, text, text, text, text,
+integer, text)`. Claim batches are limited to 25 and leases to 30–300 seconds;
+claims use `FOR UPDATE SKIP LOCKED`, revalidate live desired state, and expose
+the encrypted credential envelope only through this narrow server boundary.
+Finalization requires the exact unexpired lease and source version, reconciles
+the mapping on success, and otherwise applies bounded retry backoff or an
+explicit terminal/auth-required state. No Part 18J migration is applied to
+Production. The foundation migration is installed on watchflow-dev; the
+corrective privilege migration remains pending there.
+
 ## Part 18I scheduled movie reminders
 
 Migration `202609280001_part_18i_scheduled_reminders.sql` adds two private

@@ -346,6 +346,21 @@ boundary. User-owned rows cascade from `auth.users`; shared movies remain.
   documented for user-owned tables and must be exercised with two test accounts
   before production rollout.
 
+## Part 18J-A: calendar integration foundation
+
+Part 18J-A prepares the approved calendar MVP without exposing a user-facing
+integration yet. The eventual product direction is Google Calendar only,
+WatchFlow to Google only, the connected account's primary calendar, and one
+event for each eligible scheduled movie. The foundation defines owner-visible
+connection/status data, isolated encrypted refresh credentials, deterministic
+event mappings, and a retry-safe desired-state synchronization queue.
+
+OAuth connection and revocation, refresh-token encryption/decryption, Google
+API transport, calendar settings, executor activation, and guarded live
+acceptance remain later Part 18J work. Inbound synchronization, ICS export,
+multiple providers/accounts/calendars, email, weekly summaries, and admin
+operations remain explicitly outside this MVP.
+
 ## Part 12: search and library improvements
 
 Part 12 makes private libraries of several hundred to roughly 1,000 movies

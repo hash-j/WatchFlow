@@ -1,16 +1,102 @@
 # WatchFlow Project Context
 
 Last updated: 2026-09-29
-Last updated by: Codex / Part 18I Deterministic Notification ID Read Fix
+Last updated by: Codex / Part 18J-A Service-Role Boundary Repair
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18I implements scheduled movie reminders with durable jobs, bounded claim/finalize leases, retry-safe Web Push delivery, and a separately authenticated manual executor.
-Current branch: `codex/part-18i-notification-scheduling`.
-Current status: Parts 18A through 18H are complete and Part 18H is tagged at `3ab970b` (`part-18h-notifications-verified`). Part 18I migrations `202609280001_part_18i_scheduled_reminders.sql` and `202609280002_part_18i_fix_subscription_id_ambiguity.sql` are installed on watchflow-dev. Guarded database integration passes. The latest browser trace proved scheduled-reminder read actions were rejected before their RPC because the application validator required RFC version/variant bits while Part 18I intentionally stores deterministic PostgreSQL UUID values. The notification-ID boundary now accepts PostgreSQL's canonical UUID text form while retaining malformed-input rejection and owner-scoped RLS mutation. One guarded CI rerun is required. Production has not been touched. No current commit, push, deployment, or external cron configuration has occurred.
+Current phase: Part 18J-A defines the Google Calendar synchronization data, security, idempotency, and queue contracts only.
+Current branch: `codex/part-18j-calendar-integration`.
+Current status: Parts 18A through 18I are verified and Part 18I is tagged at `ce89657` (`part-18i-notification-scheduling-verified`). Part 18J-A migration objects are installed on watchflow-dev. Guarded acceptance found one service-role helper privilege defect; forward-only corrective migration `202609290002_part_18j_restrict_helper_execution.sql` is now implemented locally but is not yet applied remotely. It explicitly removes service-role access from all seven internal helpers and reasserts claim/finalize as the only service-role calendar entrypoints without changing behavior or RLS. All other live Part 18J-A checks passed. Production remains untouched. OAuth, Google transport, settings UI, and Part 18J-B have not started. No commit, push, or deployment has occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
 `docs/RELEASE_EVIDENCE.md` remains the authority for permission to create the
 isolated Preview. The newer Part 16E section below is the authority for deployed
 Preview acceptance status. Older dated milestone sections are historical.
+
+## 2026-09-29 Part 18J-A Service-Role Boundary Repair — LOCAL IMPLEMENTATION
+
+- Added forward-only migration
+  `202609290002_part_18j_restrict_helper_execution.sql`; the installed
+  `202609290001` migration remains unchanged. The correction explicitly
+  revokes EXECUTE from `PUBLIC`, `anon`, `authenticated`, and `service_role`
+  on all seven internal Part 18J helpers, then explicitly re-grants only the
+  bounded claim and exact finalize RPC signatures to `service_role`.
+- SECURITY DEFINER owners retain internal helper-call access, so triggers,
+  deterministic identity/version helpers, enqueue/coalescing, claim/finalize,
+  leases, retries, idempotency, mappings, ownership, and RLS are unchanged.
+  The migration contains privilege statements only and performs no table data
+  or function-body mutation.
+- Regression coverage validates the complete helper/entrypoint classification,
+  browser-role denial, service-role claim/finalize access, owner isolation, and
+  absence of RLS/data/function changes. Focused Part 18J-A plus relevant Part
+  18I coverage passes 8 files/43 tests; the full native Vitest fallback passes
+  119 files/1021 tests. ESLint, TypeScript, `git diff --check`, and the
+  276-artifact client-secret scan pass. The corrective migration is not yet
+  applied to watchflow-dev, so guarded live acceptance must be rerun after the
+  user applies it. Production remains untouched.
+
+## 2026-09-29 Part 18J-A Guarded Live Acceptance — FAIL
+
+- The local target guard matched the linked project ref, configured Supabase
+  origin, expected development origin, and `E2E_TARGET_ENV=development` to the
+  pinned watchflow-dev project. No Production endpoint or Google API was
+  contacted. The Supabase CLI migration-ledger command was blocked locally by
+  npm-cache `EPERM`; exact remote installation was instead established through
+  all four table/column probes, both public RPC contracts, and successful live
+  trigger/helper/claim/finalize behavior.
+- Four of five guarded integration groups pass. Safe metadata is owner-only;
+  anonymous access is denied at table privileges; credentials are denied to
+  anon and authenticated roles; authenticated direct writes and claim/finalize
+  calls fail; two users see only their own metadata and jobs.
+- Deterministic source/version/provider-event identities, identical-state
+  coalescing, changed-version supersession, one-row uniqueness, invalid claim
+  bounds, concurrent claim exclusivity, expired-lease recovery, stale token and
+  source-version rejection, retry finalization, valid success, terminal-state
+  protection, deletion tombstones, and provider-mapping cleanup all pass live.
+- Acceptance fails because the service-role REST client can directly execute
+  `watchflow_calendar_source_key` and
+  `watchflow_enqueue_calendar_sync`. Supabase's existing explicit/default
+  service-role function privileges survive the migration's revocation from
+  `PUBLIC`, `anon`, and `authenticated`. This violates the Part 18J-A rule that
+  service role may execute only the narrow claim/finalize calendar boundary.
+  No broad RLS or application defect was found, but acceptance cannot pass
+  until a new forward-only migration explicitly revokes service-role execution
+  from every private helper and re-grants only claim/finalize.
+- Both controlled owner connections, encrypted credential fixtures, job,
+  mapping, movie relationship, and movie were removed by exact IDs. All four
+  calendar tables returned zero remaining acceptance rows; both QA users'
+  complete preference rows matched their pre-test snapshots. Production was
+  not inspected or modified.
+
+## 2026-09-29 Part 18J-A Calendar Contracts and Migration — LOCAL IMPLEMENTATION
+
+- Added a forward-only four-table calendar foundation for the approved Google,
+  outbound-only, primary-calendar MVP. Connections/mappings/jobs are
+  owner-readable and not user-writable; encrypted refresh credentials have no
+  normal client policy or grant. Existing RLS and user-facing mutations remain
+  unchanged.
+- Schedule lifecycle triggers coalesce one desired job per connection/source.
+  Source keys, schedule versions, delete tombstones, job IDs, and provider
+  event IDs are deterministic. Source keys and nullable mapping relationships
+  preserve enough identity for provider cleanup after a movie relationship is
+  removed.
+- The only service-role API is a bounded `SKIP LOCKED` claim plus exact
+  lease/source-version finalize RPC. Claims recheck current source state;
+  finalization rejects stale/expired workers, reconciles mappings, and applies
+  bounded backoff or explicit terminal/auth-required states.
+- This subpart deliberately includes no OAuth endpoint, Google SDK/API request,
+  token crypto implementation, settings UI, executor route, external cron, or
+  Production migration application. The foundation migration is installed on
+  watchflow-dev; the corrective privilege migration must be applied before
+  guarded acceptance is rerun. Production remains untouched.
+- A disposable local PostgreSQL 18 rebuild applied every migration, including
+  Part 18J-A, and the rollback-only behavioral SQL passed enqueue/coalescing,
+  exclusive claim, stale-finalize, terminal-state, mapping cleanup, RLS, and
+  privilege checks. Focused coverage passes 7 files/40 tests; the full native
+  Vitest fallback passes 118 files/1018 tests. ESLint, TypeScript,
+  `git diff --check`, and the 276-artifact client-secret scan pass. The exact
+  `npm test` launcher and the final production-build worker remain blocked by
+  this Windows host's known `spawn EPERM`; the build compiled successfully
+  before that host-level worker failure.
 
 ## 2026-09-29 Part 18I Notification Read Acceptance — LOCAL QA FIX
 

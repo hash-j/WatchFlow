@@ -1,5 +1,42 @@
 # WatchFlow Architecture
 
+## Part 18J-A calendar synchronization foundation
+
+Part 18J-A establishes contracts only for the approved Google Calendar MVP:
+WatchFlow to Google, the connected account's primary calendar, and one event
+per eligible scheduled `user_movies` row. It does not add OAuth routes, Google
+transport, settings UI, inbound synchronization, multiple accounts/calendars,
+or a deployed executor.
+
+```text
+owned schedule/status change
+  -> security-definer trigger derives owner and opaque source key
+  -> desired operation/version coalesces into one calendar_sync_jobs row
+
+future trusted executor
+  -> service-role-only bounded claim RPC (SKIP LOCKED + lease)
+  -> decrypt credential in server memory and call provider adapter
+  -> service-role-only exact lease/version finalize RPC
+  -> reconcile event mapping or bounded retry/terminal state
+```
+
+The queue records desired state rather than an append-only event log. A newer
+schedule version replaces older unclaimed work for the same connection/source;
+an identical enqueue preserves its current lease or terminal result. Claiming
+rechecks the live schedule, connection state, and exact source version. The
+finalizer accepts only an exact, unexpired lease token and source version, so a
+stale worker cannot overwrite newer desired state. Provider event IDs are
+deterministic and mappings retain the opaque source key after a `user_movies`
+row is deleted, allowing a later provider cleanup.
+
+Authenticated users can read only their connection metadata, event mappings,
+and job status through RLS. They cannot directly write provider state. The
+credential relation has no anon/authenticated policy or grant and stores only
+an encrypted refresh-token envelope; access tokens are not persisted. The
+only service-role grants are the calendar claim/finalize RPCs. There is no
+generic privileged calendar client, token encryption implementation, Google
+API call, Production configuration, or privilege expansion to existing data.
+
 ## Part 18I scheduled reminder execution
 
 Part 18I adds one narrow background use case: a reminder before an owned movie's
