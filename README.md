@@ -12,10 +12,11 @@ recommendations. The current uncommitted Part 15.1 work also adds protected,
 server-calculated personal viewing statistics at `/statistics`.
 
 Payments, public profiles/lists, social or collaborative features, AI
-recommendations, email/weekly-summary delivery, external calendar sync, and
-production deployment are out of scope. The implemented notification system
+recommendations, email/weekly-summary delivery, inbound or multi-provider
+calendar sync, and production deployment are out of scope. The implemented notification system
 provides a private center, browser push, and manually invoked scheduled movie
-reminders. Statistics are private to the signed-in member; WatchFlow does not
+reminders. Google Calendar support provides an outbound, primary-calendar,
+manually invoked event-sync executor for connected owners. Statistics are private to the signed-in member; WatchFlow does not
 provide public, social, global, predictive, or third-party analytics.
 
 ## Repository orientation
@@ -60,12 +61,12 @@ without committing their values.
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Browser-safe public | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser-safe public | Supabase publishable/legacy anon key |
-| `SUPABASE_SECRET_KEY` | Server-only secret | Narrow trusted metadata/notification operations and the Part 18I claim/finalize executor |
+| `SUPABASE_SECRET_KEY` | Server-only secret | Narrow trusted metadata/notification operations plus bounded Part 18I and Part 18J-C RPC executors |
 | `TMDB_READ_ACCESS_TOKEN` | Server-only secret | Server-side TMDB search/details/import |
-| `NEXT_PUBLIC_APP_URL` | Browser-safe public, currently optional | Reserved application origin name; current source does not consume it |
-| `WATCHFLOW_SCHEDULER_SECRET` | Server-only secret | Separate bearer credential for the internal scheduled-reminder endpoint |
+| `NEXT_PUBLIC_APP_URL` | Browser-safe public, optional | Application origin used for contextual calendar event links |
+| `WATCHFLOW_SCHEDULER_SECRET` | Server-only secret | Bearer credential for bounded internal reminder and calendar-sync endpoints |
 | `GOOGLE_CALENDAR_CLIENT_ID` | Server-only configuration | Google OAuth client identifier used only by the connection routes |
-| `GOOGLE_CALENDAR_CLIENT_SECRET` | Server-only secret | Google OAuth token exchange |
+| `GOOGLE_CALENDAR_CLIENT_SECRET` | Server-only secret | Google OAuth authorization and refresh-token exchanges |
 | `GOOGLE_CALENDAR_REDIRECT_URI` | Server-only configuration | Exact Google OAuth callback URI ending in `/api/calendar/google/callback` |
 | `CALENDAR_TOKEN_ENCRYPTION_KEY` | Server-only secret | Base64-encoded 32-byte AES key for refresh-token encryption |
 | `CALENDAR_TOKEN_ENCRYPTION_KEY_VERSION` | Server-only configuration | Positive key version stored with encrypted credentials |

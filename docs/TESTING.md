@@ -1,8 +1,39 @@
 # WatchFlow Testing Guide
 
-Last reviewed: 2026-09-29
+Last reviewed: 2026-09-30
 
 ## Current release evidence
+
+## Part 18J-C Google Calendar transport coverage
+
+Part 18J-C uses mocked `fetch` and injected executor dependencies for normal
+tests; unit and full suites never contact Google. Coverage verifies UTC,
+Asia/Karachi, America/Los_Angeles, and a DST-sensitive instant; token refresh
+and optional rotation; deterministic create/update conflict convergence;
+delete and delete-404 behavior; 429/5xx/network/auth/terminal classification;
+malformed responses; exact claim/finalize arguments; stale finalization;
+encrypted owner binding; and absence of token/error leakage.
+
+Migration/source and rollback-only PostgreSQL coverage proves the replacement
+RPC is owner/connection/provider-bound, browser roles cannot execute it, a
+paused connection remains paused with unchanged metadata after rotation, and
+paused/disconnect-pending connections cannot be claimed. Guarded integration
+also verifies that a schedule change made while paused retains its current
+`upsert` source version for reconciliation after resume. The database check
+also validates the corrected Google-compatible deterministic event alphabet.
+
+Focused command:
+
+```text
+npx vitest run lib/calendar app/api/internal/calendar/sync/route.test.ts lib/supabase/background.test.ts --configLoader native --pool threads --maxWorkers=1 --no-file-parallelism
+```
+
+Real Google acceptance is a separate human-checkpoint operation against
+watchflow-dev. It must pin the development project and controlled account,
+then create, repeat, reschedule, and unschedule one fixture while checking one
+event, stable identity, mapping/job convergence, second-user isolation,
+unrelated-event preservation, and exact cleanup. Do not run that flow against
+Production or without explicit approval for real provider mutations.
 
 ## Part 18J-B Google OAuth coverage
 

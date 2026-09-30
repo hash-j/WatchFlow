@@ -60,7 +60,7 @@ export function createCalendarProviderEventId(
   connectionId: string,
   sourceKey: string,
 ) {
-  return `wf${md5(
+  return `a${md5(
     `watchflow:calendar-provider-event:${connectionId}:${sourceKey}`,
   )}`;
 }

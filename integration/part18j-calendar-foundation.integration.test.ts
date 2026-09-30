@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -104,6 +104,16 @@ let preferencesA: Record<string, unknown>;
 let preferencesB: Record<string, unknown>;
 let scheduledFor: string;
 let movieTitle: string;
+let baselineConnectionHash: string;
+let baselineCredentialHash: string;
+let baselineConnectionCount: number;
+let baselineCredentialCount: number;
+
+function snapshotHash(rows: unknown[]) {
+  return createHash("sha256")
+    .update(JSON.stringify(rows), "utf8")
+    .digest("hex");
+}
 
 async function authenticate(kind: "A" | "B"): Promise<QaUser> {
   const client = createClient(
@@ -225,12 +235,24 @@ integrationDescribe.sequential(
 
       const existingConnections = await admin
         .from("calendar_connections")
-        .select("id", { count: "exact", head: true });
+        .select("*")
+        .order("id");
       expect(existingConnections.error).toBeNull();
+      const existingCredentials = await admin
+        .from("calendar_credentials")
+        .select("*")
+        .order("connection_id");
+      expect(existingCredentials.error).toBeNull();
+      baselineConnectionCount = existingConnections.data!.length;
+      baselineCredentialCount = existingCredentials.data!.length;
+      baselineConnectionHash = snapshotHash(existingConnections.data!);
+      baselineCredentialHash = snapshotHash(existingCredentials.data!);
       expect(
-        existingConnections.count,
-        "Acceptance refuses to run while any pre-existing calendar connection exists.",
-      ).toBe(0);
+        existingConnections.data!.filter(
+          (row) => row.user_id === userA.userId || row.user_id === userB.userId,
+        ),
+        "QA users must not have pre-existing calendar connections.",
+      ).toEqual([]);
 
       const connections = await admin.from("calendar_connections").insert([
         {
@@ -309,6 +331,17 @@ integrationDescribe.sequential(
 
         expect(await readPreferences(userA)).toEqual(preferencesA);
         expect(await readPreferences(userB)).toEqual(preferencesB);
+
+        const [connectionsAfter, credentialsAfter] = await Promise.all([
+          admin.from("calendar_connections").select("*").order("id"),
+          admin.from("calendar_credentials").select("*").order("connection_id"),
+        ]);
+        expect(connectionsAfter.error).toBeNull();
+        expect(credentialsAfter.error).toBeNull();
+        expect(connectionsAfter.data).toHaveLength(baselineConnectionCount);
+        expect(credentialsAfter.data).toHaveLength(baselineCredentialCount);
+        expect(snapshotHash(connectionsAfter.data!)).toBe(baselineConnectionHash);
+        expect(snapshotHash(credentialsAfter.data!)).toBe(baselineCredentialHash);
       }
       await Promise.allSettled([
         userA?.client.auth.signOut(),
@@ -387,6 +420,18 @@ integrationDescribe.sequential(
         );
         expect(claimResult.error).not.toBeNull();
         expect(finalizeResult.error).not.toBeNull();
+        const replaceCredential = await client.rpc(
+          "watchflow_replace_google_calendar_credential",
+          {
+            p_user_id: userA.userId,
+            p_connection_id: connectionAId,
+            p_refresh_token_ciphertext: "\\x09",
+            p_refresh_token_nonce: `\\x${"00".repeat(12)}`,
+            p_refresh_token_auth_tag: `\\x${"00".repeat(16)}`,
+            p_encryption_key_version: 1,
+          },
+        );
+        expect(replaceCredential.error).not.toBeNull();
         const helperResult = await client.rpc("watchflow_calendar_source_key", {
           p_connection_id: connectionAId,
           p_user_movie_id: userMovieAId,
@@ -412,6 +457,68 @@ integrationDescribe.sequential(
         const result = await admin.rpc(rpc[0], rpc[1]);
         expect(result.error).not.toBeNull();
       }
+    });
+
+    it("rotates only the exact encrypted credential and preserves paused metadata", async () => {
+      const pause = await admin
+        .from("calendar_connections")
+        .update({ sync_enabled: false })
+        .eq("id", connectionAId)
+        .select("*")
+        .single();
+      expect(pause.error).toBeNull();
+      const connectionHash = snapshotHash([pause.data]);
+
+      const rotate = await admin.rpc(
+        "watchflow_replace_google_calendar_credential",
+        {
+          p_user_id: userA.userId,
+          p_connection_id: connectionAId,
+          p_refresh_token_ciphertext: "\\x09080706",
+          p_refresh_token_nonce: `\\x${"05".repeat(12)}`,
+          p_refresh_token_auth_tag: `\\x${"04".repeat(16)}`,
+          p_encryption_key_version: 2,
+        },
+      );
+      expect(rotate.error).toBeNull();
+      expect(rotate.data).toBe(true);
+
+      const [connectionAfter, credentialAfter] = await Promise.all([
+        admin.from("calendar_connections").select("*").eq("id", connectionAId).single(),
+        admin
+          .from("calendar_credentials")
+          .select("connection_id,encryption_key_version")
+          .eq("connection_id", connectionAId)
+          .single(),
+      ]);
+      expect(connectionAfter.error).toBeNull();
+      expect(credentialAfter.error).toBeNull();
+      expect(snapshotHash([connectionAfter.data])).toBe(connectionHash);
+      expect(connectionAfter.data?.sync_enabled).toBe(false);
+      expect(credentialAfter.data).toEqual({
+        connection_id: connectionAId,
+        encryption_key_version: 2,
+      });
+
+      const wrongOwner = await admin.rpc(
+        "watchflow_replace_google_calendar_credential",
+        {
+          p_user_id: userB.userId,
+          p_connection_id: connectionAId,
+          p_refresh_token_ciphertext: "\\x01",
+          p_refresh_token_nonce: `\\x${"00".repeat(12)}`,
+          p_refresh_token_auth_tag: `\\x${"00".repeat(16)}`,
+          p_encryption_key_version: 1,
+        },
+      );
+      expect(wrongOwner.error).toBeNull();
+      expect(wrongOwner.data).toBe(false);
+
+      const resume = await admin
+        .from("calendar_connections")
+        .update({ sync_enabled: true })
+        .eq("id", connectionAId);
+      expect(resume.error).toBeNull();
     });
 
     it("coalesces deterministic desired state and supersedes an obsolete version", async () => {
@@ -520,6 +627,40 @@ integrationDescribe.sequential(
       expect(visibleB.error).toBeNull();
       expect(visibleA.data).toHaveLength(1);
       expect(visibleB.data).toEqual([]);
+
+      const pause = await admin
+        .from("calendar_connections")
+        .update({ sync_enabled: false })
+        .eq("id", connectionAId);
+      expect(pause.error).toBeNull();
+      scheduledFor = new Date(
+        new Date(scheduledFor).getTime() + 2 * 60 * 60_000,
+      ).toISOString();
+      const pausedScheduleChange = await userA.client
+        .from("user_movies")
+        .update({
+          scheduled_for: scheduledFor,
+          schedule_timezone: "Asia/Karachi",
+        })
+        .eq("id", userMovieAId);
+      expect(pausedScheduleChange.error).toBeNull();
+      expect(await readFixtureJob()).toMatchObject({
+        desired_operation: "upsert",
+        source_version: createCalendarUpsertVersion({
+          sourceKey,
+          scheduledFor,
+          scheduleTimezone: "Asia/Karachi",
+          movieTitle,
+          runtimeMinutes: 118,
+        }),
+        state: "pending",
+      });
+      expect(await claim()).toEqual([]);
+      const resume = await admin
+        .from("calendar_connections")
+        .update({ sync_enabled: true })
+        .eq("id", connectionAId);
+      expect(resume.error).toBeNull();
     });
 
     it("enforces bounded exclusive claims, lease recovery, and exact finalization", async () => {

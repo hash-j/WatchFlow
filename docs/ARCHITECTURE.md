@@ -1,5 +1,49 @@
 # WatchFlow Architecture
 
+## Part 18J-C Google Calendar event synchronization
+
+Part 18J-C turns the provider-neutral desired-state queue into a bounded,
+server-only Google Calendar transport. The internal
+`POST /api/internal/calendar/sync` endpoint reuses the strong
+`WATCHFLOW_SCHEDULER_SECRET` because it belongs to the same manually invoked,
+trusted background-execution plane as Part 18I. Missing, weak, or incorrect
+authorization fails before a privileged client is created; no external cron
+is configured.
+
+```text
+authorized internal request
+  -> service-role-only bounded claim RPC revalidates owner/connection/source
+  -> decrypt refresh credential with owner-bound AAD in server memory
+  -> exchange it for an in-memory Google access token
+  -> optionally persist an explicitly rotated refresh credential via one
+     owner-and-connection-bound replacement RPC
+  -> update deterministic event ID, or create it if absent; delete by mapping
+  -> exact lease/source-version finalize RPC reconciles mapping and retry state
+```
+
+The executor performs no direct table operation and can call only the claim,
+finalize, and credential-replacement RPCs. The replacement RPC changes only
+the encrypted credential envelope and its timestamp; it cannot enable a paused
+connection or modify account metadata. Paused and disconnect-pending
+connections are excluded before claim. Reconnect-required connections are
+terminalized by the existing claim contract without contacting Google.
+
+Google access tokens are never persisted. Event upserts first update the
+deterministic caller-supplied event ID, insert that same ID only after a 404,
+and resolve a create conflict by updating the same ID. This makes retries after
+uncertain outcomes converge without enumeration or duplication. Only mapped
+events are deleted, and provider 404 is success-equivalent. HTTP 429, 5xx, and
+bounded network failures use existing bounded retries; revoked credentials
+become reconnect-required; other provider rejections are terminal and all
+errors are sanitized.
+
+Event start/end values preserve the exact `scheduled_for` instant while also
+sending the saved IANA `schedule_timezone`; runtime determines the end instant.
+The payload contains the movie title, minimal WatchFlow context, and private
+deterministic source/version metadata. Inbound sync, calendar enumeration,
+multiple calendars/providers, external cron, and Production activation remain
+outside Part 18J-C.
+
 ## Part 18J-B Google Calendar OAuth and connection management
 
 Part 18J-B adds the authenticated connection lifecycle but deliberately does
@@ -22,8 +66,8 @@ and disconnect RPCs after a fresh authenticated user check. The only normal
 user mutation is an authenticated RPC that derives ownership from `auth.uid()`
 to pause or enable sync. Disconnect attempts provider revocation server-side,
 then authoritatively removes the local connection and cascaded credential.
-Part 18J-C will implement outbound primary-calendar event transport and queue
-execution; no Google Calendar event API call occurs in Part 18J-B.
+Part 18J-C implements outbound primary-calendar event transport and queue
+execution; no Google Calendar event API call occurred in Part 18J-B.
 
 ## Part 18J-A calendar synchronization foundation
 
@@ -38,7 +82,7 @@ owned schedule/status change
   -> security-definer trigger derives owner and opaque source key
   -> desired operation/version coalesces into one calendar_sync_jobs row
 
-future trusted executor
+trusted Part 18J-C executor
   -> service-role-only bounded claim RPC (SKIP LOCKED + lease)
   -> decrypt credential in server memory and call provider adapter
   -> service-role-only exact lease/version finalize RPC
@@ -58,9 +102,9 @@ Authenticated users can read only their connection metadata, event mappings,
 and job status through RLS. They cannot directly write provider state. The
 credential relation has no anon/authenticated policy or grant and stores only
 an encrypted refresh-token envelope; access tokens are not persisted. The
-only service-role grants are the calendar claim/finalize RPCs. There is no
-generic privileged calendar client, token encryption implementation, Google
-API call, Production configuration, or privilege expansion to existing data.
+Part 18J-A exposed only calendar claim/finalize to service role. Part 18J-C
+adds the separately approved owner-bound credential-replacement RPC for token
+rotation. There remains no generic table API or Production configuration.
 
 ## Part 18I scheduled reminder execution
 

@@ -1,5 +1,44 @@
 # WatchFlow Database
 
+## Part 18J-C calendar transport corrections
+
+Migration `202609300001_part_18j_c_credential_rotation.sql` adds the single
+approved service-role operation
+`watchflow_replace_google_calendar_credential(uuid, uuid, bytea, bytea,
+bytea, smallint)`. It updates only the encrypted envelope in
+`calendar_credentials` when the exact connection belongs to the exact owner
+and provider is Google. Ownership/provider mismatch returns false. It does not
+change connection status, `sync_enabled`, account/calendar metadata, mappings,
+jobs, or movies. `PUBLIC`, `anon`, and `authenticated` cannot execute it;
+`service_role` alone can, and no table privilege or RLS policy changes.
+
+Migration `202609300002_part_18j_c_pause_claim_guard.sql` replaces only the
+existing claim RPC body without changing its signature. Pending work is
+eligible only for a connected, enabled connection, while reconnect-required
+jobs retain the existing terminalization path. Paused and disconnect-pending
+jobs remain unclaimed and unchanged, so enabling sync makes their existing
+desired state eligible without a provider mutation during the pause. Claim
+bounds, leases, source validation, encrypted return shape, finalization, and
+privileges remain unchanged.
+
+Migration
+`202609300003_part_18j_c_google_event_id_compatibility.sql` corrects the
+pre-transport deterministic event prefix from `wf` to `a`. Google caller-
+supplied event IDs accept lowercase base32hex (`a-v`, `0-9`), so `w` was not
+valid. The MD5 identity input is unchanged. Any old-prefix mapping created by
+pre-transport tests is translated before real delivery; no Google event could
+have existed because Parts 18J-A/B made no event API calls. The internal helper
+remains denied to every external role, including `service_role`.
+
+Migration `202609300004_part_18j_c_preserve_paused_desired_state.sql` corrects
+the desired-state coalescer discovered during guarded acceptance. An eligible
+scheduled movie now remains an `upsert` with its newest source version while
+sync is paused; pause still prevents claim/provider mutation through migration
+`202609300002`. Resuming therefore exposes the current upsert rather than a
+stale delete. The migration replaces only the internal helper body, re-revokes
+all external execution (including service role), and changes no RLS, table
+grant, claim/finalize signature, or queue constraint.
+
 ## Part 18J-B Google OAuth connection state and credential operations
 
 Migration `202609290003_part_18j_b_google_oauth.sql` adds private
@@ -71,8 +110,8 @@ the encrypted credential envelope only through this narrow server boundary.
 Finalization requires the exact unexpired lease and source version, reconciles
 the mapping on success, and otherwise applies bounded retry backoff or an
 explicit terminal/auth-required state. No Part 18J migration is applied to
-Production. The foundation migration is installed on watchflow-dev; the
-corrective privilege migration remains pending there.
+Production. The Part 18J-A/B migrations are installed on watchflow-dev; the
+three Part 18J-C migrations remain pending guarded development application.
 
 ## Part 18I scheduled movie reminders
 

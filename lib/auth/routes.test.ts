@@ -280,6 +280,7 @@ describe("critical authentication route contracts", () => {
       "/settings/profile",
       "/settings/preferences",
       "/settings/notifications",
+      "/settings/calendar",
       "/settings/data",
     ]) {
       expect(isProtectedRoute(route), route).toBe(true);

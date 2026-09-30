@@ -62,10 +62,10 @@ describe("calendar synchronization identifiers", () => {
   it("creates a stable Google-compatible provider event identifier", () => {
     const sourceKey = createCalendarSourceKey(connectionId, userMovieId);
     expect(createCalendarProviderEventId(connectionId, sourceKey)).toBe(
-      "wf354e02abcf0fdf6b18571932067dced4",
+      "a354e02abcf0fdf6b18571932067dced4",
     );
     expect(createCalendarProviderEventId(connectionId, sourceKey)).toMatch(
-      /^wf[0-9a-f]{32}$/,
+      /^[0-9a-v]{5,1024}$/,
     );
   });
 

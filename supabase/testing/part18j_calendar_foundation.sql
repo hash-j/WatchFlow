@@ -59,6 +59,9 @@ declare
   v_new_claim record;
   v_delete_claim record;
   v_mapping public.calendar_event_mappings%rowtype;
+  v_connection_before public.calendar_connections%rowtype;
+  v_connection_after public.calendar_connections%rowtype;
+  v_paused_claim_count integer;
   v_result boolean;
 begin
   select job.* into strict v_job
@@ -69,6 +72,57 @@ begin
   if v_job.desired_operation <> 'upsert' or v_job.state <> 'pending' then
     raise exception 'Part 18J enqueue did not create pending upsert work';
   end if;
+
+  update public.calendar_connections as connection
+  set sync_enabled = false
+  where connection.id = '181c0000-0000-4000-8000-000000000001';
+
+  select connection.* into strict v_connection_before
+  from public.calendar_connections as connection
+  where connection.id = '181c0000-0000-4000-8000-000000000001';
+
+  select public.watchflow_replace_google_calendar_credential(
+    v_connection_before.user_id,
+    v_connection_before.id,
+    decode('05060708', 'hex'),
+    decode('0b0a09080706050403020100', 'hex'),
+    decode('0f0e0d0c0b0a09080706050403020100', 'hex'),
+    2
+  ) into v_result;
+
+  select connection.* into strict v_connection_after
+  from public.calendar_connections as connection
+  where connection.id = v_connection_before.id;
+
+  if not v_result
+     or v_connection_after is distinct from v_connection_before
+     or v_connection_after.sync_enabled then
+    raise exception 'Credential rotation changed paused connection metadata';
+  end if;
+
+  select public.watchflow_replace_google_calendar_credential(
+    '181a0000-0000-4000-8000-000000000002',
+    v_connection_before.id,
+    decode('090a', 'hex'),
+    decode('000102030405060708090a0b', 'hex'),
+    decode('000102030405060708090a0b0c0d0e0f', 'hex'),
+    1
+  ) into v_result;
+
+  if v_result then
+    raise exception 'Credential rotation accepted the wrong owner';
+  end if;
+
+  select count(*) into v_paused_claim_count
+  from public.watchflow_claim_calendar_sync_jobs(1, 120);
+
+  if v_paused_claim_count <> 0 then
+    raise exception 'Paused calendar connection produced provider work';
+  end if;
+
+  update public.calendar_connections as connection
+  set sync_enabled = true
+  where connection.id = v_connection_before.id;
 
   select claim.* into strict v_first_claim
   from public.watchflow_claim_calendar_sync_jobs(1, 120) as claim;
@@ -227,6 +281,22 @@ begin
     'execute'
   ) then
     raise exception 'Part 18J finalize privilege boundary is incorrect';
+  end if;
+
+  if not pg_catalog.has_function_privilege(
+    'service_role',
+    'public.watchflow_replace_google_calendar_credential(uuid,uuid,bytea,bytea,bytea,smallint)',
+    'execute'
+  ) or pg_catalog.has_function_privilege(
+    'authenticated',
+    'public.watchflow_replace_google_calendar_credential(uuid,uuid,bytea,bytea,bytea,smallint)',
+    'execute'
+  ) or pg_catalog.has_function_privilege(
+    'anon',
+    'public.watchflow_replace_google_calendar_credential(uuid,uuid,bytea,bytea,bytea,smallint)',
+    'execute'
+  ) then
+    raise exception 'Part 18J credential replacement privilege boundary is incorrect';
   end if;
 
   foreach v_helper in array array[

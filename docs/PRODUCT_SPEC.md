@@ -232,8 +232,9 @@ member timezone, and groups scheduled movies into Today, Upcoming, and Past.
 The dashboard summarizes the next queued movie, today's schedule, recently
 added movies, and recently watched movies.
 
-Still out of scope: external calendar synchronization, email reminders,
-payments, social features, and recommendations.
+Google outbound calendar synchronization is implemented later in Part 18J-C.
+Still out of scope: inbound or multi-provider calendar synchronization, email
+reminders, payments, social features, and AI recommendations.
 
 ## Part 10A: Google Sheets CSV import
 
@@ -346,6 +347,23 @@ boundary. User-owned rows cascade from `auth.users`; shared movies remain.
   documented for user-owned tables and must be exercised with two test accounts
   before production rollout.
 
+## Part 18J-C: Google Calendar event synchronization
+
+For a connected owner with calendar sync enabled, an eligible scheduled movie
+eventually creates exactly one event in that Google account's primary calendar.
+Rescheduling updates the same deterministic event; leaving scheduled status or
+removing the schedule deletes only the mapped WatchFlow-owned event. Provider
+404 on deletion is treated as already removed. Repeated executor runs and
+retries do not create duplicate events.
+
+The event uses the movie title, exact saved scheduled instant and IANA timezone,
+runtime-derived end time, minimal WatchFlow context, and private source/version
+identity metadata. A paused, disconnect-pending, missing-credential, stale,
+deleted, or otherwise ineligible source causes no new provider mutation.
+Revoked Google authorization asks the user to reconnect. Execution is manual
+through a strongly authenticated internal endpoint for this subpart; no
+external cron or Production activation is included.
+
 ## Part 18J-B: Google Calendar connection management
 
 Part 18J-B lets an authenticated owner connect exactly one Google account to
@@ -354,10 +372,10 @@ or enable future outbound sync, reconnect, and disconnect. It requests only
 OpenID identity/email plus Google Calendar event access and requires offline
 consent so future background sync can refresh access server-side.
 
-This subpart stores no access token, exposes no refresh credential, and creates
-no Google Calendar event. Event create/update/delete behavior and background
-transport remain Part 18J-C. Multiple providers, multiple accounts, calendar
-selection, inbound synchronization, and ICS export remain deferred.
+This subpart stores no access token, exposes no refresh credential, and created
+no Google Calendar event. Part 18J-C subsequently adds event create/update/
+delete behavior. Multiple providers, multiple accounts, calendar selection,
+inbound synchronization, and ICS export remain deferred.
 
 ## Part 18J-A: calendar integration foundation
 

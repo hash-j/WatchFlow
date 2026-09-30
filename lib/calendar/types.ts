@@ -112,9 +112,9 @@ export type CalendarSyncClaim = {
   scheduledFor: string | null;
   scheduleTimezone: string | null;
   encryptedCredential: {
-    ciphertext: Uint8Array;
-    nonce: Uint8Array;
-    authTag: Uint8Array;
+    ciphertext: Buffer;
+    nonce: Buffer;
+    authTag: Buffer;
     keyVersion: number;
   };
 };

@@ -1,12 +1,224 @@
 # WatchFlow Project Context
 
 Last updated: 2026-09-30
-Last updated by: Codex / Part 18J-B Final Guarded Acceptance
+Last updated by: Codex / Part 18J-C Guarded Real-Provider Acceptance
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18J-B Google Calendar OAuth and owner connection management is complete and accepted; Part 18J-C event synchronization is next.
-Current branch: `codex/part-18j-b-google-oauth`.
-Current status: Parts 18A through 18I and Part 18J-A are verified. Part 18J-B implementation, real Google smoke, durable database/security audit, and final guarded two-user isolation all pass against watchflow-dev. Migration `202609290003` is installed there. Exact fixture cleanup restored the single unrelated connected account and credential. Production remains untouched. No commit, push, or deployment has occurred.
+Current phase: Part 18J-C Google Calendar event synchronization is implemented and verified against watchflow-dev; Part 18J-D has not started.
+Current branch: `codex/part-18j-c-calendar-event-sync`.
+Current status: Parts 18A through 18I and Part 18J-A/B/C are verified. Part 18J-C has a bounded manual executor, real Google create/update/delete transport, refresh-token rotation boundary, and forward-only compatibility/claim guards. Migrations `202609300001` through `202609300004` are installed on watchflow-dev. Provider-free database acceptance and the guarded serial real-Google lifecycle pass: deterministic create/idempotency, same-event reschedule, pause/resume, two-user isolation, already-missing delete convergence, mapping removal, zero repeat work, and exact cleanup. Google timestamp precision and deleted-event tombstone behavior are covered explicitly. Production, cron, commit, push, and deployment remain untouched.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-09-30 Part 18J-C Live Failure Repair and Acceptance — PASS
+
+- Google Calendar preserves the requested absolute start/end instants only to
+  whole-second precision and omits fractional seconds in returned RFC3339
+  values. The guarded QA contract now compares parsed epoch seconds while
+  continuing to require the exact IANA timezone and exact runtime-derived
+  start-to-end duration. Regression coverage accepts `.742Z` versus `Z` only
+  within the same provider second and rejects adjacent seconds or invalid
+  timestamps. Product scheduling and stored `timestamptz` behavior did not
+  change.
+- The delete failure was a product transport defect isolated to Google's
+  already-deleted event response. The controlled first DELETE returned success;
+  the executor's second exact DELETE returned HTTP 410, but transport treated
+  only 404 as success-equivalent and finalized the job as
+  `failed/google_provider_rejected`. Delete transport now treats exact-event
+  404 and 410 as successful absence while preserving the actual status code for
+  observability. Other 4xx/5xx, retry, auth, lease, and source-version behavior
+  is unchanged.
+- An exact post-delete GET can return HTTP 200 with the same deterministic ID
+  and `status=cancelled` instead of 404. Acceptance recognizes only 404, 410,
+  or that exact-ID cancelled tombstone as deleted; confirmed events and other
+  responses fail. No calendar enumeration was introduced.
+- Final guarded watchflow-dev real-provider acceptance passed 3/3 serial cases:
+  deterministic create and no-duplicate rerun; same-event reschedule with exact
+  timezone/runtime plus pause/resume; and two-user-isolated already-missing
+  delete with terminal success, mapping removal, deleted provider state, and
+  zero repeat work. Exact fixtures and deterministic provider event state were
+  cleaned without touching unrelated events or Production.
+- Regression validation passes: focused Part 18J/Part 18I security, OAuth,
+  credential, scheduler, timestamp, transport, and executor coverage 21 files/
+  125 tests; full native-loader Vitest 130 files/1,090 tests. ESLint,
+  TypeScript, `git diff --check`, and the client-secret scan are recorded after
+  the final repair. No migration, RLS, privilege, OAuth configuration,
+  credential, commit, push, deployment, or Part 18J-D work was added.
+
+## 2026-09-30 Part 18J-C Calendar Settings Auth-Guard Repair
+
+- Root cause: the authenticated app and settings layouts established identity
+  through cached request-scoped `getAuthContext()`/claims, but the calendar
+  page added a second `authenticateSettings()`/`getUser()` check. A transient
+  disagreement redirected the page to `/auth/login`, whose public auth gate
+  still saw valid claims and redirected again to `/dashboard`.
+- The calendar page now consumes `getAuthContext()` directly and uses its
+  owner-bound client and user ID for the RLS-protected connection read. It no
+  longer performs or owns a second login redirect after the parent layout has
+  authenticated the request.
+- Fresh `getUser()` checks remain unchanged for calendar Server Actions, OAuth
+  start/callback handling, credential operations, disconnect/reconnect, and
+  every sensitive mutation. No cookie default, host/origin behavior, OAuth
+  scope, redirect URI, schema, migration, RLS policy, credential, or database
+  state changed.
+- Regression coverage proves authenticated rendering, anonymous propagation of
+  the canonical login redirect, absence of the calendar-page re-entry into the
+  public auth gate, continued authenticated-login redirection to `/dashboard`,
+  proxy protection for `/settings/calendar`, and fresh-user validation on all
+  sensitive calendar boundaries.
+- Validation passes: focused auth/settings/calendar coverage 8 files/60 tests;
+  broader Part 18J coverage 15 files/88 tests; full native-loader fallback 129
+  files/1,086 tests; ESLint; direct TypeScript; `git diff --check`; and the
+  295-artifact client-secret scan. No database, credential, OAuth, Production,
+  commit, push, or deployment operation occurred.
+
+## 2026-09-30 Part 18J-C Guarded Real-Provider Acceptance — BLOCKED
+
+- The guarded target matched only the pinned watchflow-dev project, the branch
+  and verified Part 18J-B ancestry were correct, corrective migration
+  `202609300004` was reported applied, and QA User A had one owner-scoped
+  primary Google connection. Real Google mutations were explicitly approved.
+- A dedicated fail-closed live harness created one exact disposable scheduled
+  movie and one deterministic pending upsert. The executor claimed exactly
+  that job, decrypted the server-only credential, reached the provider path,
+  and finalized `auth_required` with the sanitized
+  `google_authorization_required` result. No mapping was created and no Google
+  event creation succeeded. The connection correctly transitioned to
+  `reconnect_required`; acceptance did not bypass or rewrite that state.
+- The attempt also exposed two QA-only harness defects: the sync-toggle RPC
+  argument must be `p_enabled`, and later lifecycle cases must not continue
+  after create fails. Both are corrected without changing product behavior,
+  security, schema, RLS, provider transport, or assertions.
+- Cleanup removed the one exact generated relationship, calendar job/mapping
+  scope, and shared movie; zero controlled movie fixtures remain. No unrelated
+  connection or Google event was enumerated or modified. Production was not
+  contacted.
+- Next acceptance step: reconnect QA User A through the existing development
+  Google OAuth flow so the connection returns to `connected` with a valid
+  encrypted refresh credential, then rerun the guarded Part 18J-C live harness.
+  Create/idempotency/update/pause-resume/delete and final provider acceptance
+  remain unverified until that succeeds.
+- After the calendar auth-guard repair was manually verified, the guarded
+  harness rechecked the exact configured acceptance identity before creating
+  fixtures. QA User A still had one Google/primary connection with sync enabled
+  but durable status `reconnect_required` and sanitized error code
+  `google_authorization_required`; its encrypted credential had not been
+  refreshed by the reported reconnect. The recent consumed OAuth state and
+  connected-row update belonged to a different watchflow-dev identity, not QA
+  User A or QA User B. The application and acceptance environment both point to
+  the same pinned watchflow-dev project, so this is an identity/session mismatch
+  rather than a target mismatch.
+- The live harness now records whether its unrelated-connection baseline was
+  captured before enforcing the after-test equality check. A fail-closed
+  preflight such as the connection-status guard therefore no longer produces a
+  secondary misleading cleanup assertion. This is QA-only cleanup behavior; no
+  product, schema, provider, RLS, credential, or acceptance assertion changed.
+- This resumed attempt created no movie, relationship, job, mapping, or Google
+  event and made no Google API request. No cleanup mutation was needed.
+- QA User A was subsequently reconnected correctly: the guarded preflight saw
+  exactly one owner-scoped Google/primary connection in `connected` state with
+  sync enabled and no stored error. The executor created and claimed one exact
+  disposable upsert job, decrypted the credential, and successfully refreshed
+  it to an access token. Google Calendar then rejected the exact event request
+  with HTTP 403 and sanitized reason `PERMISSION_DENIED` /
+  `accessNotConfigured`. A separate exact-ID, non-enumerating read probe
+  reproduced the same provider response while confirming refresh success.
+- The provider denial was finalized fail-closed as `auth_required`, returning
+  the connection to `reconnect_required`; no mapping or Google event was
+  created. Later update/delete cases did not execute. The harness removed its
+  exact movie, relationship, job, and mapping scope and did not inspect or
+  modify unrelated Google events.
+- Current external unblock: enable Google Calendar API access in the Google
+  Cloud project that owns `GOOGLE_CALENDAR_CLIENT_ID`, then reconnect exact QA
+  User A once more so the durable connection returns to `connected`, and rerun
+  the guarded real-provider harness. No schema, RLS, credential format, OAuth
+  scope, or application-code change is required for that configuration step.
+
+## 2026-09-30 Part 18J-C Google Calendar Event Synchronization — LOCAL IMPLEMENTATION
+
+- Added a server-only Google transport that refreshes access in memory, never
+  persists access tokens, optionally reports an explicit replacement refresh
+  token, and creates/updates/deletes only deterministic WatchFlow-owned events
+  in the primary calendar. Upsert uses update-first, deterministic-ID insert
+  after 404, and same-ID update after a create conflict, so retries converge
+  without enumeration or duplicates. Delete 404 is success-equivalent.
+- The event payload uses trusted claimed state: movie title, exact UTC instant,
+  saved IANA timezone, runtime-derived end, safe optional WatchFlow detail link,
+  and private source/version identity. UTC, Asia/Karachi,
+  America/Los_Angeles, and a DST-sensitive fallback instant have unit coverage.
+- Added bounded `POST /api/internal/calendar/sync`, reusing the already strong
+  `WATCHFLOW_SCHEDULER_SECRET` for the same manual trusted-background execution
+  plane as Part 18I. Its privileged client performs no direct table operations
+  and calls only claim, finalize, and the explicitly approved credential-
+  replacement RPC. Missing/invalid auth fails before executor construction;
+  responses and errors contain only sanitized aggregate state.
+- Forward migration `202609300001_part_18j_c_credential_rotation.sql` adds the
+  approved SECURITY DEFINER replacement RPC. It binds exact owner, connection,
+  and Google provider; changes only encrypted credential fields plus
+  credential `updated_at`; returns false on mismatch; denies PUBLIC/anon/
+  authenticated; and grants only service role. No replacement response means
+  no credential write.
+- Forward migration `202609300002_part_18j_c_pause_claim_guard.sql` changes no
+  RPC signature or privilege. It excludes paused and disconnect-pending
+  connections before any upsert or delete lease, leaving desired work eligible
+  immediately after resume. Reconnect-required terminalization is preserved.
+- Forward migration
+  `202609300003_part_18j_c_google_event_id_compatibility.sql` fixes the original
+  `wf` deterministic prefix because Google caller-supplied IDs accept only
+  lowercase base32hex and `w` is invalid. The replacement `a` prefix preserves
+  the MD5 identity; pre-transport fixture mappings are reconciled. The helper
+  remains non-executable by every external role, including service role.
+- Guarded pre-provider acceptance exposed one genuine pause/resume defect:
+  changing an eligible schedule while paused produced a delete tombstone, so
+  resume could delete instead of reconcile. Forward migration
+  `202609300004_part_18j_c_preserve_paused_desired_state.sql` removes
+  `sync_enabled` from desired-state classification while the separate claim
+  guard still blocks all provider work. The newest upsert/version therefore
+  waits safely and becomes eligible on resume. The internal helper remains
+  denied to PUBLIC, anon, authenticated, and service role.
+- Retry classification is explicit: 429/5xx/network failures are retryable;
+  invalid/revoked authorization and unreadable credentials require reconnect;
+  other provider/malformed responses are terminal; existing attempt limits,
+  leases, stale source-version rejection, mapping lifecycle, and owner RLS are
+  unchanged.
+- Validation passes: focused Part 18J calendar/endpoint/background coverage 14
+  files/83 tests; relevant Part
+  18I coverage 6 files/36 tests; full native-loader fallback 128 files/1081
+  tests; ESLint; direct TypeScript; `git diff --check`; and the 295-artifact
+  client-secret scan. The production bundle compiles successfully, then the
+  known Windows host `spawn EPERM` blocks Next's post-compile TypeScript worker,
+  so a completed local production build is not claimed. The local Supabase CLI
+  syntax/database check is likewise blocked before execution by the documented
+  npm-cache `EPERM`; migrations remain unapplied and require guarded
+  watchflow-dev verification.
+- No Google API was called during implementation. Guarded live acceptance must
+  stop for a human checkpoint before real provider mutation, then prove one
+  controlled create, idempotent repeat, same-event reschedule update, delete,
+  mapping/job convergence, two-user isolation, unrelated-event preservation,
+  and exact fixture cleanup. Production remains untouched.
+
+## 2026-09-30 Part 18J-C Guarded Acceptance — PRE-PROVIDER CHECKPOINT
+
+- The fail-closed target guard matched the linked ref, configured and expected
+  Supabase origins, and development environment only to watchflow-dev. RPC and
+  behavior probes established migrations `202609300001`–`202609300003` live:
+  replacement is denied to anon/authenticated and fails closed on mismatch;
+  claim/finalize remain callable only at the intended service boundary; private
+  helpers remain denied; encrypted credential storage is present.
+- The updated provider-free integration passed 6/6 using exact random fixture
+  IDs. It proved deterministic `a`-prefix IDs, coalescing, lease exclusivity/
+  recovery, stale rejection, mapping/tombstone convergence, two-user RLS,
+  credential rotation with paused connection metadata unchanged, pause claim
+  exclusion, and exact restoration of the hashed unrelated connection and
+  credential baseline.
+- No Google request occurred. Before mutation, source inspection found the
+  paused schedule desired-state defect described above. Migration
+  `202609300004` and regression coverage were added; focused migration tests
+  pass 8/8, ESLint, TypeScript, and diff check pass. It must be applied to
+  watchflow-dev before provider acceptance can continue.
+- QA User A had zero calendar connections during the preflight. The one
+  existing encrypted Google connection belongs to an unrelated development
+  identity and was preserved. QA User A must have an explicit connected,
+  sync-enabled Google connection before the approved real-provider scenario
+  can run; credentials will not be copied or repurposed across owners.
 
 ## 2026-09-30 Part 18J-B Final Two-User Acceptance — PASS
 
@@ -3142,9 +3354,15 @@ Names only are recorded here; values must never enter this file.
 |---|---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL for browser/server/proxy/admin clients | Browser-safe public | Required |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable or legacy anon value under this exact name | Browser-safe public | Required |
-| `SUPABASE_SECRET_KEY` | Shared movie metadata upsert and final Auth-user deletion | Server-only secret | Required for full product |
+| `SUPABASE_SECRET_KEY` | Narrow trusted metadata/account operations plus bounded reminder/calendar RPC executors | Server-only secret | Required for full product |
 | `TMDB_READ_ACCESS_TOKEN` | TMDB Bearer token for search/details/import | Server-only secret | Required for movie workflows |
-| `NEXT_PUBLIC_APP_URL` | Reserved public application origin name; current source does not consume it | Browser-safe public | Optional |
+| `NEXT_PUBLIC_APP_URL` | Public application origin for contextual calendar event links | Browser-safe public | Optional |
+| `WATCHFLOW_SCHEDULER_SECRET` | Strong bearer credential for bounded internal reminder/calendar executor routes | Server-only secret | Required for manual background execution |
+| `GOOGLE_CALENDAR_CLIENT_ID` | Google OAuth client and refresh exchange identifier | Server-only configuration | Required for Google Calendar |
+| `GOOGLE_CALENDAR_CLIENT_SECRET` | Google OAuth and refresh exchange secret | Server-only secret | Required for Google Calendar |
+| `GOOGLE_CALENDAR_REDIRECT_URI` | Exact Google OAuth callback URI | Server-only configuration | Required for Google Calendar |
+| `CALENDAR_TOKEN_ENCRYPTION_KEY` | Base64 AES-256-GCM key for owner-bound refresh credentials | Server-only secret | Required for Google Calendar |
+| `CALENDAR_TOKEN_ENCRYPTION_KEY_VERSION` | Stored positive calendar credential key version | Server-only configuration | Required for Google Calendar |
 | `VERCEL_URL` | Platform-provided metadata base URL | Server/runtime | Optional; localhost fallback |
 | `VERCEL_ENV` | Referenced only by a dormant starter tutorial component; no current route renders it | Server/runtime | Optional |
 | `VERCEL_PROJECT_PRODUCTION_URL` | Referenced only by a dormant starter tutorial component; no current route renders it | Server/runtime | Optional |

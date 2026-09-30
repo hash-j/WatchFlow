@@ -1,7 +1,5 @@
-import { redirect } from "next/navigation";
-
 import { CalendarSettings } from "@/components/settings/calendar-settings";
-import { authenticateSettings } from "@/lib/settings/supabase-settings";
+import { getAuthContext } from "@/lib/supabase/auth";
 
 const messages: Record<string, string> = {
   connected: "Google Calendar connected.",
@@ -19,13 +17,12 @@ export default async function CalendarSettingsPage({
 }: {
   searchParams: Promise<{ calendar?: string }>;
 }) {
-  const session = await authenticateSettings();
-  if (!session) redirect("/auth/login");
+  const { client, user } = await getAuthContext();
 
-  const { data } = await session.client
+  const { data } = await client
     .from("calendar_connections")
     .select("display_email, sync_enabled, status")
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .eq("provider", "google")
     .maybeSingle();
   const status = (await searchParams).calendar;
