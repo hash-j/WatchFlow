@@ -1,0 +1,113 @@
+name: WatchFlow dev calendar scheduler
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_watchflow_dev:
+        description: Invoke the calendar-sync executor on watchflow-dev
+        required: true
+        default: false
+        type: boolean
+  schedule:
+    - cron: "4-59/5 * * * *"
+
+permissions: {}
+
+concurrency:
+  group: watchflow-dev-calendar-scheduler
+  cancel-in-progress: false
+
+jobs:
+  invoke-calendar-executor:
+    if: >-
+      (github.event_name == 'schedule' && vars.WATCHFLOW_DEV_CALENDAR_SCHEDULER_ENABLED == 'true') ||
+      (github.event_name == 'workflow_dispatch' && inputs.confirm_watchflow_dev == true)
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    environment: watchflow-dev-scheduler
+    env:
+      WATCHFLOW_DEV_SCHEDULER_SECRET: ${{ secrets.WATCHFLOW_DEV_SCHEDULER_SECRET }}
+
+    steps:
+      - name: Invoke the watchflow-dev calendar executor
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${WATCHFLOW_DEV_SCHEDULER_SECRET:-}" ]]; then
+            echo "The watchflow-dev scheduler credential is unavailable." >&2
+            exit 1
+          fi
+
+          response_headers="${RUNNER_TEMP}/watchflow-calendar-headers.txt"
+          response_body="${RUNNER_TEMP}/watchflow-calendar-body.json"
+          response_status="$(
+            curl \
+              --silent \
+              --show-error \
+              --request GET \
+              --proto '=https' \
+              --tlsv1.2 \
+              --connect-timeout 10 \
+              --max-time 55 \
+              --max-redirs 0 \
+              --dump-header "${response_headers}" \
+              --output "${response_body}" \
+              --write-out '%{http_code}' \
+              --header "Authorization: Bearer ${WATCHFLOW_DEV_SCHEDULER_SECRET}" \
+              --header 'Accept: application/json' \
+              'https://watchflow-dev-ops.vercel.app/api/internal/calendar/sync'
+          )"
+
+          RESPONSE_STATUS="${response_status}" \
+          RESPONSE_HEADERS="${response_headers}" \
+          RESPONSE_BODY="${response_body}" \
+          node <<'NODE'
+          const { readFileSync } = require("node:fs");
+
+          const expectedKeys = [
+            "authRequired",
+            "claimed",
+            "failed",
+            "retryable",
+            "staleFinalizations",
+            "succeeded",
+          ];
+          const status = process.env.RESPONSE_STATUS;
+          const headers = readFileSync(process.env.RESPONSE_HEADERS, "utf8");
+
+          if (status !== "200") {
+            console.error(`Calendar executor returned HTTP ${status ?? "unknown"}.`);
+            process.exit(1);
+          }
+          if (/^location\s*:/im.test(headers)) {
+            console.error("Calendar executor returned an unexpected redirect.");
+            process.exit(1);
+          }
+          const cacheControl = headers.match(/^cache-control\s*:\s*(.+)$/im)?.[1] ?? "";
+          if (!cacheControl.toLowerCase().split(",").some((value) => value.trim() === "no-store")) {
+            console.error("Calendar executor response was not marked no-store.");
+            process.exit(1);
+          }
+
+          let payload;
+          try {
+            payload = JSON.parse(readFileSync(process.env.RESPONSE_BODY, "utf8"));
+          } catch {
+            console.error("Calendar executor did not return valid JSON.");
+            process.exit(1);
+          }
+          const keys = Object.keys(payload).sort();
+          const exactSchema =
+            JSON.stringify(keys) === JSON.stringify(expectedKeys) &&
+            expectedKeys.every(
+              (key) => Number.isInteger(payload[key]) && payload[key] >= 0,
+            );
+          if (!exactSchema) {
+            console.error("Calendar executor response failed its aggregate-only schema.");
+            process.exit(1);
+          }
+
+          console.log("Calendar executor completed with validated aggregate counters:");
+          console.log(JSON.stringify(payload));
+          NODE
