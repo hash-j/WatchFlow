@@ -35,7 +35,8 @@ export function createScheduledReminderBackgroundClient() {
 
 /**
  * Server-only client for the bounded calendar executor. Callers may use only
- * the calendar claim/finalize RPCs and the owner-bound credential-rotation RPC.
+ * the calendar claim/finalize RPCs, exact final-cleanup predicate, and the
+ * owner-bound credential-rotation RPC.
  * Normal application code must continue to use the cookie-bound SSR client.
  */
 export function createCalendarSyncBackgroundClient() {

@@ -1,5 +1,35 @@
 # WatchFlow Database
 
+## Part 18J-D disconnect reconciliation
+
+Forward migration
+`202609300005_part_18j_d_disconnect_reconciliation.sql` replaces only the
+existing Google connection upsert/disconnect and calendar claim/finalize
+contracts, and adds the narrow
+`watchflow_is_final_calendar_cleanup(uuid, uuid, text)` predicate.
+
+Disconnect now marks the owner connection `disconnect_pending`, disables sync,
+marks exact mappings `delete_pending`, and coalesces deterministic
+`connection_cleanup` jobs for mappings and in-flight sources. Repeated requests
+preserve identical job state and sanitized failure metadata. A leased previous
+operation delays cleanup until its lease expiry. Claims permit only cleanup
+work for disconnect-pending connections, serialize cleanup per connection, and
+reject provider IDs that do not equal the deterministic WatchFlow ID.
+
+Successful cleanup removes the exact mapping. The final exact-lease cleanup is
+identified by the new predicate so the server executor can revoke Google access
+before finalization deletes the connection and cascades credentials/jobs.
+Retryable and terminal failures preserve local state. Authorization failures do
+not misreport success or change the connection to ordinary reconnect mode.
+Reauthorization accepts only the same Google subject, keeps sync disabled, and
+resets only unfinished cleanup work.
+
+All four touched functions are SECURITY DEFINER with empty `search_path` and
+explicitly deny `PUBLIC`, `anon`, and `authenticated`. Only `service_role`
+receives their exact signatures. No table grant, RLS policy, ownership rule,
+queue constraint, general service-role table API, or existing migration is
+changed.
+
 ## Part 18J-C calendar transport corrections
 
 Migration `202609300001_part_18j_c_credential_rotation.sql` adds the single

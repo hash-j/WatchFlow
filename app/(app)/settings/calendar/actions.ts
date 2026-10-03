@@ -5,8 +5,9 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { requestGoogleCalendarDisconnect } from "@/lib/calendar/oauth-store";
+import { readGoogleCalendarCredential } from "@/lib/calendar/oauth-store";
 import { revokeGoogleRefreshToken } from "@/lib/calendar/google-provider";
-import { deleteGoogleCalendarConnection, readGoogleCalendarCredential } from "@/lib/calendar/oauth-store";
 import { decryptCalendarRefreshToken } from "@/lib/calendar/token-encryption";
 import { authenticateSettings } from "@/lib/settings/supabase-settings";
 import type { SettingsActionState } from "@/lib/settings/types";
@@ -22,11 +23,17 @@ export async function setCalendarSyncEnabledAction(
   formData: FormData,
 ): Promise<SettingsActionState> {
   const session = await authenticateSettings();
-  if (!session) return { ...errorState, message: "Your session has expired. Sign in again." };
+  if (!session) {
+    return {
+      ...errorState,
+      message: "Your session has expired. Sign in again.",
+    };
+  }
   const enabled = formData.get("enabled") === "true";
-  const { data, error } = await session.client.rpc("watchflow_set_calendar_sync_enabled", {
-    p_enabled: enabled,
-  });
+  const { data, error } = await session.client.rpc(
+    "watchflow_set_calendar_sync_enabled",
+    { p_enabled: enabled },
+  );
   if (error || data !== true) return errorState;
   revalidatePath("/settings/calendar");
   return {
@@ -40,22 +47,35 @@ export async function disconnectGoogleCalendarAction() {
   const session = await authenticateSettings();
   if (!session) redirect("/auth/login");
 
-  let revoked = false;
+  let refreshToken: string | null = null;
   try {
     const credential = await readGoogleCalendarCredential(session.user.id);
     if (credential) {
-      const token = decryptCalendarRefreshToken(credential, session.user.id);
-      revoked = await revokeGoogleRefreshToken(token);
+      refreshToken = decryptCalendarRefreshToken(
+        credential,
+        session.user.id,
+      );
     }
   } catch {
-    // Revocation is best effort. Removing the local credential is authoritative.
+    // Durable cleanup remains authoritative when the credential is unreadable.
   }
 
   try {
-    await deleteGoogleCalendarConnection(session.user.id);
+    await requestGoogleCalendarDisconnect(session.user.id);
   } catch {
     redirect("/settings/calendar?calendar=disconnect_failed");
   }
+  const { data: pending, error: pendingError } = await session.client
+    .from("calendar_connections")
+    .select("id")
+    .eq("user_id", session.user.id)
+    .eq("provider", "google")
+    .maybeSingle();
+  if (!pendingError && !pending && refreshToken) {
+    await revokeGoogleRefreshToken(refreshToken);
+  }
   revalidatePath("/settings/calendar");
-  redirect(`/settings/calendar?calendar=${revoked ? "disconnected" : "disconnected_local"}`);
+  redirect(
+    `/settings/calendar?calendar=${pending || pendingError ? "disconnect_pending" : "disconnected"}`,
+  );
 }

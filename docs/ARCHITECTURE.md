@@ -1,5 +1,44 @@
 # WatchFlow Architecture
 
+## Part 18J-D background activation and disconnect reconciliation
+
+Part 18J-D keeps the scheduled-reminder and calendar executors as independent
+bounded HTTP endpoints behind the same strong `WATCHFLOW_SCHEDULER_SECRET`.
+The repository supplies the provider-neutral invocation contract and guarded
+target requirements; no Production cron is configured. External schedules
+must call the two endpoints separately so a failure in one delivery plane does
+not block the other. Database claim/finalize RPCs remain authoritative for
+leases, retries, attempt limits, terminal states, and idempotency.
+
+Calendar disconnect is now desired-state reconciliation rather than immediate
+credential deletion. The server-authenticated request moves the exact owner's
+connection to `disconnect_pending`, disables ordinary sync, and coalesces one
+`connection_cleanup` job per known source. Existing leases delay replacement
+cleanup so an in-flight deterministic upsert cannot race behind a premature
+delete. Claims serialize cleanup per connection and accept only the exact
+deterministic WatchFlow event ID; an inconsistent mapping becomes a sanitized
+terminal error and is never sent to Google.
+
+The executor deletes each exact provider event, treats 404/410 as converged,
+and removes the matching mapping through exact-lease finalization. A narrow
+service-role-only predicate identifies the final leased cleanup. Only then is
+the refresh grant revoked; unconfirmed revocation becomes bounded retryable
+work. The final successful cleanup cascades the encrypted credential and local
+connection. Revoked authorization preserves `disconnect_pending` plus safe
+error metadata. Reauthorizing the same Google subject replaces the credential
+and resumes cleanup without enabling sync; a different subject fails closed.
+
+Normal application reads and mutations retain their authenticated SSR/RLS
+boundaries. The background client still performs no generic table operation.
+Its only calendar RPC surface is bounded claim, exact finalize, owner-bound
+credential rotation, and the exact-lease final-cleanup predicate.
+
+Operational responses contain aggregate counters or fixed safe errors only.
+Owner-readable connection/job metadata provides terminal failure visibility;
+no admin dashboard, generic worker, email channel, weekly summary, inbound
+calendar sync, new OAuth scope, or Production activation is introduced. See
+`docs/BACKGROUND_EXECUTORS.md` for the external scheduler contract.
+
 ## Part 18J-C Google Calendar event synchronization
 
 Part 18J-C turns the provider-neutral desired-state queue into a bounded,

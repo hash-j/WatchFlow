@@ -97,7 +97,7 @@ export async function readGoogleCalendarCredential(userId: string) {
   };
 }
 
-export async function deleteGoogleCalendarConnection(userId: string) {
+export async function requestGoogleCalendarDisconnect(userId: string) {
   return rpc<boolean>("watchflow_disconnect_google_calendar_connection", {
     p_user_id: userId,
   });

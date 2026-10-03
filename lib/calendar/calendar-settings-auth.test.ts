@@ -107,7 +107,7 @@ describe("calendar settings authentication boundary", () => {
     const settingsAuth = source("lib/settings/supabase-settings.ts");
 
     expect(actions).toContain("authenticateSettings()");
-    expect(actions).toContain("deleteGoogleCalendarConnection(session.user.id)");
+    expect(actions).toContain("requestGoogleCalendarDisconnect(session.user.id)");
     expect(oauthStart).toContain("supabase.auth.getUser()");
     expect(oauthCallback).toContain("supabase.auth.getUser()");
     expect(settingsAuth).toContain("client.auth.getUser()");

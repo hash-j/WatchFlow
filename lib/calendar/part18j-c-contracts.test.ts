@@ -16,7 +16,7 @@ describe("Part 18J-C executor and security contracts", () => {
     }
   });
 
-  it("uses only the three approved calendar service-role RPCs", () => {
+  it("uses only the narrowly approved calendar service-role RPCs", () => {
     const executor = source("lib/calendar/calendar-sync-executor.ts");
     const rpcNames = [
       ...executor.matchAll(/client\.rpc\(\s*"([^"]+)"/g),
@@ -26,6 +26,7 @@ describe("Part 18J-C executor and security contracts", () => {
         "watchflow_claim_calendar_sync_jobs",
         "watchflow_finalize_calendar_sync_job",
         "watchflow_replace_google_calendar_credential",
+        "watchflow_is_final_calendar_cleanup",
       ]),
     );
     expect(executor).not.toContain('.from("');

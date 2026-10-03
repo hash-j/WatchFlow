@@ -8,12 +8,19 @@ import { GOOGLE_OAUTH_COOKIE, hashOAuthSessionBinding, hashOAuthValue, parseOAut
 import { encryptCalendarRefreshToken } from "@/lib/calendar/token-encryption";
 import { createClient } from "@/lib/supabase/server";
 
-function destination(status: "connected" | "denied" | "invalid" | "failed") {
+type CalendarCallbackStatus =
+  | "connected"
+  | "cleanup_reauthorized"
+  | "denied"
+  | "invalid"
+  | "failed";
+
+function destination(status: CalendarCallbackStatus) {
   const origin = getGoogleCalendarConfig().redirectUrl.origin;
   return new URL(`/settings/calendar?calendar=${status}`, origin);
 }
 
-function finish(status: "connected" | "denied" | "invalid" | "failed") {
+function finish(status: CalendarCallbackStatus) {
   const response = NextResponse.redirect(destination(status));
   response.cookies.set(GOOGLE_OAUTH_COOKIE, "", {
     httpOnly: true,
@@ -57,7 +64,17 @@ export async function GET(request: NextRequest) {
       grantedScopes: connected.grantedScopes,
       encrypted: encryptCalendarRefreshToken(connected.refreshToken, user.id),
     });
-    return finish("connected");
+    const { data: connection } = await supabase
+      .from("calendar_connections")
+      .select("status")
+      .eq("user_id", user.id)
+      .eq("provider", "google")
+      .maybeSingle();
+    return finish(
+      connection?.status === "disconnect_pending"
+        ? "cleanup_reauthorized"
+        : "connected",
+    );
   } catch {
     return finish("failed");
   }

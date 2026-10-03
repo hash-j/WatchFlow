@@ -10,10 +10,20 @@ const mocks = vi.hoisted(() => ({
   exchange: vi.fn(),
   encrypt: vi.fn(),
   cookieGet: vi.fn(),
+  connectionStatus: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
-  createClient: async () => ({ auth: { getUser: mocks.getUser } }),
+  createClient: async () => ({
+    auth: { getUser: mocks.getUser },
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({ maybeSingle: mocks.connectionStatus }),
+        }),
+      }),
+    }),
+  }),
 }));
 vi.mock("@/lib/calendar/oauth-store", () => ({
   createCalendarOAuthState: mocks.createState,
@@ -55,7 +65,26 @@ describe("Google Calendar OAuth routes", () => {
     });
     mocks.encrypt.mockReturnValue({ ciphertext: Buffer.from("cipher"), nonce: Buffer.alloc(12), authTag: Buffer.alloc(16), keyVersion: 1 });
     mocks.saveConnection.mockResolvedValue("connection-id");
+    mocks.connectionStatus.mockResolvedValue({
+      data: { status: "connected" },
+      error: null,
+    });
     mocks.cookieGet.mockReturnValue({ value: serializeOAuthCookie("b".repeat(43), "v".repeat(43)) });
+  });
+
+  it("reports same-account cleanup reauthorization without claiming sync resumed", async () => {
+    mocks.connectionStatus.mockResolvedValue({
+      data: { status: "disconnect_pending" },
+      error: null,
+    });
+    const response = await callback(
+      new NextRequest(
+        "https://dev.watchflow.test/api/calendar/google/callback?state=opaque&code=code",
+      ),
+    );
+    expect(response.headers.get("location")).toBe(
+      "https://dev.watchflow.test/settings/calendar?calendar=cleanup_reauthorized",
+    );
   });
 
   it("denies unauthenticated OAuth start without creating state", async () => {

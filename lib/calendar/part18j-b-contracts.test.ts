@@ -53,10 +53,11 @@ describe("Part 18J-B security contracts", () => {
     const actions = source("app/(app)/settings/calendar/actions.ts");
     expect(start).toContain("supabase.auth.getUser()");
     expect(callback).toContain("supabase.auth.getUser()");
-    expect(callback).toContain('"connected" | "denied" | "invalid" | "failed"');
+    expect(callback).toContain('"cleanup_reauthorized"');
     expect(callback).not.toContain("next=");
     expect(actions).toContain("authenticateSettings()");
-    expect(actions).toContain("deleteGoogleCalendarConnection(session.user.id)");
+    expect(actions).toContain("requestGoogleCalendarDisconnect(session.user.id)");
+    expect(actions).toContain("if (!pendingError && !pending && refreshToken)");
   });
 
   it("preserves the Part 18J-A owner-read and credential-denial model", () => {

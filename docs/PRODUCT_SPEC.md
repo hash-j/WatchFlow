@@ -347,6 +347,26 @@ boundary. User-owned rows cascade from `auth.users`; shared movies remain.
   documented for user-owned tables and must be exercised with two test accounts
   before production rollout.
 
+## Part 18J-D: background executor activation and calendar disconnect reconciliation
+
+WatchFlow exposes separate strongly authenticated endpoints for scheduled
+reminders and calendar synchronization. A deployment may connect each endpoint
+to an external HTTPS scheduler using the server-only scheduler secret. Calls
+remain bounded and database leases, retries, idempotency, and terminal states
+remain authoritative. Repository implementation documents the external
+contract but does not activate a Production scheduler.
+
+Disconnecting Google Calendar first disables sync and enters cleanup state.
+WatchFlow deletes only its deterministic owned event IDs without enumerating
+the calendar. Credentials and mappings remain until cleanup converges; 404/410
+means the exact event is already absent. The final cleanup revokes Google
+access before local credential deletion. Failure or revoked authorization
+remains visible without claiming success. Reauthorizing the same account may
+finish cleanup but cannot re-enable sync; a different account is rejected.
+
+No email, weekly summary, generic worker, inbound calendar sync, new OAuth
+scope, external Production activation, or operations dashboard is added.
+
 ## Part 18J-C: Google Calendar event synchronization
 
 For a connected owner with calendar sync enabled, an eligible scheduled movie

@@ -52,16 +52,24 @@ function dependencies() {
       authTag: Buffer.alloc(16, 3),
       keyVersion: 2,
     }),
+    revokeRefreshToken: vi.fn().mockResolvedValue(true),
   };
 }
 
-function clientWithClaims(rows: unknown[], rotationResult: unknown = true) {
+function clientWithClaims(
+  rows: unknown[],
+  rotationResult: unknown = true,
+  finalCleanup: unknown = true,
+) {
   const rpc = vi.fn(async (name: string) => {
     if (name === "watchflow_claim_calendar_sync_jobs") {
       return { data: rows, error: null };
     }
     if (name === "watchflow_replace_google_calendar_credential") {
       return { data: rotationResult, error: null };
+    }
+    if (name === "watchflow_is_final_calendar_cleanup") {
+      return { data: finalCleanup, error: null };
     }
     return { data: true, error: null };
   });
@@ -174,6 +182,86 @@ describe("Part 18J-C bounded calendar executor", () => {
       "watchflow_finalize_calendar_sync_job",
       expect.objectContaining({ p_outcome: "succeeded", p_provider_status_code: 404 }),
     );
+  });
+
+  it.each([404, 410])(
+    "treats exact disconnect-cleanup deletion HTTP %i as converged",
+    async (providerStatusCode) => {
+      const cleanupClaim = claim({
+        desired_operation: "connection_cleanup",
+        user_movie_id: null,
+        movie_id: null,
+        movie_title: null,
+        runtime_minutes: null,
+        scheduled_for: null,
+        schedule_timezone: null,
+      });
+      const client = clientWithClaims([cleanupClaim]);
+      const deps = dependencies();
+      deps.deleteEvent.mockResolvedValue({
+        providerEventId: cleanupClaim.provider_event_id,
+        providerEtag: null,
+        providerStatusCode,
+      });
+
+      await expect(
+        executeCalendarSync(1, client as never, deps),
+      ).resolves.toMatchObject({ claimed: 1, succeeded: 1 });
+      expect(deps.upsertEvent).not.toHaveBeenCalled();
+      expect(deps.deleteEvent).toHaveBeenCalledWith({
+        calendarId: "primary",
+        providerEventId: cleanupClaim.provider_event_id,
+        accessToken: "ephemeral-access",
+      });
+      expect(deps.revokeRefreshToken).toHaveBeenCalledWith("refresh-secret");
+      expect(client.rpc).toHaveBeenLastCalledWith(
+        "watchflow_finalize_calendar_sync_job",
+        expect.objectContaining({
+          p_outcome: "succeeded",
+          p_provider_status_code: providerStatusCode,
+        }),
+      );
+    },
+  );
+
+  it("does not revoke Google access before a non-final cleanup", async () => {
+    const cleanupClaim = claim({ desired_operation: "connection_cleanup" });
+    const client = clientWithClaims([cleanupClaim], true, false);
+    const deps = dependencies();
+    await executeCalendarSync(1, client as never, deps);
+    expect(deps.deleteEvent).toHaveBeenCalledOnce();
+    expect(deps.revokeRefreshToken).not.toHaveBeenCalled();
+  });
+
+  it("retries final cleanup when Google revocation cannot be confirmed", async () => {
+    const cleanupClaim = claim({ desired_operation: "connection_cleanup" });
+    const client = clientWithClaims([cleanupClaim]);
+    const deps = dependencies();
+    deps.revokeRefreshToken.mockResolvedValue(false);
+    await expect(executeCalendarSync(1, client as never, deps)).resolves.toMatchObject({
+      claimed: 1,
+      retryable: 1,
+      succeeded: 0,
+    });
+    expect(client.rpc).toHaveBeenLastCalledWith(
+      "watchflow_finalize_calendar_sync_job",
+      expect.objectContaining({
+        p_outcome: "retryable",
+        p_error_code: "google_revocation_unconfirmed",
+      }),
+    );
+  });
+
+  it("revokes the replacement refresh grant when Google rotates it during final cleanup", async () => {
+    const cleanupClaim = claim({ desired_operation: "connection_cleanup" });
+    const client = clientWithClaims([cleanupClaim]);
+    const deps = dependencies();
+    deps.refreshAccessToken.mockResolvedValue({
+      accessToken: "ephemeral-access",
+      replacementRefreshToken: "rotated-refresh",
+    });
+    await executeCalendarSync(1, client as never, deps);
+    expect(deps.revokeRefreshToken).toHaveBeenCalledWith("rotated-refresh");
   });
 
   it.each([

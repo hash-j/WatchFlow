@@ -3,12 +3,15 @@ import { getAuthContext } from "@/lib/supabase/auth";
 
 const messages: Record<string, string> = {
   connected: "Google Calendar connected.",
+  cleanup_reauthorized:
+    "Google Calendar access restored for disconnect cleanup. Calendar sync remains off.",
   denied: "Google Calendar access was not granted.",
   invalid: "That calendar connection request was invalid or expired.",
   failed: "Google Calendar could not be connected. Please try again.",
   unavailable: "Google Calendar connection is not configured.",
-  disconnected: "Google Calendar disconnected and provider access revoked.",
-  disconnected_local: "Google Calendar disconnected. Provider revocation could not be confirmed.",
+  disconnect_pending:
+    "Google Calendar disconnect started. WatchFlow will remove only its own calendar events before deleting the local connection.",
+  disconnected: "Google Calendar disconnected.",
   disconnect_failed: "Google Calendar could not be disconnected. Please try again.",
 };
 
@@ -21,7 +24,7 @@ export default async function CalendarSettingsPage({
 
   const { data } = await client
     .from("calendar_connections")
-    .select("display_email, sync_enabled, status")
+    .select("display_email, sync_enabled, status, last_error_code")
     .eq("user_id", user.id)
     .eq("provider", "google")
     .maybeSingle();
@@ -40,11 +43,19 @@ export default async function CalendarSettingsPage({
       ) : null}
       <div className="mt-6">
         <CalendarSettings
-          connection={data ? {
-            displayEmail: String(data.display_email),
-            syncEnabled: Boolean(data.sync_enabled),
-            status: String(data.status),
-          } : null}
+          connection={
+            data
+              ? {
+                  displayEmail: String(data.display_email),
+                  syncEnabled: Boolean(data.sync_enabled),
+                  status: String(data.status),
+                  lastErrorCode:
+                    typeof data.last_error_code === "string"
+                      ? data.last_error_code
+                      : null,
+                }
+              : null
+          }
         />
       </div>
     </section>

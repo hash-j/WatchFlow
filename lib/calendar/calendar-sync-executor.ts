@@ -14,6 +14,7 @@ import {
   refreshGoogleCalendarAccessToken,
   upsertGoogleCalendarEvent,
 } from "./google-calendar-transport";
+import { revokeGoogleRefreshToken } from "./google-provider";
 import type {
   CalendarSyncClaim,
   CalendarSyncFinalization,
@@ -30,6 +31,7 @@ type ExecutorDependencies = {
   deleteEvent: typeof deleteGoogleCalendarEvent;
   decryptRefreshToken: typeof decryptCalendarRefreshToken;
   encryptRefreshToken: typeof encryptCalendarRefreshToken;
+  revokeRefreshToken: typeof revokeGoogleRefreshToken;
 };
 
 export type CalendarSyncExecutionResult = {
@@ -47,6 +49,7 @@ const defaultDependencies: ExecutorDependencies = {
   deleteEvent: deleteGoogleCalendarEvent,
   decryptRefreshToken: decryptCalendarRefreshToken,
   encryptRefreshToken: encryptCalendarRefreshToken,
+  revokeRefreshToken: revokeGoogleRefreshToken,
 };
 
 function bytea(value: Uint8Array) {
@@ -227,6 +230,20 @@ async function executeClaim(
       );
     }
 
+    const cleanupFinality = claim.desiredOperation === "connection_cleanup"
+      ? await client.rpc("watchflow_is_final_calendar_cleanup", {
+          p_job_id: claim.jobId,
+          p_lease_token: claim.leaseToken,
+          p_source_version: claim.sourceVersion,
+        })
+      : { data: false, error: null };
+    if (cleanupFinality.error) {
+      throw new GoogleCalendarTransportError(
+        "retryable",
+        "calendar_cleanup_finality_failed",
+      );
+    }
+
     const result =
       claim.desiredOperation === "upsert"
         ? await dependencies.upsertEvent({
@@ -248,6 +265,18 @@ async function executeClaim(
             providerEventId: claim.providerEventId,
             accessToken: access.accessToken,
           });
+
+    if (cleanupFinality.data === true) {
+      const revoked = await dependencies.revokeRefreshToken(
+        access.replacementRefreshToken ?? refreshToken,
+      );
+      if (!revoked) {
+        throw new GoogleCalendarTransportError(
+          "retryable",
+          "google_revocation_unconfirmed",
+        );
+      }
+    }
 
     return {
       jobId: claim.jobId,

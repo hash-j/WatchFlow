@@ -1,12 +1,69 @@
 # WatchFlow Project Context
 
-Last updated: 2026-09-30
-Last updated by: Codex / Part 18J-C Guarded Real-Provider Acceptance
+Last updated: 2026-10-03
+Last updated by: Codex / Part 18J-D Local Implementation
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18J-C Google Calendar event synchronization is implemented and verified against watchflow-dev; Part 18J-D has not started.
-Current branch: `codex/part-18j-c-calendar-event-sync`.
-Current status: Parts 18A through 18I and Part 18J-A/B/C are verified. Part 18J-C has a bounded manual executor, real Google create/update/delete transport, refresh-token rotation boundary, and forward-only compatibility/claim guards. Migrations `202609300001` through `202609300004` are installed on watchflow-dev. Provider-free database acceptance and the guarded serial real-Google lifecycle pass: deterministic create/idempotency, same-event reschedule, pause/resume, two-user isolation, already-missing delete convergence, mapping removal, zero repeat work, and exact cleanup. Google timestamp precision and deleted-event tombstone behavior are covered explicitly. Production, cron, commit, push, and deployment remain untouched.
+Current phase: Part 18J-D background executor activation and calendar lifecycle reconciliation is implemented and verified against watchflow-dev; external Production scheduler activation remains a separate operations gate.
+Current branch: `codex/part-18j-d-executor-activation`.
+Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Part 18J-D adds forward-only migration `202609300005`, durable disconnect cleanup, exact final-cleanup Google grant revocation, same-account cleanup reauthorization, guarded database coverage, and an external scheduler operations contract. Migration `202609300005`, provider-free database acceptance, and the controlled serial real-Google lifecycle pass on watchflow-dev. Exact fixtures, mappings, jobs, and shared movie rows were cleaned; QA A is intentionally disconnected with its Google grant revoked, while QA B and unrelated state remain unchanged. No scheduler provider, Production configuration, commit, push, or deployment occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-10-03 Part 18J-D Implementation and Guarded Acceptance — PASS
+
+- Existing reminder and calendar endpoints remain separate, bounded, and
+  protected by `WATCHFLOW_SCHEDULER_SECRET`. External scheduler configuration
+  is documented in `docs/BACKGROUND_EXECUTORS.md`; no provider or Production
+  schedule is configured from the repository.
+- Forward-only migration `202609300005_part_18j_d_disconnect_reconciliation.sql`
+  turns disconnect into owner-bound `disconnect_pending` desired state,
+  coalesces exact `connection_cleanup` jobs for mappings and in-flight sources,
+  preserves credentials until convergence, serializes cleanup per connection,
+  and rejects non-deterministic provider IDs without contacting Google.
+- The new service-role-only
+  `watchflow_is_final_calendar_cleanup(uuid,uuid,text)` predicate is exact-job,
+  lease, version, owner, and disconnect-state bound. It lets the executor revoke
+  the Google refresh grant only after the last exact event deletion; an
+  unconfirmed revocation is retryable. Final success removes mappings and then
+  cascades the local connection/credential. Browser roles receive no new
+  execution or table privilege.
+- Revoked authorization remains visibly `disconnect_pending` and does not
+  silently succeed. Reauthorization is accepted only for the same Google
+  subject, keeps sync disabled, and resumes unfinished cleanup. A different
+  account fails closed, preventing stale cleanup from crossing accounts.
+- Focused source/unit coverage and the guarded integration harness are added.
+  The live integration remains skipped until migration application and explicit
+  watchflow-dev opt-in. Real Google cleanup requires the specified human
+  checkpoint before any provider mutation.
+- Local validation passes: focused Part 18I/J-A/B/C/D coverage 14 files/94
+  tests; full native-loader Vitest 132 files/1,105 tests; ESLint; direct
+  TypeScript; `git diff --check`; production build with 44 generated route
+  shells; and the post-build client-secret scan across 560 browser artifacts.
+  The ordinary Windows Vitest launcher encountered the known config-loader
+  `spawn EPERM`; the documented native-loader fallback is the recorded full
+  result. Environment readiness was checked without printing values: combined
+  local/test configuration is pinned to watchflow-dev, targets development,
+  and has the required strong scheduler, server, Google, encryption, and QA
+  variable names populated.
+- Live provider-free acceptance passes against the pinned watchflow-dev project
+  `ckwadpmvxieekjlsfcks`: the four required Part 18J-D RPCs are present; one
+  guarded integration file/three cases proves cleanup coalescing, durable
+  credential retention, same-account reauthorization, different-account
+  rejection, exact final-state convergence, privileged-role denial, and
+  two-user isolation. The disposable integration owner and rows were removed.
+- After the explicit human checkpoint approval, three separately identifiable
+  QA A schedules created exactly three deterministic Google events. Exact-ID
+  reads verified them, one exact event was removed to establish already-missing
+  convergence, and no calendar listing endpoint was used.
+- Repeated disconnect coalesced three cleanup jobs without duplication.
+  Serial batch-one executions removed mappings one at a time while retaining
+  the credential until the final cleanup. The already-missing event converged,
+  the final cleanup revoked the Google refresh grant, and connection/credential/
+  mapping/job rows then cascaded deterministically.
+- Final watchflow-dev audit reports zero controlled connection, credential,
+  mapping, job, relationship, movie, or actionable calendar-job rows. QA A is
+  intentionally disconnected and requires a manual OAuth reconnect if the QA
+  account should remain connected. QA B's existing connection and all unrelated
+  connection state matched the pre-run snapshot. Production remained untouched.
 
 ## 2026-09-30 Part 18J-C Live Failure Repair and Acceptance — PASS
 
