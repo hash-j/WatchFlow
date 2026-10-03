@@ -1,12 +1,39 @@
 # WatchFlow Project Context
 
 Last updated: 2026-10-04
-Last updated by: Codex / Part 18 Production Operations Unit 2B
+Last updated by: Codex / Part 18 Production Operations Unit 2C
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18 Production Operations Unit 2B verifies the disabled-by-default GitHub Actions scheduler path through manual zero-work runs against watchflow-dev while preserving the Production Vercel Cron design.
+Current phase: Part 18 Production Operations Unit 2C attempts controlled automatic GitHub scheduler acceptance against watchflow-dev after the successful Unit 2B manual preflight.
 Current branch: `codex/part-18-production-operations`.
-Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Operations Unit 1 and the Unit 2B manual zero-work preflight are verified. The reminder and calendar GitHub workflows completed independently against the dedicated watchflow-dev deployment with exact all-zero aggregate responses; both schedule gates remain disabled. No fixture, Google mutation, Production access, commit, or push was included.
+Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Operations Unit 1 and the Unit 2B manual zero-work preflight are verified. Unit 2C automatic acceptance is blocked because GitHub created no `schedule` event across five eligible reminder cron windows. Both gates are disabled, the exact fixtures were removed, QA state was restored, and no Google or Production mutation occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-10-04 Part 18 Production Operations Unit 2C — AUTOMATIC TRIGGER BLOCKED
+
+- QA A was reconnected with exactly one valid, enabled Google Calendar
+  connection and one matching encrypted credential. QA A/B owner isolation
+  passed and both actionable queues were empty before fixture setup.
+- Exact disposable reminder and calendar fixtures were created against pinned
+  watchflow-dev. The remote `movies.id` identity rejected the initially planned
+  explicit values before any row was inserted; database-generated IDs `369`
+  and `370` were then recorded while every deterministic user-movie, job,
+  notification, source, source-version, and provider-event identifier remained
+  unchanged. Only the intended reminder and calendar jobs became actionable.
+- The reminder schedule gate was enabled at `2026-10-03T22:48:46Z`. The active
+  default-branch workflow crossed the eligible `22:52`, `22:57`, `23:02`,
+  `23:07`, and `23:12` UTC cron windows, but GitHub created no `schedule` run.
+  This was not an HTTP, executor, claim, lease, database, or Google failure:
+  the scheduled event never existed and the reminder job remained unleased.
+- The test failed closed. Both repository gates were reset to `false`; the two
+  exact relationships, movies, jobs, cross-trigger rows, notifications,
+  deliveries, and mappings were removed; QA B reminder preferences were
+  restored; QA A's pre-existing skipped reminder row and enabled Google
+  connection remained intact; and both actionable queues returned to zero.
+- No calendar scheduler was enabled, no Google API request or event mutation
+  occurred, and Production remained untouched. Unit 2C must be rerun only
+  after GitHub scheduled-event delivery is observed or sufficient activation
+  time has elapsed; `workflow_dispatch` cannot substitute for the required
+  automatic-event evidence.
 
 ## 2026-10-04 Part 18 Production Operations Unit 2B — MANUAL ZERO-WORK PREFLIGHT PASS
 
