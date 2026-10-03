@@ -1,12 +1,41 @@
 # WatchFlow Project Context
 
 Last updated: 2026-10-04
-Last updated by: Codex / Part 18 Production Operations Unit 2A
+Last updated by: Codex / Part 18 Production Operations Unit 2B
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18 Production Operations Unit 2A adds a disabled-by-default GitHub Actions path for guarded watchflow-dev scheduler acceptance while preserving the Production Vercel Cron design.
+Current phase: Part 18 Production Operations Unit 2B verifies the disabled-by-default GitHub Actions scheduler path through manual zero-work runs against watchflow-dev while preserving the Production Vercel Cron design.
 Current branch: `codex/part-18-production-operations`.
-Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Operations Unit 1 is verified. Unit 2A adds a cron-free explicit local config for the dedicated Hobby development project plus independent reminder/calendar GitHub workflows with fixed watchflow-dev routes, strict response validation, and separate disabled schedule gates. No schedule is enabled and no deployment, fixture, provider call, database change, Production change, commit, or push is included.
+Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Operations Unit 1 and the Unit 2B manual zero-work preflight are verified. The reminder and calendar GitHub workflows completed independently against the dedicated watchflow-dev deployment with exact all-zero aggregate responses; both schedule gates remain disabled. No fixture, Google mutation, Production access, commit, or push was included.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-10-04 Part 18 Production Operations Unit 2B — MANUAL ZERO-WORK PREFLIGHT PASS
+
+- Both default-branch workflows are registered and active. Manual
+  `workflow_dispatch` runs used `confirm_watchflow_dev=true` and the fixed
+  `https://watchflow-dev-ops.vercel.app` routes; scheduled execution remained
+  disabled throughout.
+- Reminder run `37158282809` completed successfully with exact counters
+  `claimedJobs=0`, `attemptedDeliveries=0`, `delivered=0`, `retryable=0`, and
+  `failed=0`.
+- Calendar run `37158352824` completed successfully with exact counters
+  `claimed=0`, `succeeded=0`, `retryable=0`, `failed=0`, `authRequired=0`, and
+  `staleFinalizations=0`.
+- Each workflow validated HTTP 200, no redirect, `Cache-Control: no-store`, the
+  exact aggregate-only response schema, and nonnegative integer counters.
+  Both runs used the same default-branch head and produced no artifacts.
+- The linked and queried Supabase target remained the exact watchflow-dev ref
+  `ckwadpmvxieekjlsfcks`. A post-run read-only audit found no notification,
+  reminder job/delivery, calendar job/mapping, or `user_movies` row created or
+  updated during the dispatch window. With zero calendar claims, no Google API
+  mutation occurred.
+- A sanitized audit found no locally configured sensitive value in either run
+  log and no Production hostname. The workflows have no step-summary or
+  artifact-writing path and receive only the scoped watchflow-dev scheduler
+  secret.
+- Repository variables remained exactly
+  `WATCHFLOW_DEV_REMINDER_SCHEDULER_ENABLED=false` and
+  `WATCHFLOW_DEV_CALENDAR_SCHEDULER_ENABLED=false`. Controlled automatic
+  fixture acceptance still requires a separate human approval checkpoint.
 
 ## 2026-10-04 Part 18 Production Operations Unit 2A — LOCAL IMPLEMENTATION
 
