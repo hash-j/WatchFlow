@@ -1,12 +1,42 @@
 # WatchFlow Project Context
 
 Last updated: 2026-10-03
-Last updated by: Codex / Part 18J-D Local Implementation
+Last updated by: Codex / Part 18 Production Operations Unit 1
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18J-D background executor activation and calendar lifecycle reconciliation is implemented and verified against watchflow-dev; external Production scheduler activation remains a separate operations gate.
-Current branch: `codex/part-18j-d-executor-activation`.
-Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Part 18J-D adds forward-only migration `202609300005`, durable disconnect cleanup, exact final-cleanup Google grant revocation, same-account cleanup reauthorization, guarded database coverage, and an external scheduler operations contract. Migration `202609300005`, provider-free database acceptance, and the controlled serial real-Google lifecycle pass on watchflow-dev. Exact fixtures, mappings, jobs, and shared movie rows were cleaned; QA A is intentionally disconnected with its Google grant revoked, while QA B and unrelated state remain unchanged. No scheduler provider, Production configuration, commit, push, or deployment occurred.
+Current phase: Part 18 Production Operations Unit 1 prepares the verified reminder and calendar executors for Vercel Cron without activating an external scheduler.
+Current branch: `codex/part-18-production-operations`.
+Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Operations Unit 1 adds shared authenticated GET/POST executor routes, a fail-closed server-only Supabase project-ref pin, independent one-minute repository cron declarations, and aggregate-only structured execution logging. No product behavior, migration, RLS, privilege, external Vercel configuration, Production change, deployment, commit, or push is included.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-10-03 Part 18 Production Operations Unit 1 — LOCAL IMPLEMENTATION
+
+- Both protected executor routes now export `GET` and `POST` aliases for one
+  shared implementation. Both methods use the unchanged constant-time
+  `WATCHFLOW_SCHEDULER_SECRET` bearer verifier before target validation or
+  privileged client construction; manual POST acceptance remains supported.
+- Scheduled execution fails closed unless the server-only
+  `WATCHFLOW_EXPECTED_SUPABASE_PROJECT_REF` is present, valid, and equals the
+  project ref extracted from the configured HTTPS Supabase URL. Fixed 401/503/
+  500 responses reveal no configured target or secret.
+- `vercel.json` declares independent one-minute GET schedules for reminders
+  and calendar sync. Vercel must be configured with environment-isolated,
+  matching `CRON_SECRET` and `WATCHFLOW_SCHEDULER_SECRET` values. Repository
+  configuration is not evidence that any Vercel scheduler is deployed or
+  active.
+- Successful executor logs contain a fixed route label plus only their
+  aggregate result counters. Response/log shaping excludes users, emails,
+  movies, event payloads, provider responses, subscriptions, tokens, secrets,
+  and raw errors. The client-secret scan now includes both new server-only
+  configuration names.
+- No schema, migration, RLS, service-role, OAuth scope, lease, retry,
+  idempotency, executor, queue, or product-feature behavior changes. Rollback
+  begins by disabling cron and preserving durable queue state.
+- Validation passes: focused Operations/Part 18I/J coverage 38 files/216
+  tests; full native-loader Vitest 136 files/1,131 tests; ESLint; direct
+  TypeScript; `git diff --check`; the post-build client-secret scan across 560
+  browser artifacts; and the Next 16.2.12 production build with 44 generated
+  route shells. The ordinary Windows Vitest config loader reproduced the known
+  host-level `spawn EPERM`; the documented native-loader fallback is green.
 
 ## 2026-10-03 Part 18J-D Implementation and Guarded Acceptance — PASS
 
@@ -3415,6 +3445,8 @@ Names only are recorded here; values must never enter this file.
 | `TMDB_READ_ACCESS_TOKEN` | TMDB Bearer token for search/details/import | Server-only secret | Required for movie workflows |
 | `NEXT_PUBLIC_APP_URL` | Public application origin for contextual calendar event links | Browser-safe public | Optional |
 | `WATCHFLOW_SCHEDULER_SECRET` | Strong bearer credential for bounded internal reminder/calendar executor routes | Server-only secret | Required for manual background execution |
+| `WATCHFLOW_EXPECTED_SUPABASE_PROJECT_REF` | Fail-closed scheduler target pin matched against the configured Supabase URL | Server-only configuration | Required for scheduled execution |
+| `CRON_SECRET` | Vercel-supplied cron bearer; must equal the environment's `WATCHFLOW_SCHEDULER_SECRET` | Server-only secret | Required only for Vercel Cron |
 | `GOOGLE_CALENDAR_CLIENT_ID` | Google OAuth client and refresh exchange identifier | Server-only configuration | Required for Google Calendar |
 | `GOOGLE_CALENDAR_CLIENT_SECRET` | Google OAuth and refresh exchange secret | Server-only secret | Required for Google Calendar |
 | `GOOGLE_CALENDAR_REDIRECT_URI` | Exact Google OAuth callback URI | Server-only configuration | Required for Google Calendar |
