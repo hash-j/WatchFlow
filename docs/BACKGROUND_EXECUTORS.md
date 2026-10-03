@@ -52,6 +52,65 @@ Before enabling a schedule, set and verify the deployment's server-only
 Production deployment. Production activation requires a separate explicit release approval.
 Ephemeral Preview deployments must not receive a scheduler.
 
+## Non-Production GitHub scheduler acceptance
+
+The dedicated `watchflow-dev-ops` Vercel project uses the Hobby plan. Hobby
+does not accept the repository's intended one-minute cron declarations, so
+GitHub Actions provides the scheduler only for guarded non-Production
+acceptance. This does not change the Production design: `vercel.json` retains
+the two independent one-minute Vercel Cron entries for eventual Pro/Production
+activation.
+
+Deploy the dedicated Hobby project with the explicitly selected
+`vercel.watchflow-dev.json` local configuration. That configuration deliberately
+contains no cron declarations and otherwise leaves Vercel's normal framework,
+install, build, output, and runtime detection unchanged. Never rename it to
+`vercel.json` or use it for Production. The explicit development deployment
+command is:
+
+```text
+vercel deploy --prod --local-config vercel.watchflow-dev.json --project watchflow-dev-ops
+```
+
+Here, `--prod` promotes only within the dedicated non-Production Vercel project;
+it does not authorize a WatchFlow Production deployment.
+
+The repository has separate reminder and calendar workflows. Each uses a fixed
+`https://watchflow-dev-ops.vercel.app` origin, one fixed executor path, GET,
+the existing bearer contract, no redirects, bounded request time, and exact
+aggregate-only response validation. Both use the `watchflow-dev-scheduler`
+GitHub Environment with only this required secret:
+
+- `WATCHFLOW_DEV_SCHEDULER_SECRET`
+
+The value must equal that deployment's `WATCHFLOW_SCHEDULER_SECRET`. GitHub
+does not need `CRON_SECRET`, Supabase credentials, Google credentials, VAPID
+keys, encryption keys, or service-role credentials to invoke these routes.
+
+Scheduled execution is fail-closed behind independent repository variables:
+
+- `WATCHFLOW_DEV_REMINDER_SCHEDULER_ENABLED=false`
+- `WATCHFLOW_DEV_CALENDAR_SCHEDULER_ENABLED=false`
+
+Only the exact string `true` enables the corresponding scheduled job. Manual
+`workflow_dispatch` runs instead require the explicit
+`confirm_watchflow_dev=true` input. Reminder and calendar schedules have
+separate concurrency groups and never cancel an in-progress invocation.
+
+GitHub Actions supports a minimum five-minute scheduled interval, not the
+intended one-minute Production cadence. The acceptance schedules are staggered
+at minutes `2-57/5` and `4-59/5`. Scheduled workflows run from the default
+branch and may be delayed or dropped under platform load, so this path verifies
+automatic invocation, durable idempotency, retries, isolation, and cleanup; it
+is not evidence of one-minute delivery precision or a Production scheduler
+SLA.
+
+Keep both variables false until the deployment passes missing/wrong-auth,
+authorized zero-work, target-pin, no-redirect, no-store, and aggregate-schema
+preflight. Calendar fixture execution and any real Google mutation still
+require a later exact-fixture human checkpoint. No Production scheduler is
+activated by these files.
+
 ## Secret-free results
 
 Successful responses contain aggregate counters only. Failure responses use a

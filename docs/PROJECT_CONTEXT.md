@@ -1,12 +1,57 @@
 # WatchFlow Project Context
 
-Last updated: 2026-10-03
-Last updated by: Codex / Part 18 Production Operations Unit 1
+Last updated: 2026-10-04
+Last updated by: Codex / Part 18 Production Operations Unit 2A
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18 Production Operations Unit 1 prepares the verified reminder and calendar executors for Vercel Cron without activating an external scheduler.
+Current phase: Part 18 Production Operations Unit 2A adds a disabled-by-default GitHub Actions path for guarded watchflow-dev scheduler acceptance while preserving the Production Vercel Cron design.
 Current branch: `codex/part-18-production-operations`.
-Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Operations Unit 1 adds shared authenticated GET/POST executor routes, a fail-closed server-only Supabase project-ref pin, independent one-minute repository cron declarations, and aggregate-only structured execution logging. No product behavior, migration, RLS, privilege, external Vercel configuration, Production change, deployment, commit, or push is included.
+Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Operations Unit 1 is verified. Unit 2A adds a cron-free explicit local config for the dedicated Hobby development project plus independent reminder/calendar GitHub workflows with fixed watchflow-dev routes, strict response validation, and separate disabled schedule gates. No schedule is enabled and no deployment, fixture, provider call, database change, Production change, commit, or push is included.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-10-04 Part 18 Production Operations Unit 2A — LOCAL IMPLEMENTATION
+
+- Vercel Hobby rejects the intended one-minute cron cadence. The existing
+  `vercel.json` remains unchanged for eventual Pro/Production use.
+  `vercel.watchflow-dev.json` is a separate cron-free local configuration for
+  explicit CLI deployment to the dedicated `watchflow-dev-ops` Hobby project;
+  it adds no build/runtime override and must never replace the Production
+  configuration.
+- Separate reminder and calendar GitHub Actions workflows support guarded
+  `workflow_dispatch` plus staggered five-minute schedules. Both use only the
+  fixed development origin, their exact GET route, bearer authentication from
+  `WATCHFLOW_DEV_SCHEDULER_SECRET`, no redirect following, bounded timeouts,
+  HTTP 200 plus `Cache-Control: no-store`, and an exact nonnegative aggregate
+  response schema. Invalid responses are not printed.
+- The workflows use the exact `watchflow-dev-scheduler` GitHub Environment,
+  empty permissions, distinct non-cancelling concurrency groups, and no
+  Supabase, service-role, Google, VAPID, or encryption credential. Scheduled
+  execution remains disabled unless the respective repository variable is
+  exactly `true`: `WATCHFLOW_DEV_REMINDER_SCHEDULER_ENABLED` or
+  `WATCHFLOW_DEV_CALENDAR_SCHEDULER_ENABLED`. Manual invocation separately
+  requires `confirm_watchflow_dev=true`.
+- GitHub schedules run only from the default branch, have a five-minute minimum,
+  and may be delayed or dropped. This path is limited to non-Production
+  acceptance and does not weaken the intended one-minute Vercel Cron Production
+  cadence. Any controlled calendar fixture and real Google mutation still
+  require a later human checkpoint.
+- The client-secret scanner recognizes the new GitHub scheduler secret name.
+  Source contracts preserve the two original one-minute Vercel entries and
+  verify fixed origins/routes, GET-only bearer transport, no query credential,
+  secret-safe logging, empty permissions, exact environment/gates,
+  confirmation, staggered cadence, independent concurrency, aggregate schemas,
+  and the cron-free development config.
+- No schedule was enabled; no Vercel or GitHub environment was configured; no
+  deployment, executor invocation, fixture, database mutation, Google request,
+  Production access, commit, or push occurred during implementation.
+- Validation passes: focused Operations/Part 18I/J coverage 37 files/208 tests;
+  the full native-loader single-worker fallback 137 files/1,137 tests; ESLint;
+  direct TypeScript; `git diff --check`; the Next 16.2.12 production build with
+  44 generated route shells; and the post-build client-secret scan across 560
+  browser artifacts. The ordinary Windows Vitest launcher reproduced the known
+  host-level config-loader `spawn EPERM`; no test executed or failed in that
+  attempt, and the documented full fallback is green. The first sandboxed build
+  attempt could not reach Google Fonts; the approved network-enabled rerun
+  completed successfully.
 
 ## 2026-10-03 Part 18 Production Operations Unit 1 — LOCAL IMPLEMENTATION
 
