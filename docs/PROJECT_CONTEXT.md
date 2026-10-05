@@ -1,12 +1,41 @@
 # WatchFlow Project Context
 
 Last updated: 2026-10-05
-Last updated by: Codex / Part 18 Production Operations Unit 2C schedule-delivery audit
+Last updated by: Codex / Part 18 Production Operations Unit 2D design
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18 Production Operations Unit 2C is auditing delayed GitHub schedule delivery after the successful Unit 2B manual preflight and cleaned automatic-trigger attempt.
+Current phase: Part 18 Production Operations Unit 2D designs a minimal Upstash QStash replacement for non-Production automatic scheduler acceptance after GitHub schedule delivery proved too delayed and lossy.
 Current branch: `codex/part-18-production-operations`.
-Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Operations Unit 1 and the Unit 2B manual zero-work preflight are verified. Unit 2C automatic acceptance remains blocked: GitHub eventually emitted schedule events, but the first arrived about 91 minutes after the enabled test window and subsequent delivery is sparse and heavily delayed. Both gates remain disabled; fixtures are absent; no Google or Production mutation occurred.
+Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Operations Unit 1 and the Unit 2B manual zero-work preflight are verified. Unit 2C GitHub automatic acceptance remains blocked. Unit 2D confirms QStash can invoke the existing development GET routes with a redacted forwarded bearer, independent staggered five-minute schedules, zero retries, and bounded timeout without an application change. No QStash schedule or fixture exists yet; GitHub gates remain disabled; Production is untouched.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-10-05 Part 18 Production Operations Unit 2D — QSTASH DESIGN CHECKPOINT
+
+- Current QStash contracts support two independent URL schedules, UTC cron by
+  default, destination method `GET`, forwarded custom headers, explicit zero
+  retries, bounded per-request timeout, deterministic schedule IDs, labels,
+  pause/resume/delete operations, and delivery logs filtered by schedule ID or
+  label. New schedules can take up to 60 seconds to load on an active node.
+- The QStash management token authenticates only QStash control-plane calls.
+  The existing development-only `WATCHFLOW_SCHEDULER_SECRET` is separately
+  stored in each schedule as the forwarded destination `Authorization` bearer;
+  the QStash token is never delivered to WatchFlow.
+- Request headers must use QStash one-way redaction so the forwarded bearer is
+  unavailable in the console, schedule get/list responses, logs, and DLQ while
+  its original value remains deliverable. Schedules carry no body, callback,
+  Supabase, Google, VAPID, encryption, or QA credential.
+- Proposed acceptance schedules preserve the existing staggered UTC crons:
+  reminder `2-57/5 * * * *`, calendar `4-59/5 * * * *`; method `GET`, retries
+  `0`, timeout `55s`, and fixed watchflow-dev destinations. Existing database
+  leases and deterministic identities remain the authoritative concurrency and
+  duplicate defenses.
+- Pause both schedules first at the end or on any anomaly, wait for already
+  created messages to reach a terminal state, then delete each exact schedule.
+  Deleting a schedule stops future message creation but does not cancel messages
+  already produced by it.
+- No application code, authentication, migration, deployment, fixture, Google
+  request, scheduler, QStash credential, or Production configuration was
+  created or changed. Human setup and a new exact-fixture checkpoint remain
+  required before controlled execution.
 
 ## 2026-10-05 Part 18 Production Operations Unit 2C — SCHEDULE DELIVERY AUDIT
 
