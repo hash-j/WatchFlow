@@ -1,12 +1,45 @@
 # WatchFlow Project Context
 
-Last updated: 2026-10-04
-Last updated by: Codex / Part 18 Production Operations Unit 2C
+Last updated: 2026-10-05
+Last updated by: Codex / Part 18 Production Operations Unit 2C schedule-delivery audit
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18 Production Operations Unit 2C attempts controlled automatic GitHub scheduler acceptance against watchflow-dev after the successful Unit 2B manual preflight.
+Current phase: Part 18 Production Operations Unit 2C is auditing delayed GitHub schedule delivery after the successful Unit 2B manual preflight and cleaned automatic-trigger attempt.
 Current branch: `codex/part-18-production-operations`.
-Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Operations Unit 1 and the Unit 2B manual zero-work preflight are verified. Unit 2C automatic acceptance is blocked because GitHub created no `schedule` event across five eligible reminder cron windows. Both gates are disabled, the exact fixtures were removed, QA state was restored, and no Google or Production mutation occurred.
+Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Operations Unit 1 and the Unit 2B manual zero-work preflight are verified. Unit 2C automatic acceptance remains blocked: GitHub eventually emitted schedule events, but the first arrived about 91 minutes after the enabled test window and subsequent delivery is sparse and heavily delayed. Both gates remain disabled; fixtures are absent; no Google or Production mutation occurred.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-10-05 Part 18 Production Operations Unit 2C — SCHEDULE DELIVERY AUDIT
+
+- Both workflow files are byte-equivalent after line-ending normalization to
+  the current `master` blobs at commit
+  `49a3778d1f288f993084821f6e53814227ee676a`. GitHub registers both workflows
+  as `active`; actual `schedule` runs prove their YAML and cron blocks parse.
+- Repository Actions are enabled with all actions allowed. The repository is
+  active, private, and uses `master` as its default branch. Neither workflow is
+  manually or policy-disabled.
+- The reminder cron remains `2-57/5 * * * *`; calendar remains
+  `4-59/5 * * * *`. Both current repository gates remain exactly `false`.
+- GitHub eventually emitted eight `schedule` runs for each workflow. Every one
+  completed as `skipped` with a zero-step skipped job because the corresponding
+  gate was false when the delayed run evaluated its job-level condition. This
+  is distinct from an executor or endpoint failure.
+- The first reminder schedule run was `37165926090` at
+  `2026-10-04T00:45:34Z`, about 91 minutes after the controlled gate was
+  disabled at `2026-10-03T23:14:08Z`. The first calendar schedule run was
+  `37165975772` at `2026-10-04T00:46:33Z`. Later events arrived only at sparse,
+  multi-hour intervals rather than the declared five-minute cadence.
+- Environment selection, empty workflow permissions, non-cancelling
+  concurrency, and the job-level gate cannot prevent GitHub from creating a
+  workflow run. The run/job evidence proves the gate only skips the job after
+  event creation. Manual dispatch success separately proves that the
+  environment and endpoint path work when the job runs.
+- Root-cause classification: external GitHub Actions scheduled-event delivery
+  is too delayed and lossy for deterministic Unit 2C automatic acceptance; no
+  workflow syntax, registration, repository-policy, application, or endpoint
+  defect was found. A dedicated non-Production Vercel Pro cron deployment is
+  the smallest reliable alternative because it reuses the existing GET,
+  bearer-authentication, target-pin, secret-separation, and aggregate-response
+  contracts without application or database changes.
 
 ## 2026-10-04 Part 18 Production Operations Unit 2C — AUTOMATIC TRIGGER BLOCKED
 
