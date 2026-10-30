@@ -1,12 +1,663 @@
 # WatchFlow Project Context
 
-Last updated: 2026-10-05
-Last updated by: Codex / Part 18 Production Operations Unit 2D design
+Last updated: 2026-10-30
+Last updated by: Codex / Unit 2D first automatic execution read-only recovery preparation
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Part 18 Production Operations Unit 2D designs a minimal Upstash QStash replacement for non-Production automatic scheduler acceptance after GitHub schedule delivery proved too delayed and lossy.
+Current phase: The human performed the first real automatic calendar execution. The job reportedly succeeded once and the schedule is paused; log shape rejection blocked finalization. An explicit read-only --recover path is prepared, not run. Never rerun --first-run, canary or normal A2; both real schedules must remain paused.
 Current branch: `codex/part-18-production-operations`.
-Current status: Parts 18A through 18I and Part 18J-A/B/C/D are verified. Operations Unit 1 and the Unit 2B manual zero-work preflight are verified. Unit 2C GitHub automatic acceptance remains blocked. Unit 2D confirms QStash can invoke the existing development GET routes with a redacted forwarded bearer, independent staggered five-minute schedules, zero retries, and bounded timeout without an application change. No QStash schedule or fixture exists yet; GitHub gates remain disabled; Production is untouched.
+Current status: Human-reported first occurrence 2026-10-29T21:59:00Z: connected/sync=true, controlled upsert succeeded/attempt_count=1/unleased, mapping present, calendar pause verified, no unrelated actionable/cleanup work, failures empty. Error QSTASH_EVENT_SHAPE_MISMATCH left automatic provenance unverified and exact Google fixture unknown. Recovery must independently verify those facts. No live recovery/provider request or mutation was performed by Codex. Earlier checkpoints below are historical.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-10-30 Unit 2D — FIRST AUTOMATIC EXECUTION RECOVERY (PREPARED ONLY)
+
+- The actual job execution already occurred; do not resume, invoke, requeue or
+  reset anything. CLI --first-run now fails before environment/network access.
+  --recover returns via a separate read-only function before mutation capabilities,
+  prompts, timers or finally-pause logic are reached, even on errors.
+- Exact per-state key-count equality caused the schema rejection mechanism. The
+  decoder now requires known security/provenance fields and typed values while
+  discarding extra opaque metadata. No actual additional real-calendar key names
+  were supplied; the new metadata fixture is explicitly synthetic/representative.
+  Known optional fields remain checked when present; headers/body values never
+  leave normalized rows or establish trust. Canary-only guards remain intact.
+- Recovery verifies exact successful job/connection/source, one synced owner-bound
+  mapping and expected event, reviewed live function/security/claim predicates,
+  current full inventories, paused calendar/reminder and false GitHub gates.
+  Google uses memory-only refresh (no replacement token allowed) then only the
+  exact primary-calendar event GET with repository-derived fixture validation.
+- Retained logs GET is fixed to 2026-10-29T21:58:30Z through 22:00:30Z for the
+  exact calendar schedule. Require one correlated CREATED -> ACTIVE -> DELIVERED
+  message with exact destination/GET/labels and actual 2xx. First creation and
+  attempt cutoffs are enforced; second occurrence at 22:04Z is excluded.
+- No pre-run inventory file exists. Do not manufacture a baseline or claim an
+  exhaustive deleted-history audit. Require current inventories, no unrelated
+  activity timestamps since incident start and unchanged full snapshots across
+  reads; report the explicit isolation scope and unavailable historical baseline.
+  Missing/incomplete timestamps or retained logs fail closed without mutation.
+- All 117 offline operator/decoder tests passed. Coverage includes successful
+  recovery with every mutation/approval/timer hook forbidden, failure without a
+  compensating pause, strict core fields with opaque optional metadata discarded,
+  exact historical query bounds, second-trigger rejection, scoped inventory
+  isolation and final snapshot races. Mocked Google transport verifies memory-only
+  refresh followed by only the exact primary-event GET and token/buffer cleanup.
+  Syntax, ESLint, TypeScript and whitespace checks passed; build failed fetching
+  Geist from Google Fonts. Original canary evidence remains byte-identical. The
+  new recovery command was not run live, and no fixture/provider state changed.
+
+## 2026-10-30 Unit 2D — RETAINED-HISTORY STATUS SUPPLEMENT (HISTORICAL)
+
+- The human recovered three retained canary rows read-only: CREATED, ACTIVE,
+  DELIVERED; the DELIVERED row has responseStatus=200. Store only that reviewed
+  safe fact and provenance in the separate canary-reviewed-status JSON fixture.
+  Pin its exact schema/values, original evidence byte hash and correlation hash
+  of the captured anonymous message alias, timeline, schedule and destination.
+  The raw live message ID was anonymized in the original; retained-history
+  correlation is the human's explicit review, not a reconstructed raw identity.
+- The production evidence reader computes the actual original byte SHA-256,
+  reads only the fixed supplement path, validates all pins and overlays only
+  the sole normalized DELIVERED row in memory. No CLI/env success override,
+  original-file edit or live-decoder relaxation is permitted. Missing/altered
+  bindings fail closed. The original zero-placeholder fixture remains unchanged.
+- The first automatic operator uses that same strict review gate, then the shared
+  live decoder: exact calendar schedule/destination/GET/labels, one nonempty
+  message ID, CREATED -> ACTIVE -> DELIVERED and actual 2xx. Unknown state/shape,
+  wrong correlation or non-2xx fail closed. Existing fresh live fixture/gate
+  prechecks, typed approval, bounded observation and safety pause remain required.
+- All 107 offline operator/decoder tests passed, including supplementary status,
+  byte/correlation binding, immutable parsed object and zero-I/O PASS review.
+  No live canary/first execution/precheck, executor or provider call was run.
+- The local --review-evidence command returned CANARY_EVIDENCE_REVIEW_PASS:
+  three events, one message, automatic provenance/attempt/success true and decoder
+  readiness true. Original evidence byte hash matched before and after. Syntax,
+  ESLint, TypeScript and whitespace checks passed; production build failed only
+  fetching Geist from Google Fonts. No real first execution or schedule action
+  was performed. A fresh guarded precheck and typed human approval still apply.
+
+## 2026-10-30 Unit 2D — INITIAL OFFLINE CANARY EVIDENCE REVIEW (HISTORICAL)
+
+- Preserved the existing ignored canary evidence file byte-for-byte. Three rows
+  correlate to one anonymous message: CREATED, ACTIVE, DELIVERED. The old parser
+  rejected callerIp/host/path/duration before counting IDs, causing its zero
+  count. Shared exact-field decoding now derives one message, pinned schedule,
+  destination, GET, labels and timeline; ACTIVE proves an observed attempt.
+- The old sanitizer replaced unhandled numeric fields, including responseStatus,
+  with zero. The DELIVERED state survives, but an actual 2xx response does not.
+  Strict review must fail EVIDENCE_RESPONSE_STATUS_REDACTED, missing
+  sanitized_pages[1].events[0].responseStatus. Never substitute a synthetic 200
+  or the unrelated public-asset GET status. No canary rerun is authorized.
+- Added a shared decoder and captured-schema fixture, used by local evidence
+  review, first-run reads and A2's events branch. Unknown fields/states,
+  ambiguous correlation and unverified nonempty pagination fail closed; A2's
+  legacy logs handling and mutation preconditions remain. Headers are never
+  provenance or printed. Future sanitization preserves safe HTTP status values
+  without changing the existing evidence.
+- --review-evidence returns before environment/context, network, approval,
+  timers, cleanup and writes. --first-run checks strict evidence readiness
+  before context/network/approval and remains blocked by the lost status.
+  Offline regressions include the captured historical failure, synthetic 2xx
+  success, message deduplication, provenance, malformed rows and zero-I/O review.
+  All 102 operator/decoder tests passed. Do not run the first real execution.
+- Ran only the approved local --review-evidence command: it exited 1 with
+  CANARY_EVIDENCE_REVIEW_FAIL / EVIDENCE_RESPONSE_STATUS_REDACTED, three captured
+  events, one message, provenance/attempt true, successful delivery/readiness
+  false and the exact missing status field above. Original evidence SHA-256 was
+  unchanged before and after. Syntax, repository ESLint, TypeScript and whitespace
+  checks passed. Production build failed fetching Geist from Google Fonts.
+
+## 2026-10-29 Unit 2D — ISOLATED LOG CANARY (HISTORICAL PREPARATION)
+
+- The human reported CANARY_STOP code=UNEXPECTED_FAILURE at precheck despite
+  proven infrastructure. The old catch discarded native failure stages; that
+  output cannot identify the original live exception. Only the canary's precheck
+  and error handling were patched, with offline regressions. No live precheck,
+  diagnostic request, canary, or real schedule action was run for this repair.
+  The new context/capture/asset/lookup boundaries preserve safe codes across
+  owner/reauth/A2-style classes and emit fixed sanitized fallback stages.
+- The working reauthorization no-login target guard and environment loader
+  replace the sync-enable guard's unnecessary QA-password/public-key dependency.
+  Existing repository/source/scheduler-strength pins remain. The same direct
+  PG snapshot, pooler/strict TLS/CA configuration and read-only transaction are
+  reused; errors are classified before the shared generic catch loses them.
+  QStash/GitHub GET failures retain their service/auth codes through allSettled.
+  Missing credentials/CA files, TLS/auth failures, asset and lookup failures are
+  explicit; no raw message/body/credential/path is logged. Custom CA remains
+  optional when system trust works. No new credential or package was introduced.
+- The exact --precheck-only success line remains required and returns before
+  approval, timers, evidence writes, or mutations. Twenty-nine canary tests and
+  90 total operator tests passed. Syntax, ESLint, TypeScript and whitespace checks
+  passed; the build failed fetching Geist from Google Fonts. No live precheck or
+  provider request was run for this repair. The real first execution remains blocked until
+  nonempty canary evidence is captured and reviewed in a separately approved run.
+
+- Added `scripts/part18-ops-unit2d-log-canary.mjs`, focused offline tests, and
+  `docs/PART18_OPS_UNIT2D_LOG_CANARY.md`. The existing passive public icon path
+  is excluded by the session proxy. Its dev deployment was verified with one
+  requested unauthenticated GET (200, SVG MIME, matching content, no cookie).
+  Asset/routing source pins and an unauthenticated runtime body check guard it.
+- Only the dedicated canary ID may be created/paused/resumed/deleted. Its GET
+  destination is the static icon; retries zero, 10-second timeout, three isolated
+  labels, and no body/forwarded authentication/callback/credentials. The existing
+  real schedules and gates have GET-only access. There are no application writes,
+  Auth sign-ins, direct publishes, executor/claim calls, or Google Calendar writes.
+- After exact typed approval, require canary absence, unchanged controlled
+  fixture/global calendar inventories, no mapping/exact event, both real pauses,
+  and false gates. Select a five-minute-ahead UTC annual occurrence, create and
+  immediately pause, recheck, resume only the canary with adequate activation
+  lead, and pause on its first event. A bounded watchdog/finally deletes the
+  canary and verifies 404. Cleanup waits for in-flight activation requests and
+  blocks later ones; no existing canary or prior evidence is overwritten.
+- Actual runtime structures are reported without values, and redacted fixtures
+  are saved exclusively in ignored local storage after cleanup. Message IDs are
+  anonymized, timestamps shifted, and all header/body/response values removed.
+  Unknown schema or pagination causes cleanup and failure, not guessed proof.
+  Candidate provenance requires one exact scheduled message/destination/GET/
+  time window and DELIVERED evidence. No real nonempty capture was fabricated.
+  A2/first-run decoders remain unchanged and blocked pending actual live review.
+- Twenty-one canary tests passed; 82 tests passed including the prior operator
+  suites. Syntax, repository ESLint, TypeScript, and tracked/new-file whitespace
+  checks passed. The build failed fetching Geist from Google Fonts. No live
+  canary/precheck or application fixture mutation was performed. The actual live
+  nonempty fixture and real decoder patch await the approved canary's capture;
+  no fabricated live row or readiness claim was added.
+
+## 2026-10-29 Unit 2D — FIRST AUTOMATIC EXECUTION (PREPARED, NOT READY)
+
+- Added `scripts/part18-ops-unit2d-first-automatic.mjs`, its focused tests, and
+  `docs/PART18_OPS_UNIT2D_FIRST_AUTOMATIC.md`. Only explicit --precheck-only and
+  --first-run modes exist. The exact first-automatic typed approval is required
+  before any external write. The script never signs in, invokes an executor,
+  claims/finalizes a job, writes application data, changes a gate, resumes the
+  reminder, or mutates Google Calendar. Existing target/TLS/credential guards
+  are reused; no dependency, migration, or environment change was made.
+- Every mutable precheck repeats after approval and at the resume boundary.
+  UTC cron planning selects one occurrence with sufficient lead time, resumes
+  only 75..10 seconds before it, and arms an independent pause cutoff 75 seconds
+  after it (225 seconds before the next occurrence). Relevant DB/log activity,
+  errors, interruption, and clock drift enter one shared pause path, also awaited
+  in finally. Once approved, even a failed pre-resume boundary check triggers
+  the safety pause. Wrong approval or pre-approval failure makes zero writes.
+  Pause GET is checked even after a lost POST response; writes are never retried.
+  A local timer cannot guarantee safety after machine/process/network loss.
+- Repository-defined success is job `succeeded`, one legitimate attempt, cleared
+  lease, and exact mapping `synced`. Full unrelated/cross-user/cleanup job rows
+  and unrelated mappings must equal the complete baseline. Source, stable
+  connection fields, and function/security contracts remain pinned. The source
+  event payload comes from the pure repository builder; post-verification uses
+  only exact primary event GET and checks title/times/timezone/private source
+  identifiers/description/etag. No direct executor or provider write occurs.
+- Readiness blocker: the actual nonempty QStash events row schema is unverified.
+  The production reader accepts only the known empty envelope/cursor contract;
+  nonempty rows cause immediate pause and sanitized allowlisted field-type
+  reporting, then failure. Correct terminal DB/event state alone cannot prove
+  automatic provenance. The internal normalized proof/success validators are
+  tested using explicitly synthetic decoder injection; the production reader
+  cannot currently emit that proof. Do not run live until this gap is reviewed
+  and resolved. No raw values, secrets, headers, or message IDs are printed.
+- Local evidence: 24 first-run tests passed; with prior sync/recovery regressions,
+  61 tests passed. No live precheck, schedule action, execution, or provider call
+  was performed in this task. The latest starting-state assertions are human-
+  supplied evidence, not fresh reads by this preparation task. Syntax, repository
+  ESLint, TypeScript, and tracked/new-file whitespace checks passed. The build
+  failed fetching Geist from Google Fonts. Live readiness remains NO until the
+  nonempty event decoder and automatic-delivery correlation are verified.
+
+## 2026-10-29 Unit 2D — QA USER A SYNC RE-ENABLE (PREPARED ONLY)
+
+- Added `scripts/part18-ops-unit2d-sync-reenable.mjs` and
+  `docs/PART18_OPS_UNIT2D_SYNC_REENABLE.md`. Explicit `--precheck-only` checks
+  application data read-only; `--reenable` requires the exact typed approval
+  phrase. Both authenticate as QA User A; ordinary Auth session/sign-in metadata
+  effects are distinct from the single application-data mutation. No command
+  was run live during preparation.
+- The only application-data write is the authenticated owner's
+  `watchflow_set_calendar_sync_enabled({p_enabled:true})`. Its transport rejects
+  direct table writes, any other RPC/payload, and a second armed request. The
+  reviewed RPC updates only sync_enabled and ordinary updated_at; all other
+  connection fields, subject, credential row, full controlled job, and global
+  job-ID inventory are fingerprinted in memory and required unchanged.
+- Fresh target/identity/fixture checks, strict successful Google refresh/exact
+  event 404, acceptance-cron calendar pause, reminder pause, and both false
+  GitHub gates repeat after the human prompt and before the RPC. There is no
+  stale-grant exception for this checkpoint. The read-only PostgreSQL path is
+  pinned to the existing development pooler with strict TLS and in-memory
+  password. Live owner-RPC/claim/helper definitions, security/grants, and the
+  sole connection timestamp trigger are checked against reviewed contracts.
+- SELECT-only claimability verifies due time, attempt limit, connection state,
+  owner, credential presence, scheduled source/version, and deterministic event
+  identity. The actual claim RPC is never invoked, and no row locks/leases or
+  job attempts are used. Sync=true makes the controlled job eligible; both
+  scheduler holds and disabled GitHub gates must remain in force.
+- Every RPC attempt, including lost responses, is followed by independent
+  database, Google, and hold checks, then repeated database/hold reads. Errors
+  report sanitized observations and fixed codes, never raw exceptions or
+  secrets. No automatic retry, sync rollback, scheduler repair/resume, executor,
+  workflow, OAuth, Google Calendar mutation, or Production operation is added.
+- Local evidence: the new checkpoint suite passed 17 offline tests; with the
+  unchanged A2 recovery suite, 37 tests passed. Live re-enable and live precheck
+  remain unexecuted and require separate approval. Syntax, repository ESLint,
+  TypeScript, and tracked/new-file whitespace checks passed. The production
+  build failed fetching Geist from Google Fonts.
+
+## 2026-10-29 Unit 2D — A2 READ-ONLY RECOVERY (OPERATOR-CONFIRMED COMPLETE)
+
+- Subsequent human-reported live completion: SCRIPT_A2_RECOVERED_PASS,
+  application_safe=true, both mutation-attempt flags false, and retained-query
+  counters zero with paginationComplete=true. No incident bounds were retained;
+  incident-window transport count remains UNKNOWN. This preparation task did
+  not repeat that live recovery. The earlier preparation evidence below is
+  historical; do not rerun normal A2 or resume either schedule.
+
+- Added explicit `--postcheck-only` dispatch and offline recovery/parser tests.
+  Normal A2 still requires holding cron before any replacement. Recovery uses
+  owner-verified GET/HEAD-only admin reads without creating an Auth session;
+  the existing read-only credential RPC and in-memory refresh path remain.
+  It checks the already-applied acceptance schedule, paused holds, false gates,
+  controlled fixture, credential stability, and exact primary event 404 twice.
+- The operator confirmed the live response is an object with only `events: []`,
+  without a body cursor or pagination header. This alternate array name caused
+  the original failure. The parser accepts the exact empty envelope, retaining
+  existing strict `logs`/cursor support. Unknown nonempty event rows, ambiguous
+  envelopes, unknown alternate-envelope properties, invalid arrays/cursors,
+  loops, and page limits fail closed. No event-row schema was invented.
+  Empty pages without cursors terminate only the current query; retention
+  cannot prove incident-window history. Recovery explicitly prints UNKNOWN
+  incident transport count, independently of its retained-query counters.
+  Pagination failures prevent recovered success while independent safety
+  rechecks still run. Transport rows alone are not application-safety failures.
+- See `docs/PART18_OPS_UNIT2D_A2_RECOVERY.md`. The prepared mode has not run live;
+  its execution and resulting live acceptance remain for the human operator.
+  The standalone live reads verified connected/sync=false, pending/zero-attempt/
+  unleased upsert, no mapping/unrelated actionable work/actionable cleanup,
+  successful approved refresh, and exact event 404. No secrets were printed.
+  Reminder/gates/logs could not be independently read without operator tokens.
+- Twenty offline recovery/parser tests passed, including the exact confirmed
+  empty-events fixture through the production parser/query/recovery path and
+  independent safety rechecks. No live recovery or normal A2 was executed.
+  Operator-side live checks remain necessary before recovered acceptance.
+  Syntax, repository ESLint, TypeScript, and whitespace checks passed. The build
+  was attempted and failed fetching Geist from Google Fonts. The completed
+  empty-events parser patch ran local/static tests only and changed no live state.
+
+## 2026-10-29 Part 18J — SAME-SUBJECT GOOGLE REAUTHORIZATION CHECKPOINT (PREPARED ONLY)
+
+- Added `scripts/part18j-google-reauth-checkpoint.mjs` and
+  `docs/PART18J_GOOGLE_REAUTH_CHECKPOINT.md`. Modes are `--pre`,
+  `--approve-manual-reauth`, and `--post`. No mode automates OAuth or changes
+  remote data, scheduler configuration, sync state, or calendar events. Pre
+  and approval modes create exclusively signed records in ignored local
+  storage; postcheck has no file writes. Raw Google subject and encrypted
+  credential material are never stored in those records or printed.
+- Live assertions pin the development project and pooler, applied migration,
+  exact deployed function body/security, reviewed OAuth source, and timestamp-
+  only connection/credential triggers. The exact controlled connection/job,
+  no mappings or additional connection jobs, no unrelated actionable work,
+  paused holding schedules, and false GitHub gates are required. Subject
+  equality uses a keyed exact-byte fingerprint. Full credential and envelope
+  hashes must change after OAuth; stable connection fields, credential
+  identity, the entire controlled job, global job inventory, and holds must
+  remain unchanged.
+- Manual approval requires the exact typed phrase specified in the runbook
+  before printing the localhost URL. The human must use QA User A's verified
+  browser session, choose Reconnect account and the same Google account, and
+  leave sync disabled. Normal OAuth creates/consumes its owner-bound state and
+  may replace only the credential and legitimate reconnection metadata.
+- The human approved removal of the expired-grant circular gate. Only `--pre`
+  accepts the exact safe refresh classification `invalid_grant`, recording
+  `EXPECTED_STALE_GOOGLE_GRANT` in the signed baseline and PRE_REAUTH_PASS
+  output without making an event GET. Successful pre-refresh still requires
+  the exact event 404, and every other failure is rejected. All non-provider
+  guards and final state comparisons remain mandatory. Approval mode records
+  the exact typed boundary and rechecks baseline/state/holds without Google
+  requests. Postcheck still requires a changed credential, identical subject
+  and controlled state, successful fresh refresh, and the exact event 404;
+  `invalid_grant` is never accepted post-reauth. Tokens remain in memory and
+  replacement refresh tokens remain rejected. A stale baseline does not
+  claim pre-event absence. GET-only evidence cannot audit transient actions
+  by other actors and remains scoped to the pinned flow and fixture.
+- The updated focused checkpoint suite passed 49 offline tests, along with
+  ESLint, TypeScript, syntax, and diff checks. The
+  production build failed fetching Geist from Google Fonts. No live precheck,
+  reauthorization, token refresh, migration, fixture mutation, QStash/GitHub
+  change, executor invocation, A1/A2 run, or Production access occurred here.
+
+## 2026-10-29 Part 18J — LINKED MIGRATION APPLICATION (HISTORICAL PREPARATION)
+
+- The operator reported a pending remote migration and a fresh passing precheck
+  after the failed apply attempt. The reported old function fingerprint is now
+  pinned by the script. These are operator-provided live observations; this
+  update did not repeat the live precheck or apply a migration.
+- Application now uses `migration up --linked`. The existing branch, dev URL,
+  project link, migration hash, controlled fixture, paused schedules, and
+  disabled scheduler gates remain required. Target/hash/link guards and the
+  sole-pending ledger check repeat immediately before application. No
+  `--include-all`, password argument, link operation, or ledger-parser change
+  was introduced. Installed CLI 2.121.0 help lists both `--linked` and
+  `--project-ref`, so an unsupported flag is not a confirmed prior root cause.
+- Failed application or postchecks trigger independent ledger and function
+  fingerprint observations. Only pending-plus-old-fingerprint is classified
+  unchanged; applied-plus-changed-fingerprint is classified applied with failed
+  postchecks. Other states remain ambiguous. Output contains fixed safe CLI
+  classifications, exit status, and command-started evidence, without stderr.
+  Recovery inspection cannot authorize application and retains identity and
+  function security checks. Normal postchecks still require the new contract,
+  unchanged controlled fixture, scheduler holds, and then the guarded suite.
+- The surviving local rollback snapshot matches the reported old fingerprint.
+  A retry reuses it only if it matches the pre-apply definition exactly; it
+  cannot overwrite a mismatched snapshot. This update preserved the snapshot.
+- Local operator tests, syntax, ESLint, TypeScript, diff checks, and the ledger
+  fixture passed. The build failed fetching Geist from Google Fonts. No live
+  migration, OAuth, A1/A2, QStash, GitHub, or Production change was performed.
+
+## 2026-10-28 Part 18J — LINKED FUNCTION METADATA PRECHECK
+
+- The credentialed operator reported another generic metadata-read failure.
+  The pinned session-pooler host, port 5432, database, and project-qualified
+  username match the existing link and Supabase's documented format. Repository
+  review found an invalid `pg_catalog.coalesce` call in the metadata SELECT and
+  a base64 parser incompatible with PostgreSQL's wrapped output. The query now
+  uses SQL `coalesce` and returns a typed JSON result directly through `pg`.
+  Transport/query failures emit only fixed safe classifications and allowlisted
+  SQLSTATE codes. TLS certificate/hostname verification remains mandatory;
+  `SUPABASE_DB_CA_CERT_PATH` optionally supplies a trusted CA file. Password
+  bytes are preserved in memory, and both exact empty search-path encodings
+  are accepted while nonempty paths remain rejected. The read-only transaction,
+  target/fixture/function gates, and migration ledger code remain intact.
+  Twenty-one offline tests of the actual operator helpers, syntax, ESLint,
+  TypeScript, diff checks, and the ledger fixture passed. The build failed at
+  the existing Google Fonts fetch. No live precheck or live mutation ran;
+  the actual live failure stage remains unconfirmed until the operator retries.
+- The operator environment has no `psql`. Neither `package.json`, the lockfile,
+  nor installed modules contained a direct PostgreSQL client, so `pg@8.23.1`
+  was added as the necessary direct client. The metadata path now connects to
+  the pinned watchflow-dev session pooler with explicit connection fields and
+  TLS certificate verification, using `SUPABASE_DB_PASSWORD` only in memory.
+  It runs the fixed metadata SELECT inside `BEGIN READ ONLY` and rolls back.
+  Link, pooler, live QA fixture, function signature, security, and fingerprint
+  checks remain. The migration ledger parser is unchanged. Local syntax,
+  ESLint, TypeScript, diff, ledger fixture, and ten metadata helper checks
+  passed. The build again failed fetching Geist from Google Fonts. No live
+  precheck or mutation was performed during this update.
+- An earlier metadata query used local PostgreSQL `psql` over the existing
+  passwordless, pinned watchflow-dev session-pooler address. Its password is
+  supplied only as `PGPASSWORD` in the child environment. The script checks
+  the two linked-project markers, pooler host/port/user/database, and live QA
+  connection/job identity before accepting function metadata. The migration
+  ledger parser is unchanged. Local syntax, ESLint, TypeScript, diff, ledger
+  fixture, and direct metadata parser checks passed. This transport change was
+  not exercised against the live database in the Codex shell; no migration or
+  other live mutation occurred. The production build was attempted and failed
+  while fetching Geist from Google Fonts.
+- The earlier Part 18J operator queried function metadata through Supabase CLI
+  2.121.0 `db query --linked --output-format json`, after checking both local
+  linked-project markers against the exact watchflow-dev ref. It supplies the
+  database password only through the child-process environment and retains
+  live QA connection/job identity and function security assertions. CLI help
+  describes `--linked` as a Management API path; the previously observed scoped
+  token 401 may still block the metadata query in an operator environment.
+- Local syntax, ESLint, TypeScript, diff checks, and five metadata parser cases
+  passed. The production build failed while fetching Geist from Google Fonts.
+  The approved read-only `--precheck-only` command was run in this Codex shell
+  and stopped with `MISSING_SUPABASE_DB_PASSWORD`; that variable is absent from
+  this shell's process, user, and machine environments. No migration, OAuth,
+  QStash, GitHub, Google Calendar, or Production mutation was performed. A
+  precheck in the separately configured operator environment remains necessary.
+
+## 2026-10-16 Part 18J — DEVELOPMENT MIGRATION OPERATOR (PREPARED ONLY)
+
+- Added `scripts/part18j-apply-dev-reauth-migration.mjs` and
+  `docs/PART18J_DEV_MIGRATION_CHECKPOINT.md`. The operator pins watchflow-dev,
+  the exact migration hash, the required old function security metadata, QA
+  fixture, paused QStash schedules, and disabled GitHub gates. It requires a
+  typed approval and repeats mutable checks before applying the sole pending
+  local migration. It prepares an ignored local snapshot of the old function
+  definition for a separately approved forward rollback migration.
+- The operator and migration were **not run**. No live database, Google, QStash,
+  GitHub, or Production state was changed during this preparation. The guarded
+  integration tests remain unrun against the live development project.
+- The operator now supports an explicit `SUPABASE_CLI_PATH` for the separately
+  installed Windows CLI 2.121.0 and a `--precheck-only` mode. CLI help confirmed
+  `migration up --project-ref`; the application path pins that flag to the dev
+  project. Precheck mode exits before snapshot creation, approval, migration,
+  and tests. The live precheck was not run during this update.
+- The CLI migration-list parser now accepts exact single-backtick wrappers on
+  migration cells, including an empty backtick pair for the pending Part 18J
+  Remote cell. The corrected sanitized CLI 2.121.0 table fixture and local
+  malformed-output cases passed. This parser repair did not rerun the live
+  precheck or apply the migration.
+- A later operator-run live `--precheck-only` still stopped at the migration
+  ledger with a generic invalid-output code. The ledger parser and validation
+  now emit sanitized assertion-specific reason codes, and the offline
+  `--ledger-fixture-test` mode uses the same validation path without loading
+  credentials or making network calls. This diagnostic update did not run a
+  live precheck or apply the migration.
+- A subsequent operator-run live precheck stopped at
+  `LEDGER_REMOTE_VERSION_INVALID row_index=27`. The Remote cell is nonblank and
+  does not match the numeric version pattern after normalization, but its exact
+  character/layout cause has not yet been observed. A targeted sanitized
+  diagnostic for rows 26–28 now reports only presence, wrapper type, lengths,
+  numeric-match flags, and unexpected Remote Unicode code point numbers. It
+  does not print migration values. This update did not run a live precheck.
+- The next read-only diagnostic identified the exact row-27 cause: CLI 2.121.0
+  rendered the pending Remote value as a single ASCII space inside backticks.
+  The ledger parser now trims only ordinary ASCII spaces inside an exact
+  backtick pair before validating the cell. The fixture uses that observed
+  shape, and six offline regression cases pass. No live precheck or migration
+  application occurred during this repair.
+
+## 2026-10-16 Part 18J — SAME-SUBJECT GOOGLE REAUTHORIZATION REPAIR (UNAPPLIED)
+
+- Prepared forward migration
+  `202610160001_part_18j_same_subject_reauth.sql` for the service-role-only
+  `watchflow_upsert_google_calendar_connection` function. For an existing
+  `connected` Google connection, a null, empty, or different returned subject
+  now raises before any connection or credential write; the same subject keeps
+  the connection ID, status, and exact `sync_enabled` value while refreshing OAuth metadata and
+  the encrypted credential. A null or empty subject also fails at first connect
+  or reconnect; valid-subject behavior is preserved. `disconnect_pending` now
+  uses a null-safe same-subject comparison while retaining its cleanup reset.
+  The connected path contains no calendar-job or mapping mutation.
+- Added a guarded disposable-user integration suite covering first connection,
+  both connected sync states, different-subject rejection, reconnect recovery,
+  disconnect-pending cleanup, null-subject rejection with credential/work
+  preservation, and exact pending-upsert preservation. The suite is skipped
+  without an explicit development-only integration gate. No live
+  migration, OAuth reauthorization, or QA fixture change was performed.
+- A read-only watchflow-dev `pg_catalog` query found one deployed function with
+  the expected eight argument types/order, `uuid` return, `SECURITY DEFINER`,
+  empty `search_path`, execute allowed only to `service_role`, and no overload.
+  No remote function body was replaced or applied.
+- Local TypeScript and ESLint checks passed. The new integration suite loaded
+  with its gate disabled and all nine tests skipped. Existing OAuth route tests
+  passed; one unrelated old migration text test failed on its LF assertion
+  against a CRLF file. Production build could not fetch Geist from Google Fonts
+  in this environment. Apply/review the forward migration in development and
+  run the guarded integration suite before considering QA User A reauthorization.
+
+## 2026-10-06 Part 18 Production Operations Unit 2D — CALENDAR FIXTURE CHECKPOINT
+
+- The explicit fixture/read approval was received after the read-only preflight.
+  The target remained pinned to watchflow-dev ref
+  `ckwadpmvxieekjlsfcks`; both GitHub scheduler variables remained exactly
+  `false`; no scheduler endpoint was invoked.
+- QA User A connection `e652e5c8-f08c-4736-88d8-073bce772ccc` remained the
+  sole Google connection: provider calendar `primary`, status `connected`, sync
+  enabled, one matching encrypted credential, and no stored authorization
+  error. Its captured pre-execution state has null last-success/error fields
+  and `updated_at=2026-10-03T22:36:17.509838Z`. QA User A reminder preferences
+  were not changed: reminders disabled, 60-minute offset, push disabled.
+- Before fixture creation, actionable reminder and calendar queues both equaled
+  zero. QA A/B isolation and authenticated credential denial remained intact.
+- Controlled fixture manifest:
+  - title `Part 18 Ops Unit 2D Calendar 50ecacb3`
+  - shared movie ID `372`; TMDB ID `1957895521`
+  - user-movie ID `9152882e-291a-47a2-b964-c1a4a6dd9630`
+  - connection ID `e652e5c8-f08c-4736-88d8-073bce772ccc`
+  - scheduled instant `2026-10-13T19:32:00.000Z`
+  - timezone `Asia/Karachi`; runtime `113` minutes
+  - source key `589038a338f409210b819e6a7e0e871c`
+  - source version `8ca7b4e9cabaac13bdda45d0089f3169`
+  - calendar job ID `b9eb8a77-0723-675b-3f2b-8503a0781ab8`
+  - deterministic Google event ID `a2ab6758f9fedbb0344d416ac00f2ca7d`
+  - generated reminder notification boundary
+    `c988dc8e-5503-94dd-7532-de28055ca1bc`
+- Scheduling generated one reminder job, which was removed immediately by the
+  exact user-movie boundary before any scheduler activation. Post-fixture state
+  is zero actionable reminder jobs, exactly one pending/unleased calendar
+  upsert with zero attempts, and zero exact mapping rows. QA User B cannot read
+  the exact job or mapping.
+- A credential-preserving token exchange returned no replacement refresh token.
+  One exact-ID `GET` to `primary` returned HTTP `404`, proving the deterministic
+  provider event does not exist. No Calendar collection listing, event create,
+  update, delete, executor invocation, or other Google mutation occurred.
+- QStash EU still shows `Active 0` / `Paused 1`; its sole paused row is the
+  reminder executor. US remains empty. No calendar schedule was created.
+- Proposed calendar schedule remains ID
+  `watchflow-dev-part18-ops-unit2d-calendar`, destination
+  `https://watchflow-dev-ops.vercel.app/api/internal/calendar/sync`, `GET`, UTC
+  cron `4-59/5 * * * *`, retries `0`, timeout `55s`, the existing development
+  bearer in `Authorization`, redaction `header[Authorization]`, and labels
+  `watchflow-dev,part18-ops-unit2d,calendar`.
+- At `2026-10-05T19:33:05Z`, the next eligible UTC windows were `19:34`,
+  `19:39`, `19:44`, `19:49`, and `19:54`. Recalculate immediately before
+  activation because no calendar schedule exists yet.
+- Cleanup must pause the calendar schedule first, remove only provider event
+  `a2ab6758f9fedbb0344d416ac00f2ca7d`, its exact source mapping and job, exact
+  reminder job/delivery/notification boundary, user-movie
+  `9152882e-291a-47a2-b964-c1a4a6dd9630`, and movie `372`; then restore the
+  captured connection metadata/preferences if execution changed them. Verify
+  both actionable queues return to zero and unrelated QA A/B data is unchanged.
+- Do not create or activate the calendar schedule without the exact phrase
+  `APPROVED FOR PART 18 OPS UNIT 2D CONTROLLED QSTASH CALENDAR EXECUTION`.
+
+## 2026-10-06 Part 18 Production Operations Unit 2D — CALENDAR READ-ONLY PREFLIGHT
+
+- Repository preflight remained on `codex/part-18-production-operations` at
+  `cb008ba`; the only existing worktree change was this context file carrying
+  the prior reminder acceptance evidence. Both GitHub scheduler repository
+  variables remain exactly `false`.
+- The Supabase URL, linked project, and E2E guard all resolved exclusively to
+  watchflow-dev ref `ckwadpmvxieekjlsfcks`.
+- QA User A owns exactly one Google connection,
+  `e652e5c8-f08c-4736-88d8-073bce772ccc`: provider calendar `primary`, status
+  `connected`, sync enabled, no stored authorization error, and exactly one
+  matching encrypted credential. Authenticated QA clients remain unable to
+  read credential storage.
+- QA User A and QA User B are distinct. Each sees only owner-scoped connection
+  metadata, and QA User B cannot read QA User A's exact connection.
+- Before any fixture mutation, actionable reminder jobs and actionable
+  calendar jobs both equal zero.
+- Direct QStash console inspection found EU `Active 0` / `Paused 1`, with the
+  sole paused row targeting the reminder executor. US contains `Active 0` /
+  `Paused 0`. Therefore no calendar QStash schedule exists in either region
+  and the reminder schedule remains paused.
+- The guarded fixture command was rejected before launch by the execution
+  safety gate, which requires fresh explicit approval for the watchflow-dev
+  fixture mutation and the read-only exact-provider-event check. No fixture,
+  mapping, job, notification, schedule, endpoint invocation, access-token
+  exchange, Calendar API request, or Google mutation occurred. Resume from
+  this zero-work baseline only after that explicit approval; then record the
+  deterministic manifest and stop again before creating the QStash calendar
+  schedule.
+
+## 2026-10-05 Part 18 Production Operations Unit 2D — REMINDER ACCEPTANCE PASS
+
+- The exact QStash schedule was resumed at `2026-10-05T18:41:40Z` after the
+  pinned watchflow-dev fixture was reconfirmed pending, future-scheduled, and
+  isolated from calendar work. No manual endpoint request or workflow dispatch
+  was used as execution evidence.
+- First cron delivery message
+  `msg_26hZCxZCuWyyTWPmSVBrNB882AMhRs83L41bpkoivJ2StfZa7hGXoW1HifdFGXK`
+  was created at `2026-10-05T18:42:00Z` and delivered at `18:42:03Z` in three
+  seconds. QStash recorded `GET`, schedule ID
+  `watchflow-dev-part18-ops-unit2d-reminders`, timeout `55000`, redacted
+  `Authorization`, expected labels, and HTTP `200`.
+- The exact job finalized at `2026-10-05T18:42:03.481745Z` as `delivered` with
+  `in_app_only_push_disabled`; notification
+  `c3012a12-6c27-0cd9-48d3-65722f769c5d` was created once at the same instant.
+  Push was intentionally disabled, so no per-subscription delivery-ledger row
+  existed.
+- Second cron delivery message
+  `msg_26hZCxZCuWyyTWPmSVBrNCtiJEafd9tea25LQbbj8id9JJ1aKWAoAGJb1TiRChw`
+  was created at `2026-10-05T18:47:00Z` and delivered at `18:47:02Z` in one
+  second with the same schedule/method/timeout/redaction evidence and HTTP
+  `200`.
+- Dedicated Vercel runtime logs for both automatic GETs returned the exact
+  aggregate response `{claimedJobs:0, attemptedDeliveries:0, delivered:0,
+  retryable:0, failed:0}`. This is expected for the push-disabled in-app path:
+  the claim RPC creates/finalizes the durable notification internally and
+  returns no push-delivery claim rows to the TypeScript aggregation layer.
+  Database proof showed one notification, zero ledger rows, unchanged original
+  completion/creation timestamps, zero duplicate job mutation, and zero
+  calendar work after the second run.
+- The QStash reminder schedule was paused immediately after the second run and
+  showed `Active 0` / `Paused 1`. No calendar QStash schedule exists.
+- Exact cleanup removed relationship/reminder job
+  `215857f9-8534-4aab-954e-de07c9ce2fb4`, notification
+  `c3012a12-6c27-0cd9-48d3-65722f769c5d`, movie `371`, and any exact delivery
+  or calendar scope. Every controlled count returned zero; no deletion-triggered
+  calendar row appeared. QA User B preferences were restored to reminders
+  disabled, 60-minute offset, and push disabled. Both actionable queues are
+  zero, no Google API call occurred, and Production was untouched.
+
+## 2026-10-05 Part 18 Production Operations Unit 2D — REMINDER FIXTURE CHECKPOINT
+
+- QStash remained paused throughout preparation. Direct console inspection
+  confirmed the exact destination, `GET`, UTC cron `2-57/5 * * * *`, zero
+  retries, deterministic schedule ID, redacted forwarded `Authorization`, and
+  `Active 0` / `Paused 1`. The operator's stored-configuration audit confirmed
+  the timeout as `55000 ms`; the dashboard editor does not render that stored
+  timeout field. EU contains only this paused reminder schedule and US contains
+  no schedules, so no calendar schedule exists.
+- The guarded database target remained exact watchflow-dev ref
+  `ckwadpmvxieekjlsfcks`. Both actionable queues were empty before fixture
+  creation. QA User B was selected to keep QA User A's connected Google account
+  outside the reminder-only acceptance.
+- Fixture title `Part 18 Ops Unit 2D Reminder 5b71d961`, TMDB ID `1977918931`,
+  shared movie ID `371`, relationship/reminder job ID
+  `215857f9-8534-4aab-954e-de07c9ce2fb4`, schedule key
+  `215857f9-8534-4aab-954e-de07c9ce2fb4:1791297211197000:UTC:1440`, and
+  deterministic notification ID `c3012a12-6c27-0cd9-48d3-65722f769c5d`
+  are exact cleanup boundaries.
+- The movie is scheduled for `2026-10-06T14:33:31.197Z` in UTC with a
+  1,440-minute reminder offset; the pending job is already due, available, and
+  has zero attempts. QA User B's original reminder settings were disabled with
+  a 60-minute offset and push disabled; controlled settings are enabled with a
+  1,440-minute offset and push remains disabled.
+- Scheduling generated calendar job
+  `d580a35a-d15c-5f5f-c41c-c9edbcd2e85b`; it was removed by exact owner/movie
+  scope before any executor activation. There are zero actionable calendar
+  jobs, zero pre-delivery notifications, and zero reminder delivery-ledger rows.
+- Do not resume the reminder schedule without an explicit execution approval.
+  Cleanup must delete only the exact notification/delivery/job/relationship/
+  movie scope above and restore QA User B's captured reminder settings.
+
+## 2026-10-05 Part 18 Production Operations Unit 2D — REMINDER ACCEPTANCE CONFIGURATION BLOCKED
+
+- Repository preflight passed on `codex/part-18-production-operations` at
+  `cb008ba`; the working tree was clean before this documentation update.
+- Read-only guarded database inspection verified the exact development project
+  ref `ckwadpmvxieekjlsfcks` and found zero due/actionable scheduled reminder
+  jobs and zero due/actionable calendar sync jobs.
+- Repository variables remained fail-closed:
+  `WATCHFLOW_DEV_REMINDER_SCHEDULER_ENABLED=false` and
+  `WATCHFLOW_DEV_CALENDAR_SCHEDULER_ENABLED=false`.
+- After operator sign-in, QStash EU contained exactly one active schedule and
+  QStash US contained none. The exact schedule ID was
+  `watchflow-dev-part18-ops-unit2d-reminders`; destination, `GET`, default UTC
+  cron `2-57/5 * * * *`, zero retries, and the redacted forwarded
+  `Authorization` value matched the design. No calendar schedule existed.
+- The schedule editor did not contain `Upstash-Timeout`; therefore the required
+  `55s` timeout was not configured. The schedule was paused immediately and
+  QStash then showed `Active 0` and `Paused 1`. Editing was not attempted
+  because redacted schedules require the original bearer value to be supplied
+  again, and re-saving the displayed hash would corrupt delivery auth.
+- Acceptance failed closed before changing preferences or creating any movie,
+  relationship, reminder job, notification, delivery ledger, calendar job, or
+  Google event. No endpoint was invoked manually and Production was untouched.
+- Resume only after the operator safely replaces or updates the paused schedule
+  with `Upstash-Timeout: 55s`, re-supplies the original development-only
+  scheduler bearer, preserves header redaction, and confirms the corrected
+  schedule remains paused for a fresh configuration audit.
 
 ## 2026-10-05 Part 18 Production Operations Unit 2D — QSTASH DESIGN CHECKPOINT
 

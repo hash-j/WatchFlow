@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "source": "LIVE_CANARY_CAPTURE_AT_OPERATOR_EXECUTION",
+  "fixture_origin": "DERIVED_FROM_EXISTING_SANITIZED_CANARY_EVIDENCE",
+  "fixture_note": "Historical responseStatus=0 is a sanitizer placeholder, not an observed HTTP status. Original evidence is unchanged.",
+  "source_evidence_sha256": "bd3040408957cfa1d603c740d2caf01cd2105336dbf26e4c8ed2578a205e6646",
+  "canary_schedule_id": "watchflow-dev-part18-ops-unit2d-log-canary",
+  "destination": "https://watchflow-dev-ops.vercel.app/icons/watchflow-icon.svg",
+  "structures": [
+    {
+      "top_level_type": "object",
+      "top_level": {
+        "properties": {
+          "events": "array"
+        },
+        "omitted_property_count": 0
+      },
+      "row_array_property": "events",
+      "event_count": 0,
+      "first_event": null,
+      "body_cursor_present": false,
+      "pagination_header_present": false,
+      "pagination_header_names": []
+    },
+    {
+      "top_level_type": "object",
+      "top_level": {
+        "properties": {
+          "events": "array"
+        },
+        "omitted_property_count": 0
+      },
+      "row_array_property": "events",
+      "event_count": 3,
+      "first_event": {
+        "type": "object",
+        "properties": {
+          "time": "number",
+          "messageId": "string",
+          "state": "string",
+          "url": "string",
+          "scheduleId": "string",
+          "header": "object",
+          "responseStatus": "number",
+          "timeout": "number",
+          "method": "string",
+          "label": "string",
+          "labels": "array",
+          "callerIp": "string",
+          "host": "string",
+          "path": "string",
+          "duration": "number"
+        },
+        "omitted_property_count": 0
+      },
+      "body_cursor_present": false,
+      "pagination_header_present": false,
+      "pagination_header_names": []
+    }
+  ],
+  "sanitized_pages": [
+    {
+      "events": []
+    },
+    {
+      "events": [
+        {
+          "time": 946684801743,
+          "messageId": "canary-message-1",
+          "state": "DELIVERED",
+          "url": "https://watchflow-dev-ops.vercel.app/icons/watchflow-icon.svg",
+          "scheduleId": "watchflow-dev-part18-ops-unit2d-log-canary",
+          "header": {},
+          "timeout": 10000,
+          "method": "GET",
+          "label": "REDACTED",
+          "labels": [
+            "watchflow-dev",
+            "part18-ops-unit2d",
+            "log-canary"
+          ],
+          "callerIp": "REDACTED",
+          "host": "REDACTED",
+          "path": "REDACTED",
+          "responseStatus": 0,
+          "duration": 0
+        },
+        {
+          "time": 946684801031,
+          "messageId": "canary-message-1",
+          "state": "ACTIVE",
+          "url": "https://watchflow-dev-ops.vercel.app/icons/watchflow-icon.svg",
+          "scheduleId": "watchflow-dev-part18-ops-unit2d-log-canary",
+          "header": {},
+          "timeout": 10000,
+          "method": "GET",
+          "label": "REDACTED",
+          "labels": [
+            "watchflow-dev",
+            "part18-ops-unit2d",
+            "log-canary"
+          ],
+          "callerIp": "REDACTED",
+          "host": "REDACTED",
+          "path": "REDACTED"
+        },
+        {
+          "time": 946684800534,
+          "messageId": "canary-message-1",
+          "state": "CREATED",
+          "url": "https://watchflow-dev-ops.vercel.app/icons/watchflow-icon.svg",
+          "scheduleId": "watchflow-dev-part18-ops-unit2d-log-canary",
+          "header": {},
+          "timeout": 10000,
+          "method": "GET",
+          "label": "REDACTED",
+          "labels": [
+            "watchflow-dev",
+            "part18-ops-unit2d",
+            "log-canary"
+          ],
+          "callerIp": "REDACTED",
+          "host": "REDACTED",
+          "path": "REDACTED",
+          "nextDeliveryTime": 0
+        }
+      ]
+    }
+  ],
+  "fixture_first_ms": 946684800000,
+  "fixture_cutoff_ms": 946684890000,
+  "canary_deleted_verified": true,
+  "application_data_isolation_verified": true
+}

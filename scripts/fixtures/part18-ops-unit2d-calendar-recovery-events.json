@@ -1,0 +1,45 @@
+{
+  "fixture_type": "SYNTHETIC_CORE_AND_OPTIONAL_METADATA_NOT_A_LIVE_CAPTURE",
+  "note": "Known lifecycle and fixed incident window; optional metadata illustrates tolerance without claiming the actual extra live keys are known.",
+  "page": {
+    "events": [
+      {
+        "time": 1793311142000,
+        "messageId": "offline-calendar-message",
+        "state": "DELIVERED",
+        "url": "https://watchflow-dev-ops.vercel.app/api/internal/calendar/sync",
+        "scheduleId": "watchflow-dev-part18-ops-unit2d-calendar",
+        "method": "GET",
+        "labels": ["watchflow-dev", "part18-ops-unit2d", "calendar"],
+        "responseStatus": 200,
+        "timeout": 55000,
+        "header": {},
+        "responseHeaders": {},
+        "responseBody": "OFFLINE_REDACTED",
+        "duration": 20,
+        "queueName": "OFFLINE_REDACTED"
+      },
+      {
+        "time": 1793311141000,
+        "messageId": "offline-calendar-message",
+        "state": "ACTIVE",
+        "url": "https://watchflow-dev-ops.vercel.app/api/internal/calendar/sync",
+        "scheduleId": "watchflow-dev-part18-ops-unit2d-calendar",
+        "method": "GET",
+        "labels": ["watchflow-dev", "part18-ops-unit2d", "calendar"],
+        "timeout": 55000,
+        "body": "OFFLINE_REDACTED"
+      },
+      {
+        "time": 1793311140000,
+        "messageId": "offline-calendar-message",
+        "state": "CREATED",
+        "url": "https://watchflow-dev-ops.vercel.app/api/internal/calendar/sync",
+        "scheduleId": "watchflow-dev-part18-ops-unit2d-calendar",
+        "method": "GET",
+        "labels": ["watchflow-dev", "part18-ops-unit2d", "calendar"],
+        "nextDeliveryTime": 0
+      }
+    ]
+  }
+}
