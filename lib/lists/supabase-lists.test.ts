@@ -38,6 +38,7 @@ import {
   removeOwnedListMovie,
   setOwnedMovieListMemberships,
   updateOwnedCustomList,
+  getOwnedListChoices,
 } from "./supabase-lists";
 
 const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -96,7 +97,12 @@ function queryBuilder(
 }
 
 function authenticatedClient(overrides: Record<string, unknown> = {}) {
+  const ordering = { select: vi.fn(), eq: vi.fn(), in: vi.fn((_key: string, ids: string[]) => Promise.resolve({
+    data: ids.map(id => ({ id, movies: { title: id === secondUserMovieId ? "Alpha" : "Beta", release_year: null, release_date: null } })), error: null,
+  })) };
+  ordering.select.mockReturnValue(ordering); ordering.eq.mockReturnValue(ordering);
   return {
+    from: vi.fn(() => ordering),
     auth: {
       getUser: vi.fn().mockResolvedValue({
         data: { user: { id: userId, email: "member@example.com" } },
@@ -296,6 +302,44 @@ describe("custom-list authentication and owner filters", () => {
 });
 
 describe("custom-list RPC boundaries", () => {
+  it("sorts one bounded append batch by year/title/ID and scopes metadata reads to the owner", async () => {
+    const read = ownerQueryBuilder({ data: [
+      { id: userMovieId, movies: { title: "New", release_year: 2020 } },
+      { id: secondUserMovieId, movies: { title: "Old", release_year: 1980 } },
+    ], error: null });
+    const rpc = vi.fn().mockResolvedValue({ data: { ...rpcResult, added_count: 1, skipped_count: 1 }, error: null });
+    createClientMock.mockResolvedValue(authenticatedClient({ from: vi.fn(() => read), rpc }));
+    const result = await addOwnedMoviesToList({ listId, userMovieIds: [userMovieId, secondUserMovieId] });
+    expect(read.eq).toHaveBeenCalledWith("user_id", userId);
+    expect(read.in).toHaveBeenCalledWith("id", [userMovieId, secondUserMovieId]);
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("watchflow_add_movies_to_list", { p_list_id: listId, p_user_movie_ids: [secondUserMovieId, userMovieId] });
+    expect(result).toMatchObject({ success: true, added: 1, skipped: 1 });
+  });
+  it("rejects missing/cross-user library selections before any mutation", async () => {
+    const rpc = vi.fn();
+    createClientMock.mockResolvedValue(authenticatedClient({ from: vi.fn(() => ownerQueryBuilder({ data: [], error: null })), rpc }));
+    await expect(addOwnedMoviesToList({ listId, userMovieIds: [userMovieId] })).rejects.toBeInstanceOf(ListsNotFoundError);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it("rejects zero/duplicate/oversized selections before opening an authenticated mutation", async () => {
+    for (const ids of [[], [userMovieId, userMovieId], Array.from({ length: 101 }, () => userMovieId)]) {
+      await expect(addOwnedMoviesToList({ listId, userMovieIds: ids })).rejects.toBeInstanceOf(ListsValidationError);
+    }
+    expect(createClientMock).not.toHaveBeenCalled();
+  });
+  it.each(["not_found", "selection_changed"])("keeps a failed atomic RPC result (%s) non-successful", async reason => {
+    const rpc = vi.fn().mockResolvedValue({ data: { ...rpcResult, success: false, reason, added_count: 0 }, error: null });
+    createClientMock.mockResolvedValue(authenticatedClient({ rpc }));
+    expect(await addOwnedMoviesToList({ listId, userMovieIds: [userMovieId] })).toMatchObject({ success: false, reason, added: 0 });
+    expect(createNotificationMock).not.toHaveBeenCalled();
+  });
+  it("lists only the authenticated owner's bounded custom-list choices", async () => {
+    const query = { select: vi.fn(), eq: vi.fn(), order: vi.fn(), limit: vi.fn().mockResolvedValue({ data: [{ id: listId, name: "Mine" }], error: null }) };
+    query.select.mockReturnValue(query); query.eq.mockReturnValue(query); query.order.mockReturnValue(query);
+    createClientMock.mockResolvedValue(authenticatedClient({ from: vi.fn(() => query) }));
+    expect(await getOwnedListChoices()).toEqual([{ id: listId, name: "Mine" }]);
+    expect(query.eq).toHaveBeenCalledWith("user_id", userId); expect(query.limit).toHaveBeenCalledWith(500);
+  });
   it("creates a trusted notification only for a newly added owned membership", async () => {
     const preMemberships = membershipQueryBuilder({ data: [], error: null });
     const postMemberships = membershipQueryBuilder({

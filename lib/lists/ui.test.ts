@@ -225,7 +225,7 @@ describe("Part 13 ordered list-item and movie-detail contracts", () => {
     const row = source("components/lists/list-movie-row.tsx");
     const controls = source("components/lists/list-order-controls.tsx");
 
-    expect(row).toContain("Position {item.position}");
+    expect(row).toContain("Position {displayPosition}");
     expect(row).toContain("MovieStatusBadge");
     expect(row).toContain("Your rating: {item.personalRating}/10");
     expect(row).toContain("Not rated");
@@ -234,8 +234,8 @@ describe("Part 13 ordered list-item and movie-detail contracts", () => {
     expect(row).toContain("isFirst={isFirst}");
     expect(row).toContain("isLast={isLast}");
 
-    expect(controls).toContain("disabled={isPending || isFirst}");
-    expect(controls).toContain("disabled={isPending || isLast}");
+    expect(controls).toContain("disabled={disabled || isPending || isFirst}");
+    expect(controls).toContain("disabled={disabled || isPending || isLast}");
     expect(controls).toContain("already first in this list");
     expect(controls).toContain("already last in this list");
     expect(controls).toContain('name="listMovieId"');

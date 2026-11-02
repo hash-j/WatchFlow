@@ -12,11 +12,13 @@ export function ListOrderControls({
   title,
   isFirst,
   isLast,
+  disabled = false,
 }: {
   listMovieId: string;
   title: string;
   isFirst: boolean;
   isLast: boolean;
+  disabled?: boolean;
 }) {
   const [state, action, isPending] = useActionState(
     moveListItemAction,
@@ -33,7 +35,7 @@ export function ListOrderControls({
         size="sm"
         variant="outline"
         className="min-h-11 w-full lg:w-auto"
-        disabled={isPending || isFirst}
+        disabled={disabled || isPending || isFirst}
         aria-label={
           isFirst
             ? `${title} is already first in this list`
@@ -51,7 +53,7 @@ export function ListOrderControls({
         size="sm"
         variant="outline"
         className="min-h-11 w-full lg:w-auto"
-        disabled={isPending || isLast}
+        disabled={disabled || isPending || isLast}
         aria-label={
           isLast
             ? `${title} is already last in this list`

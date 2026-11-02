@@ -13,11 +13,15 @@ export function ListMovieRow({
   listName,
   isFirst,
   isLast,
+  manualOrder = true,
+  displayPosition = item.position,
 }: {
   item: CustomListMovie;
   listName: string;
   isFirst: boolean;
   isLast: boolean;
+  manualOrder?: boolean;
+  displayPosition?: number;
 }) {
   const year =
     item.movie.releaseYear ??
@@ -28,12 +32,12 @@ export function ListMovieRow({
       <div className="hidden items-center gap-3 md:flex md:flex-col md:items-start">
         <span
           className="grid size-10 shrink-0 place-items-center rounded-full bg-muted text-sm font-semibold"
-          aria-label={`Position ${item.position}`}
+          aria-label={`Position ${displayPosition}`}
         >
-          {item.position}
+          {displayPosition}
         </span>
         <span className="sr-only">
-          Position {item.position}
+          Position {displayPosition}
         </span>
       </div>
 
@@ -47,7 +51,7 @@ export function ListMovieRow({
 
       <div className="col-start-2 row-start-1 min-w-0 md:col-start-3">
         <p className="mb-1 text-xs font-medium text-muted-foreground md:hidden">
-          Position {item.position}
+          Position {displayPosition}
         </p>
         <Link
           href={`/library/${item.movie.id}`}
@@ -85,6 +89,7 @@ export function ListMovieRow({
           title={item.movie.title}
           isFirst={isFirst}
           isLast={isLast}
+          disabled={!manualOrder}
         />
         <RemoveListMovieDialog
           listMovieId={item.listMovieId}

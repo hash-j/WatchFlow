@@ -42,6 +42,7 @@ import {
   toggleLibrarySelection,
 } from "@/lib/library/selection";
 import { LIBRARY_MOVIE_STATUS_LABELS } from "@/lib/movies/types";
+import { BulkAddToListDialog } from "@/components/lists/bulk-add-to-list-dialog";
 
 type VisibleLibraryItem = {
   libraryId: string;
@@ -247,7 +248,7 @@ function BulkActions({
   }, [onResult, removeState]);
 
   return (
-    <MobileToolbar className="grid items-end gap-3 sm:grid-cols-2 sm:rounded-lg sm:border sm:bg-muted/30 sm:p-3 xl:grid-cols-[minmax(15rem,1fr)_auto_auto]">
+    <MobileToolbar className="grid items-end gap-3 sm:grid-cols-2 sm:rounded-lg sm:border sm:bg-muted/30 sm:p-3 xl:grid-cols-[minmax(15rem,1fr)_auto_auto_auto]">
       <label className="min-w-0 space-y-1 text-sm font-medium sm:col-span-2 xl:col-span-1">
         Change status
         <Select
@@ -267,6 +268,7 @@ function BulkActions({
           and time.
         </span>
       </label>
+      <BulkAddToListDialog selectedIds={selectedIds} onResult={onResult} />
       <ConfirmationDialog
         triggerLabel="Review status change"
         title={`Change status for ${selectedIds.length} ${

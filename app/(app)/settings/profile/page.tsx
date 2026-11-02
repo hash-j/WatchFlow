@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 
 import { ProfileSettingsForm } from "@/components/settings/profile-settings-form";
+import { ChangePasswordForm } from "@/components/settings/change-password-form";
+import { createClient } from "@/lib/supabase/server";
+import { supportsPasswordChange } from "@/lib/auth/change-password";
 import { formatUserDate } from "@/lib/settings/formatting";
 import { getSettingsPageData } from "@/lib/settings/supabase-settings";
 
@@ -17,6 +20,9 @@ function initials(name: string, email: string | undefined) {
 export default async function ProfileSettingsPage() {
   const data = await getSettingsPageData();
   if (!data) redirect("/auth/login");
+  const client = await createClient();
+  const { data: { user }, error } = await client.auth.getUser();
+  if (error || !user || user.id !== data.user.id) redirect("/auth/login");
 
   const createdAt = data.user.created_at ?? data.profile.createdAt;
 
@@ -63,6 +69,7 @@ export default async function ProfileSettingsPage() {
         </div>
       </section>
 
+      <ChangePasswordForm passwordAccount={supportsPasswordChange(user)} />
       <aside className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
         Profile photos are not available yet. WatchFlow uses your initials in
         the meantime.

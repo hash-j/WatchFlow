@@ -28,6 +28,7 @@ vi.mock("./dispatcher", () => ({
 import {
   countUnreadNotifications,
   createCustomListMovieAddedNotification,
+  createCustomListMoviesAddedNotifications,
   createCsvImportCompletedNotification,
   createMovieStatusTransitionNotification,
   getMovieStatusNotificationEvent,
@@ -487,6 +488,27 @@ describe("trusted custom-list notification producer", () => {
     listName: "Weekend Movies",
     movieTitle: "Arrival",
   };
+
+  it("batches a multi-movie addition into one preference read and one owner-bound idempotent write", async () => {
+    let rows: Record<string, unknown>[] = [];
+    const select = vi.fn(async () => ({ data: rows.map(row => ({ id: row.id })), error: null }));
+    const upsert = vi.fn((payload, options) => {
+      expect(options).toEqual({ onConflict: "id", ignoreDuplicates: true }); rows = payload; return { select };
+    });
+    mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => ({ upsert })) });
+    await createCustomListMoviesAddedNotifications([input, { ...input, listMovieId: "55555555-5555-4555-8555-555555555555", movieTitle: "Second" }]);
+    expect(mocks.createClient).toHaveBeenCalledOnce(); expect(upsert).toHaveBeenCalledOnce();
+    expect(rows).toHaveLength(2); expect(rows.every(row => row.user_id === userId)).toBe(true);
+    expect(new Set(rows.map(row => row.id)).size).toBe(2);
+    expect(upsert.mock.calls[0][1]).toEqual({ onConflict: "id", ignoreDuplicates: true });
+    await runDeferredCallbacks();
+    expect(mocks.dispatchNotificationEvent).toHaveBeenCalledTimes(2);
+  });
+  it("does not allow a mixed-owner or unbounded bulk notification payload", async () => {
+    await expect(createCustomListMoviesAddedNotifications([input, { ...input, verifiedUserId: "other" }])).rejects.toThrow();
+    await expect(createCustomListMoviesAddedNotifications(Array.from({ length: 101 }, () => input))).rejects.toThrow();
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
+  });
 
   it("creates fixed owner-bound content and suppresses duplicate delivery", async () => {
     mocks.createClient

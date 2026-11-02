@@ -4,8 +4,10 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 import { logSupabaseError } from "@/lib/supabase/error-logging";
 import { getAuthContext } from "@/lib/supabase/auth";
-import { createCustomListMovieAddedNotification } from "@/lib/notifications/supabase-notifications";
+import { createCustomListMovieAddedNotification, createCustomListMoviesAddedNotifications } from "@/lib/notifications/supabase-notifications";
 import { createClient } from "@/lib/supabase/server";
+import { compareListMovies } from "./sorting";
+import { addMoviesToListSchema } from "./validation";
 
 import {
   ListsAuthenticationError,
@@ -163,6 +165,14 @@ export async function getCustomListSummaries() {
   }
 
   return mapCustomListSummaries(data);
+}
+
+export async function getOwnedListChoices() {
+  const { client, user } = await authenticateLists();
+  const { data, error } = await client.from("lists").select("id, name")
+    .eq("user_id", user.id).order("name", { ascending: true }).limit(500);
+  if (error) throwListsError("custom list choices query failed", error);
+  return (data ?? []).map(row => ({ id: String(row.id), name: String(row.name) }));
 }
 
 async function readOwnedListMovies(
@@ -567,6 +577,7 @@ async function readNewListAdditionCandidates(
 async function produceListAdditionNotifications(
   session: AuthenticatedListsSession,
   candidates: ListAdditionCandidate[],
+  batch = false,
 ) {
   if (candidates.length === 0) return;
   const { client, user } = session;
@@ -591,7 +602,7 @@ async function produceListAdditionNotifications(
       candidate,
     ]),
   );
-  await Promise.allSettled(
+  const inputs =
     (data ?? []).flatMap((row) => {
       if (
         typeof row.id !== "string" ||
@@ -605,7 +616,7 @@ async function produceListAdditionNotifications(
       );
       return candidate
         ? [
-            createCustomListMovieAddedNotification({
+            {
               verifiedUserId: user.id,
               listId: candidate.listId,
               listMovieId: row.id,
@@ -613,15 +624,30 @@ async function produceListAdditionNotifications(
               listName: candidate.listName,
               movieTitle: candidate.movieTitle,
               moviePosterPath: candidate.moviePosterPath,
-            }),
+            },
           ]
         : [];
-    }),
-  );
+    });
+  if (batch && inputs.length > 1) await createCustomListMoviesAddedNotifications(inputs);
+  else await Promise.allSettled(inputs.map(input => createCustomListMovieAddedNotification(input)));
 }
 
 export async function addOwnedMoviesToList(input: AddMoviesToListInput) {
+  if (!addMoviesToListSchema.safeParse(input).success) throw new ListsValidationError();
   const session = await authenticateLists();
+  const { data: movies, error: movieError } = await session.client.from("user_movies")
+    .select("id, movies!inner(title, release_year, release_date)").eq("user_id", session.user.id).in("id", input.userMovieIds);
+  if (movieError) throwListsError("custom list append ordering read failed", movieError);
+  if (!movies || movies.length !== input.userMovieIds.length || new Set(movies.map(row => row.id)).size !== movies.length ||
+    movies.some(row => !input.userMovieIds.includes(row.id))) {
+    throw new ListsNotFoundError("Some selected movies are no longer in your library. No movies were added.");
+  }
+  const ordered = movies.map(row => {
+    const movie = Array.isArray(row.movies) ? row.movies[0] : row.movies;
+    if (!movie || typeof movie.title !== "string") throw new ListsPersistenceError();
+    return { id: row.id, title: movie.title, releaseYear: typeof movie.release_year === "number" ? movie.release_year : null,
+      releaseDate: typeof movie.release_date === "string" ? movie.release_date : null };
+  }).sort((a, b) => compareListMovies(a, b));
   let candidates: ListAdditionCandidate[] = [];
   try {
     candidates = await readNewListAdditionCandidates(
@@ -638,12 +664,12 @@ export async function addOwnedMoviesToList(input: AddMoviesToListInput) {
     "watchflow_add_movies_to_list",
     {
       p_list_id: input.listId,
-      p_user_movie_ids: input.userMovieIds,
+      p_user_movie_ids: ordered.map(movie => movie.id),
     },
   );
   if (result.success && result.added > 0) {
     try {
-      await produceListAdditionNotifications(session, candidates);
+      await produceListAdditionNotifications(session, candidates, true);
     } catch {
       // The membership mutation succeeded; producer failures stay non-fatal.
     }

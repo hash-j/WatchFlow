@@ -348,7 +348,8 @@ describe("Part 16F-B Batch 2B library polish contracts", () => {
 
     expect(selection).toContain("grid items-end gap-3");
     expect(selection).toContain("sm:grid-cols-2");
-    expect(selection).toContain("xl:grid-cols-[minmax(15rem,1fr)_auto_auto]");
+    expect(selection).toContain("xl:grid-cols-[minmax(15rem,1fr)_auto_auto_auto]");
+    expect(selection).toContain("BulkAddToListDialog selectedIds={selectedIds}");
     expect(selection).not.toContain('variant="ghost"');
     expect(selection.match(/variant="outline"/g)?.length).toBeGreaterThanOrEqual(
       3,

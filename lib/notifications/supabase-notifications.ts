@@ -338,6 +338,32 @@ export async function createCustomListMovieAddedNotification(input: {
   return { id: notificationId, created };
 }
 
+// Same fixed trusted list-membership producer, with one preference read and
+// one idempotent insert for a bounded bulk selection instead of one per movie.
+export async function createCustomListMoviesAddedNotifications(inputs: Parameters<typeof createCustomListMovieAddedNotification>[0][]) {
+  if (!inputs.length) return;
+  const owner = inputs[0].verifiedUserId;
+  if (inputs.length > 100 || inputs.some(input => input.verifiedUserId !== owner)) throw new NotificationProducerError();
+  const category: NotificationCategory = "custom_lists";
+  if (!(await isNotificationCategoryEnabled(owner, category))) return;
+  const rows = inputs.map(input => ({
+    id: deterministicNotificationId("custom-list-movie-added", owner, input.listMovieId), user_id: owner, type: "system",
+    title: "Added to custom list", body: `${input.movieTitle} was added to ${input.listName}.`, action_path: `/lists/${input.listId}`,
+    metadata: { source: "custom_list_membership", category, event: "movie_added", list_id: input.listId,
+      list_movie_id: input.listMovieId, user_movie_id: input.userMovieId, movie_title: input.movieTitle,
+      movie_poster_path: input.moviePosterPath ?? null },
+  }));
+  const admin = createAdminClient(owner);
+  const { data, error } = await admin.from("notifications").upsert(rows, { onConflict: "id", ignoreDuplicates: true }).select("id");
+  if (error) { logSupabaseError("bulk custom list notification creation failed", error); throw new NotificationProducerError(); }
+  const created = new Set((data ?? []).map(row => row.id));
+  for (const row of rows) dispatchCreatedNotification(created.has(row.id), {
+    notificationId: row.id, category, title: row.title, body: row.body, movieTitle: row.metadata.movie_title,
+    imageUrl: getTmdbImageUrl(row.metadata.movie_poster_path, "w342"),
+    actionUrl: notificationActionUrl(row.action_path, row.id, "push"),
+  });
+}
+
 export async function createCsvImportCompletedNotification(input: {
   verifiedUserId: string;
   completionId: string;

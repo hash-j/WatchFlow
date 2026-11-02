@@ -1,12 +1,46 @@
 # WatchFlow Project Context
 
-Last updated: 2026-10-30
-Last updated by: Codex / Unit 2D first automatic execution read-only recovery preparation
+Last updated: 2026-11-02
+Last updated by: Codex / custom-list sorting, Library bulk lists and profile password change
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: The human performed the first real automatic calendar execution. The job reportedly succeeded once and the schedule is paused; log shape rejection blocked finalization. An explicit read-only --recover path is prepared, not run. Never rerun --first-run, canary or normal A2; both real schedules must remain paused.
+Current phase: Implementing the three requested product features after the human-accepted completed Unit 2D checkpoint b188c00. Calendar/QStash/Google acceptance work is frozen and untouched. No push or commit has been performed.
 Current branch: `codex/part-18-production-operations`.
-Current status: Human-reported first occurrence 2026-10-29T21:59:00Z: connected/sync=true, controlled upsert succeeded/attempt_count=1/unleased, mapping present, calendar pause verified, no unrelated actionable/cleanup work, failures empty. Error QSTASH_EVENT_SHAPE_MISMATCH left automatic provenance unverified and exact Google fixture unknown. Recovery must independently verify those facts. No live recovery/provider request or mutation was performed by Codex. Earlier checkpoints below are historical.
+Current status: Starting branch/HEAD/clean tree verified before implementation. Custom-list display sorts and deterministic batch append, Library bulk Add to list and authenticated profile password change are implemented for local review. No migration or dependency change. Manual browser/live-auth acceptance remains pending; see docs/LISTS_AND_PASSWORD_ACCEPTANCE.md. Earlier operational checkpoints below are historical and do not authorize rerunning any operator.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-11-02 — Custom-list sorting, bulk membership and password change
+
+- Reused the existing private-list RPC, ownership/RLS, transaction/lock order,
+  duplicate constraint and selection bounds. A single bounded owner-scoped
+  metadata read orders the append batch by year/title/stable ID; existing list
+  members keep their saved positions. No schema change or direct relationship
+  mutation was added. Deleted/cross-user/missing selections remain fail-closed.
+- Sort is local/display-only with five requested options; unknown years sort
+  last and manual controls are disabled outside Manual. Returning to Manual
+  restores saved ordering. Library's existing bulk selection opens an on-demand
+  owned-list picker, uses the same batch action and reports added/skipped counts.
+- Batch notification creation reads preferences once and inserts fixed trusted
+  membership notifications together. Existing idempotency and best-effort push
+  semantics remain. Added-list revalidation avoids the root-layout invalidation;
+  manual movement refreshes the affected list. No general performance rewrite.
+- Password change uses fresh auth.getUser, then Supabase email/password sign-in
+  with that verified email in a memory-only verifier. It updates through the
+  original SSR session, also supplying current_password. No session substitution,
+  admin Auth API, password logging/persistence or editable browser identity is
+  used. External-provider-only accounts show guidance. Minimum/match validation,
+  pending/success/error states and safe reauthentication guidance are included.
+- Manual acceptance/check inventory: docs/LISTS_AND_PASSWORD_ACCEPTANCE.md.
+  No calendar/QStash/Google code, schedule, workflow, fixture or live setting was
+  touched. No live password/list mutation was run from this task.
+- Validation: 571 tests passed across 68 relevant list/auth/library/settings/
+  notification files; TypeScript, ESLint and git diff --check passed. The guarded
+  existing Supabase RLS integration invocation skipped (development prerequisites
+  not enabled); no live fixtures were altered. Vitest used a workspace-local
+  ignored temporary directory to avoid the Windows sandbox cache-rename error.
+  Standard build failed fetching Geist from Google Fonts. A local Webpack dev
+  smoke test returned HTTP 200 for /auth/sign-up after Turbopack's Windows CSS
+  worker failed; no source/config workaround was introduced. Test servers were
+  stopped. All six user-facing acceptance checks remain for Hashim to perform.
 
 ## 2026-10-30 Unit 2D — FIRST AUTOMATIC EXECUTION RECOVERY (PREPARED ONLY)
 

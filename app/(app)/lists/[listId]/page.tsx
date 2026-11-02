@@ -15,7 +15,7 @@ import {
   getSafeListLoadError,
   ListLoadError,
 } from "@/components/lists/list-load-error";
-import { ListMovieRow } from "@/components/lists/list-movie-row";
+import { SortableListMovies } from "@/components/lists/sortable-list-movies";
 import { Badge } from "@/components/ui/badge";
 import {
   PageContainer,
@@ -218,17 +218,7 @@ async function ListDetailContent({
             </div>
           </div>
         ) : (
-          <ol className="mt-4 space-y-3">
-            {data.movies.map((item, index) => (
-              <ListMovieRow
-                key={item.listMovieId}
-                item={item}
-                listName={data.list.name}
-                isFirst={index === 0}
-                isLast={index === data.movies.length - 1}
-              />
-            ))}
-          </ol>
+          <SortableListMovies movies={data.movies} listName={data.list.name} />
         )}
       </section>
 

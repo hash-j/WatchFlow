@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   updateOwnedCustomList: vi.fn(),
   deleteOwnedCustomList: vi.fn(),
   addOwnedMoviesToList: vi.fn(),
+  getOwnedListChoices: vi.fn(),
   moveOwnedCustomList: vi.fn(),
   moveOwnedListItem: vi.fn(),
   removeOwnedListMovie: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock("@/lib/lists/supabase-lists", () => ({
   updateOwnedCustomList: mocks.updateOwnedCustomList,
   deleteOwnedCustomList: mocks.deleteOwnedCustomList,
   addOwnedMoviesToList: mocks.addOwnedMoviesToList,
+  getOwnedListChoices: mocks.getOwnedListChoices,
   moveOwnedCustomList: mocks.moveOwnedCustomList,
   moveOwnedListItem: mocks.moveOwnedListItem,
   removeOwnedListMovie: mocks.removeOwnedListMovie,
@@ -30,6 +32,7 @@ vi.mock("@/lib/lists/supabase-lists", () => ({
 
 import {
   addMoviesToListAction,
+  getBulkListChoicesAction,
   createListAction,
   deleteListAction,
   moveListItemAction,
@@ -252,6 +255,24 @@ describe("custom-list create, edit, and delete actions", () => {
 });
 
 describe("custom-list membership actions", () => {
+  it("loads only safe list choices and sanitizes picker failures", async () => {
+    mocks.getOwnedListChoices.mockResolvedValueOnce([{ id: listId, name: "Weekend Movies" }]);
+    expect(await getBulkListChoicesAction()).toEqual({ lists: [{ id: listId, name: "Weekend Movies" }], error: null });
+    mocks.getOwnedListChoices.mockRejectedValueOnce(new Error("PRIVATE_PROVIDER_RESPONSE"));
+    const result = await getBulkListChoicesAction();
+    expect(result.lists).toEqual([]); expect(result.error).not.toContain("PRIVATE_PROVIDER_RESPONSE");
+  });
+  it("rejects empty selections without any repository call", async () => {
+    const data = new FormData(); data.set("listId", listId);
+    expect((await addMoviesToListAction(initialListActionState, data)).status).toBe("error");
+    expect(mocks.addOwnedMoviesToList).not.toHaveBeenCalled();
+  });
+  it("handles deleted or inaccessible lists without reporting a successful addition", async () => {
+    mocks.addOwnedMoviesToList.mockResolvedValueOnce(mutationResult({ success: false, reason: "not_found", added: 0 }));
+    const data = new FormData(); data.set("listId", listId); data.append("userMovieIds", userMovieId);
+    expect((await addMoviesToListAction(initialListActionState, data)).status).toBe("error");
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
   it("moves only a validated list-card identifier and revalidates list views", async () => {
     const formData = new FormData();
     formData.set("listId", listId);
@@ -321,8 +342,8 @@ describe("custom-list membership actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists/[listId]", "page");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/library/[movieId]", "page");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/notifications");
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
-    expect(mocks.revalidatePath).toHaveBeenCalledTimes(5);
+    expect(mocks.revalidatePath).not.toHaveBeenCalledWith("/", "layout");
+    expect(mocks.revalidatePath).toHaveBeenCalledTimes(4);
   });
 
   it("keeps stale multi-add selections atomic and honest", async () => {

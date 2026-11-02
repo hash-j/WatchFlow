@@ -3,6 +3,7 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 import {
   ListsAuthenticationError,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/lists/errors";
 import {
   addOwnedMoviesToList,
+  getOwnedListChoices,
   createOwnedCustomList,
   deleteOwnedCustomList,
   moveOwnedCustomList,
@@ -91,6 +93,11 @@ function listErrorMessage(error: unknown) {
   }
 
   return "The custom list could not be updated. Please try again.";
+}
+
+export async function getBulkListChoicesAction(): Promise<{ lists: { id: string; name: string }[]; error: string | null }> {
+  try { return { lists: await getOwnedListChoices(), error: null }; }
+  catch (error) { return { lists: [], error: listErrorMessage(error) }; }
 }
 
 export async function createListAction(
@@ -233,8 +240,11 @@ export async function addMoviesToListAction(
       );
     }
 
-    revalidateListViews({ allMovieDetails: true });
-    if (result.added > 0) revalidateNotificationViews();
+    if (result.added > 0) {
+      revalidateListViews({ allMovieDetails: true });
+      // Membership-only additions do not need a root-layout/application reload.
+      revalidatePath("/notifications");
+    }
 
     const addedLabel = `${result.added} ${
       result.added === 1 ? "movie" : "movies"
@@ -279,6 +289,7 @@ export async function moveListItemAction(
     }
 
     revalidateListViews();
+    if (result.moved && result.listId) revalidatePath(`/lists/${result.listId}`);
     return successState(
       previousState,
       result.moved
