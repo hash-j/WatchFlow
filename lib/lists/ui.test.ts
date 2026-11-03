@@ -90,7 +90,8 @@ describe("Part 13 route and private navigation contracts", () => {
     expect(card).toContain("Private");
     expect(card).toContain("{list.movieCount}");
     expect(card).toContain("Last updated");
-    expect(card).toContain("ListPosterCollage");
+    expect(card).toContain("ListArtwork");
+    expect(source("components/lists/list-artwork.tsx")).toContain("ListPosterCollage");
     expect(card).toContain("ListSummaryOrderControls");
     expect(page).toContain("isFirst={index === 0}");
     expect(page).toContain("isLast={index === lists.length - 1}");

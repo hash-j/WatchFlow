@@ -6,11 +6,15 @@ export function ListFormFields({
   name = "",
   description = "",
   fieldErrors,
+  onNameChange,
+  onDescriptionChange,
 }: {
   idPrefix: string;
   name?: string;
   description?: string;
   fieldErrors: Record<string, string[]>;
+  onNameChange?: (value: string) => void;
+  onDescriptionChange?: (value: string) => void;
 }) {
   const nameError = fieldErrors.name?.[0];
   const descriptionError = fieldErrors.description?.[0];
@@ -28,7 +32,9 @@ export function ListFormFields({
           name="name"
           required
           maxLength={80}
-          defaultValue={name}
+          value={onNameChange ? name : undefined}
+          defaultValue={onNameChange ? undefined : name}
+          onChange={onNameChange ? event => onNameChange(event.currentTarget.value) : undefined}
           autoComplete="off"
           placeholder="Weekend Movies"
           aria-invalid={Boolean(nameError)}
@@ -48,7 +54,9 @@ export function ListFormFields({
           name="description"
           rows={4}
           maxLength={500}
-          defaultValue={description}
+          value={onDescriptionChange ? description : undefined}
+          defaultValue={onDescriptionChange ? undefined : description}
+          onChange={onDescriptionChange ? event => onDescriptionChange(event.currentTarget.value) : undefined}
           placeholder="Optional notes about this private collection"
           aria-invalid={Boolean(descriptionError)}
           aria-describedby={descriptionError ? descriptionErrorId : undefined}

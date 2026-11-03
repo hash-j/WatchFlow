@@ -5,7 +5,7 @@ import { countUnreadNotifications } from "@/lib/notifications/supabase-notificat
 import { getAuthContext } from "@/lib/supabase/auth";
 
 async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
-  const { user, profileName, client } = await getAuthContext();
+  const { user, profile, profileName, client } = await getAuthContext();
   const unreadNotificationCount = await countUnreadNotifications(
     client,
     user.id,
@@ -15,6 +15,8 @@ async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
     <AppShell
       email={user.email}
       profileName={profileName}
+      ownerId={user.id}
+      avatarPath={typeof profile?.avatar_url === "string" ? profile.avatar_url : null}
       unreadNotificationCount={unreadNotificationCount}
     >
       {children}

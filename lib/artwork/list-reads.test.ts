@@ -1,0 +1,34 @@
+import { beforeEach, expect, it, vi } from "vitest";
+const mocks = vi.hoisted(() => ({ context: vi.fn() }));
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/supabase/auth", () => ({ getAuthContext: mocks.context }));
+import { getCustomListDetail, getCustomListSummaries } from "@/lib/lists/supabase-lists";
+const userId = "11111111-1111-4111-8111-111111111111", listId = "22222222-2222-4222-8222-222222222222";
+const row = { list_id: listId, id: listId, name: "Mine", description: null, visibility: "private", created_at: "2026-01-01", updated_at: "2026-01-01", sort_position: 1, movie_count: 0, poster_paths: [] };
+const picker = { query: "", status: "all", favourite: "all" } as const;
+beforeEach(() => vi.resetAllMocks());
+it("reads thumbnail references in one owner-scoped batch for all list cards", async () => {
+  const range = vi.fn().mockResolvedValue({ data: [{ id: listId, thumbnail_path: "reference" }], error: null });
+  const chain = { select: vi.fn(), eq: vi.fn(), order: vi.fn(), range };
+  chain.select.mockReturnValue(chain); chain.eq.mockReturnValue(chain); chain.order.mockReturnValue(chain);
+  const client = { rpc: vi.fn().mockResolvedValue({ data: [row, { ...row, id: "other", list_id: "other" }], error: null }), from: vi.fn(() => chain) };
+  mocks.context.mockResolvedValue({ user: { id: userId }, client });
+  const lists = await getCustomListSummaries();
+  expect(client.from).toHaveBeenCalledOnce(); expect(chain.eq).toHaveBeenCalledWith("user_id", userId);
+  expect(range).toHaveBeenCalledExactlyOnceWith(0, 1); expect(lists[0].thumbnailPath).toBe("reference"); expect(lists[1].thumbnailPath).toBeNull();
+  range.mockResolvedValueOnce({ data: null, error: { code: "42703" } });
+  expect((await getCustomListSummaries())[0].thumbnailPath).toBeNull();
+});
+it("loads detail artwork in the existing owned-list query and keeps premigration detail usable", async () => {
+  const owned = { select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: { ...row, thumbnail_path: "reference" }, error: null }) };
+  owned.select.mockReturnValue(owned); owned.eq.mockReturnValue(owned);
+  const movies = { select: vi.fn(), eq: vi.fn(), order: vi.fn().mockResolvedValue({ data: [], error: null }) };
+  movies.select.mockReturnValue(movies); movies.eq.mockReturnValue(movies);
+  const client = { from: vi.fn((table: string) => table === "lists" ? owned : movies) };
+  mocks.context.mockResolvedValue({ user: { id: userId }, client });
+  expect((await getCustomListDetail(listId, picker, false))?.list.thumbnailPath).toBe("reference");
+  expect(owned.select).toHaveBeenCalledExactlyOnceWith("id, name, description, visibility, created_at, updated_at, thumbnail_path");
+  expect(owned.eq).toHaveBeenCalledWith("user_id", userId);
+  owned.maybeSingle.mockResolvedValueOnce({ data: null, error: { code: "42703" } });
+  expect((await getCustomListDetail(listId, picker, false))?.list.name).toBe("Mine");
+});

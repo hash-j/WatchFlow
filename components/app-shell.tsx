@@ -5,12 +5,15 @@ import { AppNavigation } from "@/components/app-navigation";
 import { LogoutButton } from "@/components/logout-button";
 import { MobileAppNavigation } from "@/components/mobile-app-navigation";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import { UserAvatar } from "@/components/artwork/user-avatar";
 
 type AppShellProps = {
   children: React.ReactNode;
   email: string | null;
   profileName: string | null;
   unreadNotificationCount?: number;
+  ownerId?: string;
+  avatarPath?: string | null;
 };
 
 export function AppShell({
@@ -18,6 +21,8 @@ export function AppShell({
   email,
   profileName,
   unreadNotificationCount = 0,
+  ownerId,
+  avatarPath,
 }: AppShellProps) {
   const identity = profileName ?? email ?? "WatchFlow member";
 
@@ -44,6 +49,7 @@ export function AppShell({
           />
 
           <div className="border-t border-white/10 p-4">
+            <UserAvatar ownerId={ownerId} path={avatarPath} name={profileName} email={email} className="mb-3" />
             <p className="break-words text-sm font-medium">{identity}</p>
             {profileName && email ? (
               <p className="break-all text-xs text-sidebar-muted">{email}</p>
@@ -62,6 +68,8 @@ export function AppShell({
           identity={identity}
           email={email}
           unreadCount={unreadNotificationCount}
+          ownerId={ownerId}
+          avatarPath={avatarPath}
         />
         <main className="min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
           {children}

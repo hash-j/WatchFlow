@@ -1,6 +1,8 @@
 "use server";
 
 import "server-only";
+import { deleteAccountArtwork } from "@/lib/artwork/server";
+import { ArtworkError } from "@/lib/artwork/images";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -58,7 +60,7 @@ function persistenceError(error: unknown): SettingsActionState {
   return {
     status: "error",
     message:
-      error instanceof SettingsPersistenceError
+      error instanceof SettingsPersistenceError || error instanceof ArtworkError
         ? error.message
         : "WatchFlow could not save that change. Please try again.",
     fieldErrors: {},
@@ -244,6 +246,7 @@ export async function deleteAccountAction(
   }
 
   try {
+    await deleteAccountArtwork(session.client, session.user.id);
     await deleteVerifiedAuthUser(session.user);
   } catch (error) {
     return persistenceError(error);

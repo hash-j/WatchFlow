@@ -4,18 +4,11 @@ import { ProfileSettingsForm } from "@/components/settings/profile-settings-form
 import { ChangePasswordForm } from "@/components/settings/change-password-form";
 import { createClient } from "@/lib/supabase/server";
 import { supportsPasswordChange } from "@/lib/auth/change-password";
+import { UserAvatar } from "@/components/artwork/user-avatar";
+import { ArtworkEditor } from "@/components/artwork/artwork-editor";
+import { ownsArtworkPath } from "@/lib/artwork/paths";
 import { formatUserDate } from "@/lib/settings/formatting";
 import { getSettingsPageData } from "@/lib/settings/supabase-settings";
-
-function initials(name: string, email: string | undefined) {
-  const source = name || email || "W";
-  return source
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
 
 export default async function ProfileSettingsPage() {
   const data = await getSettingsPageData();
@@ -30,12 +23,7 @@ export default async function ProfileSettingsPage() {
     <div className="space-y-6">
       <section className="rounded-xl border bg-card p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-          <div
-            className="grid size-16 shrink-0 place-items-center rounded-full border bg-muted text-xl font-semibold"
-            aria-label="Profile initials"
-          >
-            {initials(data.profile.fullName, data.user.email)}
-          </div>
+          <UserAvatar ownerId={user.id} path={data.profile.avatarUrl} name={data.profile.fullName} email={data.user.email} className="size-16 text-xl" />
           <div className="min-w-0">
             <h2 className="text-xl font-semibold">Profile</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -65,15 +53,14 @@ export default async function ProfileSettingsPage() {
         </div>
 
         <div className="mt-6 border-t pt-6">
+          <ArtworkEditor target={{ kind: "avatar" }} hasImage={ownsArtworkPath(data.profile.avatarUrl, user.id, { kind: "avatar" })} />
+        </div>
+        <div className="mt-6 border-t pt-6">
           <ProfileSettingsForm profile={data.profile} />
         </div>
       </section>
 
       <ChangePasswordForm passwordAccount={supportsPasswordChange(user)} />
-      <aside className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-        Profile photos are not available yet. WatchFlow uses your initials in
-        the meantime.
-      </aside>
     </div>
   );
 }

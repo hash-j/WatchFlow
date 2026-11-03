@@ -12,15 +12,20 @@ import {
 import { LogoutButton } from "@/components/logout-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/artwork/user-avatar";
 
 export function MobileAppNavigation({
   identity,
   email,
   unreadCount = 0,
+  ownerId,
+  avatarPath,
 }: {
   identity: string;
   email: string | null;
   unreadCount?: number;
+  ownerId?: string;
+  avatarPath?: string | null;
 }) {
   const pathname = usePathname();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -97,6 +102,7 @@ export function MobileAppNavigation({
           />
 
           <div className="border-t border-white/10 p-4">
+            <UserAvatar ownerId={ownerId} path={avatarPath} name={identity} email={email} className="mb-3" />
             <p className="break-words text-sm font-medium">{identity}</p>
             {email && email !== identity ? (
               <p className="mt-1 break-all text-xs text-sidebar-muted">

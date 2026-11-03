@@ -1,15 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ListPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { createListAction } from "@/app/(app)/actions/lists";
 import { Button } from "@/components/ui/button";
-import { DialogCloseButton, ResponsiveDialog } from "@/components/ui/responsive-dialog";
-import { initialListActionState } from "@/lib/lists/types";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 
-import { ListFormFields } from "./list-form-fields";
+import { ListDetailsForm } from "./list-details-form";
 
 export function CreateListDialog({
   idPrefix = "create-list",
@@ -23,10 +21,7 @@ export function CreateListDialog({
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const [state, action, isPending] = useActionState(
-    createListAction,
-    initialListActionState,
-  );
+  const [formVersion, setFormVersion] = useState(0);
   const titleId = `${idPrefix}-title`;
   const descriptionId = `${idPrefix}-dialog-description`;
 
@@ -41,6 +36,7 @@ export function CreateListDialog({
   }
 
   function handleClose() {
+    setFormVersion(value => value + 1);
     triggerRef.current?.focus();
     if (defaultOpen) {
       router.replace("/lists");
@@ -66,46 +62,7 @@ export function CreateListDialog({
         onClose={handleClose}
         className="max-w-xl"
       >
-        <form action={action} className="relative space-y-5 p-4 pt-16 sm:p-6 sm:pt-16">
-          <DialogCloseButton onClick={closeDialog} />
-          <div>
-            <h2 id={titleId} className="text-xl font-semibold">
-              Create a custom list
-            </h2>
-            <p
-              id={descriptionId}
-              className="mt-2 text-sm text-muted-foreground"
-            >
-              Give your private collection a clear name and an optional
-              description.
-            </p>
-          </div>
-
-          <ListFormFields
-            idPrefix={idPrefix}
-            fieldErrors={state.fieldErrors}
-          />
-
-          {state.message ? (
-            <p className="text-sm text-destructive" role="alert">
-              {state.message}
-            </p>
-          ) : null}
-
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isPending}
-              onClick={closeDialog}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Creating..." : "Create List"}
-            </Button>
-          </div>
-        </form>
+        <ListDetailsForm key={formVersion} idPrefix={idPrefix} onCancel={closeDialog} />
       </ResponsiveDialog>
     </>
   );

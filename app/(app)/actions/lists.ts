@@ -4,6 +4,9 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { ArtworkError } from "@/lib/artwork/images";
+import { artworkFileError } from "@/lib/artwork/paths";
+import { mutateArtwork } from "@/lib/artwork/server";
 
 import {
   ListsAuthenticationError,
@@ -95,6 +98,32 @@ function listErrorMessage(error: unknown) {
   return "The custom list could not be updated. Please try again.";
 }
 
+function coverInput(form: FormData, creating: boolean): { operation: "keep" | "upload" | "remove"; file: FormDataEntryValue | null } {
+  const operation = form.get("coverOperation") ?? "keep";
+  if (operation !== "keep" && operation !== "upload" && operation !== "remove" || creating && operation === "remove") {
+    throw new ArtworkError("Choose a valid cover image action.");
+  }
+  const file = form.get("coverImage");
+  if (operation === "upload") {
+    if (!(file instanceof File)) throw new ArtworkError("Choose an image to upload.");
+    const error = artworkFileError(file);
+    if (error) throw new ArtworkError(error);
+  }
+  return { operation, file };
+}
+
+function coverError(error: unknown) {
+  return error instanceof ArtworkError ? error.message : "The cover image could not be changed. Please try again.";
+}
+
+function revalidateListFormViews() {
+  // Form saves must update the current card/cover in the action response.
+  // Keep this scoped to lists and their library membership labels.
+  revalidatePath("/lists");
+  revalidatePath("/lists/[listId]", "page");
+  revalidatePath("/library/[movieId]", "page");
+}
+
 export async function getBulkListChoicesAction(): Promise<{ lists: { id: string; name: string }[]; error: string | null }> {
   try { return { lists: await getOwnedListChoices(), error: null }; }
   catch (error) { return { lists: [], error: listErrorMessage(error) }; }
@@ -117,6 +146,10 @@ export async function createListAction(
     );
   }
 
+  let cover: ReturnType<typeof coverInput>;
+  try { cover = coverInput(formData, true); }
+  catch (error) { return errorState(previousState, coverError(error), { cover: [coverError(error)] }); }
+
   let createdId: string;
   try {
     const created = await createOwnedCustomList(parsed.data);
@@ -131,8 +164,15 @@ export async function createListAction(
     return errorState(previousState, listErrorMessage(error));
   }
 
-  revalidateListViews({ allMovieDetails: true });
-  redirect(`/lists/${createdId}?created=1`);
+  let coverFailed = false;
+  if (cover.operation === "upload") {
+    try { coverFailed = (await mutateArtwork({ kind: "list", listId: createdId }, "upload", cover.file)).status !== "success"; }
+    catch { coverFailed = true; }
+  }
+  revalidateListFormViews();
+  // The list already exists even if its optional cover fails. Redirect to that
+  // list with a safe notice, rather than inviting a duplicate creation attempt.
+  redirect(`/lists/${createdId}?created=1${coverFailed ? "&cover=failed" : ""}`);
 }
 
 export async function updateListAction(
@@ -153,6 +193,10 @@ export async function updateListAction(
     );
   }
 
+  let cover: ReturnType<typeof coverInput>;
+  try { cover = coverInput(formData, false); }
+  catch (error) { return errorState(previousState, coverError(error), { cover: [coverError(error)] }); }
+
   try {
     const updated = await updateOwnedCustomList(parsed.data);
     if (!updated) {
@@ -162,8 +206,19 @@ export async function updateListAction(
       );
     }
 
-    revalidateListViews({ allMovieDetails: true });
-    return successState(previousState, "List details saved.");
+    let message = "List details saved.";
+    if (cover.operation !== "keep") {
+      try {
+        const artwork = await mutateArtwork({ kind: "list", listId: parsed.data.listId }, cover.operation, cover.file);
+        if (artwork.status !== "success") throw new ArtworkError(artwork.message);
+        message += ` ${artwork.message}`;
+      } catch (error) {
+        revalidateListFormViews();
+        return errorState(previousState, `List details saved, but the cover could not be changed. ${coverError(error)}`);
+      }
+    }
+    revalidateListFormViews();
+    return successState(previousState, message);
   } catch (error) {
     if (error instanceof ListsConflictError) {
       return errorState(previousState, error.message, {

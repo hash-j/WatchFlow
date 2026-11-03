@@ -133,15 +133,17 @@ async function readOwnedList(
   client: SupabaseClient,
   userId: string,
   listId: string,
+  includeArtwork = false,
 ): Promise<CustomList | null> {
   const { data, error } = await client
     .from("lists")
-    .select("id, name, description, visibility, created_at, updated_at")
+    .select(includeArtwork ? "id, name, description, visibility, created_at, updated_at, thumbnail_path" : "id, name, description, visibility, created_at, updated_at")
     .eq("id", listId)
     .eq("user_id", userId)
     .maybeSingle();
 
   if (error) {
+    if (includeArtwork && ["42703", "PGRST204"].includes(error.code ?? "")) return readOwnedList(client, userId, listId, false);
     throwListsError(
       "owned custom list query failed",
       error,
@@ -149,11 +151,13 @@ async function readOwnedList(
     );
   }
 
-  return data ? mapCustomList(data) : null;
+  if (!data) return null;
+  const list = mapCustomList(data);
+  return includeArtwork ? { ...list, thumbnailPath: text((data as unknown as UnknownRecord).thumbnail_path) } : list;
 }
 
 export async function getCustomListSummaries() {
-  const { client } = await authenticateListsRequest();
+  const { client, user } = await authenticateListsRequest();
   const { data, error } = await client.rpc("watchflow_list_summaries");
 
   if (error) {
@@ -164,7 +168,14 @@ export async function getCustomListSummaries() {
     );
   }
 
-  return mapCustomListSummaries(data);
+  const lists = mapCustomListSummaries(data);
+  if (!lists.length) return lists;
+  // One metadata query for the gallery, not one database/signed-URL request per card.
+  const { data: artwork, error: artworkError } = await client.from("lists").select("id, thumbnail_path")
+    .eq("user_id", user.id).order("sort_position", { ascending: true }).order("id", { ascending: true }).range(0, lists.length - 1);
+  if (artworkError && !["42703", "PGRST204"].includes(artworkError.code)) throwListsError("list thumbnails query failed", artworkError);
+  const paths = new Map((artwork ?? []).map(row => [row.id, row.thumbnail_path]));
+  return lists.map(list => ({ ...list, thumbnailPath: typeof paths.get(list.id) === "string" ? paths.get(list.id) as string : null }));
 }
 
 export async function getOwnedListChoices() {
@@ -278,7 +289,7 @@ export async function getCustomListDetail(
   includeCandidates: boolean,
 ): Promise<ListDetailData | null> {
   const { client, user } = await authenticateListsRequest();
-  const list = await readOwnedList(client, user.id, listId);
+  const list = await readOwnedList(client, user.id, listId, true);
 
   if (!list) {
     return null;

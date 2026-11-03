@@ -36,6 +36,7 @@ type ListDetailPageProps = {
   searchParams: Promise<{
     add?: string | string[];
     created?: string | string[];
+    cover?: string | string[];
     listQuery?: string | string[];
     listStatus?: string | string[];
     listFavourite?: string | string[];
@@ -110,6 +111,7 @@ async function ListDetailContent({
   }
 
   const created = first(query.created) === "1";
+  const coverFailed = created && first(query.cover) === "failed";
 
   return (
     <div className="space-y-8">
@@ -118,7 +120,7 @@ async function ListDetailContent({
           className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm font-medium text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
           role="status"
         >
-          Your private list was created.
+          {coverFailed ? "Your private list was created, but its cover could not be saved. Choose Edit to upload it again." : "Your private list was created."}
         </p>
       ) : null}
 

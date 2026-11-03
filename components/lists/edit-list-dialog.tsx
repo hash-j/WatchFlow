@@ -1,17 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Pencil } from "lucide-react";
 
-import { updateListAction } from "@/app/(app)/actions/lists";
 import { Button } from "@/components/ui/button";
-import { DialogCloseButton, ResponsiveDialog } from "@/components/ui/responsive-dialog";
-import {
-  initialListActionState,
-  type CustomList,
-} from "@/lib/lists/types";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+import type { CustomList } from "@/lib/lists/types";
 
-import { ListFormFields } from "./list-form-fields";
+import { ListDetailsForm } from "./list-details-form";
 
 export function EditListDialog({
   list,
@@ -22,19 +18,16 @@ export function EditListDialog({
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const [state, action, isPending] = useActionState(
-    updateListAction,
-    initialListActionState,
-  );
+  const [formVersion, setFormVersion] = useState(0);
+  const [announcement, setAnnouncement] = useState("");
   const idPrefix = `edit-list-${list.id}`;
   const titleId = `${idPrefix}-title`;
   const descriptionId = `${idPrefix}-dialog-description`;
 
-  useEffect(() => {
-    if (state.requestId > 0 && state.status === "success") {
-      dialogRef.current?.close();
-    }
-  }, [state.requestId, state.status]);
+  const handleSaved = useCallback((message: string) => {
+    setAnnouncement(message);
+    dialogRef.current?.close();
+  }, []);
 
   return (
     <>
@@ -49,9 +42,9 @@ export function EditListDialog({
         <Pencil className="size-4" aria-hidden="true" />
         Edit
       </Button>
-      {state.status === "success" && state.message ? (
-        <p className="sr-only" role="status">
-          {state.message}
+      {announcement ? (
+        <p className="text-xs text-muted-foreground" role="status">
+          {announcement}
         </p>
       ) : null}
 
@@ -59,51 +52,11 @@ export function EditListDialog({
         ref={dialogRef}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        onClose={() => triggerRef.current?.focus()}
+        onClose={() => { setFormVersion(value => value + 1); triggerRef.current?.focus(); }}
         className="max-w-xl"
       >
-        <form action={action} className="relative space-y-5 p-4 pt-16 sm:p-6 sm:pt-16">
-          <DialogCloseButton onClick={() => dialogRef.current?.close()} />
-          <input type="hidden" name="listId" value={list.id} />
-          <div>
-            <h2 id={titleId} className="text-xl font-semibold">
-              Edit list
-            </h2>
-            <p
-              id={descriptionId}
-              className="mt-2 text-sm text-muted-foreground"
-            >
-              Renaming this list does not change its movies or saved order.
-            </p>
-          </div>
-
-          <ListFormFields
-            idPrefix={idPrefix}
-            name={list.name}
-            description={list.description ?? ""}
-            fieldErrors={state.fieldErrors}
-          />
-
-          {state.status === "error" && state.message ? (
-            <p className="text-sm text-destructive" role="alert">
-              {state.message}
-            </p>
-          ) : null}
-
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isPending}
-              onClick={() => dialogRef.current?.close()}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving..." : "Save changes"}
-            </Button>
-          </div>
-        </form>
+        <ListDetailsForm key={formVersion} list={list} idPrefix={idPrefix}
+          onCancel={() => dialogRef.current?.close()} onSaved={handleSaved} />
       </ResponsiveDialog>
     </>
   );

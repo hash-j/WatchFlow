@@ -1,14 +1,178 @@
 # WatchFlow Project Context
 
-Last updated: 2026-11-02
-Last updated by: Codex / custom-list sorting, Library bulk lists and profile password change
+Last updated: 2026-11-03
+Last updated by: Codex / custom-list cover dialogs
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Implementing the three requested product features after the human-accepted completed Unit 2D checkpoint b188c00. Calendar/QStash/Google acceptance work is frozen and untouched. No push or commit has been performed.
+Current phase: Custom-list cover UX moved into create/edit dialogs, using the existing private artwork flow. No new migration. Original artwork migration remains committed; corrective migration application has not been reported. Calendar/QStash/Google acceptance work is frozen and untouched. No push or automatic commit.
 Current branch: `codex/part-18-production-operations`.
-Current status: Starting branch/HEAD/clean tree verified before implementation. Custom-list display sorts and deterministic batch append, Library bulk Add to list and authenticated profile password change are implemented for local review. No migration or dependency change. Manual browser/live-auth acceptance remains pending; see docs/LISTS_AND_PASSWORD_ACCEPTANCE.md. Earlier operational checkpoints below are historical and do not authorize rerunning any operator.
+Current status: List detail now shows information and movies without inline cover/editor controls. Create/edit share name/description/cover forms with previews, prominent upload/replace, remove/undo and cancellation cleanup. Server actions reuse owner-checked artwork mutations and handle optional-cover partial failures without duplicate creation. No live uploads or migrations were performed. Existing correction/deployment checkpoints below remain separate; live artwork acceptance still requires those existing backend prerequisites. Earlier checkpoints do not authorize rerunning any operator.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
-## 2026-11-02 — Custom-list sorting, bulk membership and password change
+## 2026-11-03 — Custom-list cover UX
+
+- Removed the list-detail cover block and separate Edit thumbnail dialog/button.
+  Covers remain on list cards; list detail focuses on list information/movies.
+  Create/edit now share ListDetailsForm and ListCoverField. The cover section
+  shows an optional state/current cover, local selected-image preview, prominent
+  dark-theme upload/replace button and clear remove/undo. Controls wrap on small
+  screens, with a visible sticky save/cancel footer and scrollable native dialog.
+- Create saves an owned list first, then optionally uploads through mutateArtwork.
+  A cover failure redirects to the created list with a safe retry notice; it does
+  not invite duplicate creation or delete the list. Edit saves details then its
+  optional cover change, reporting partial failure explicitly while staying open.
+  Basic MIME/size checks happen before list writes; full decode/normalization,
+  fresh artwork authentication, owner/list predicates, generated paths, CAS and
+  Storage RLS remain in the existing secure flow. No new schema/policy change.
+- Create/edit form saves revalidate list views and library membership labels
+  immediately in the server action, so a saved cover appears in the response
+  rather than waiting on deferred invalidation. No root-layout refresh is added.
+- Name/description and the selected File are retained in client memory across
+  validation responses so native form resets cannot lose retry bytes. Closing
+  resets form state and revokes local preview URLs; no files are persisted client-side.
+  Cover removal applies on Save; Cancel/Undo leave existing artwork intact.
+- No migration, operator, live upload, QStash/calendar/Google/Production action,
+  commit or push was performed. Existing corrective migration deployment remains
+  a separate prerequisite; its application has not been reported in this chat.
+  Acceptance notes and this task's file inventory are in docs/PRIVATE_ARTWORK_ACCEPTANCE.md.
+- Validation: 652 tests across 80 relevant files and the isolated desktop/mobile
+  browser fixture passed. TypeScript and ESLint passed. The build failed only
+  fetching Geist from Google Fonts. Read-only checks against the existing dev
+  server returned sign-up 200 and unauthenticated artwork 401; the human server
+  was not stopped/restarted. No live upload, migration, commit or push occurred.
+
+## 2026-11-03 — Artwork migration committed; read-only recovery prepared
+
+- Latest checkpoint: --recover reported ARTWORK_POLICY_EXPRESSION_INVALID with
+  recovery_read_only=true. No failed policy name or live expression was included.
+  The Codex process still lacks the human terminal's database credentials.
+  --inspect-policies is now a separate read-only metadata path using the same
+  development identity/TLS/ledger guards, with no QStash token dependency. It
+  prints only the six policy names/schema/table/commands/roles/permissive flags
+  and USING/WITH CHECK definitions. Hashim supplied the resulting diagnosis:
+  both INSERT policies bind the path extraction to l.name. This is a real
+  authorization defect, not a harmless PostgreSQL deparser difference.
+- Prepared 202611020002_fix_private_list_artwork_policies.sql, without editing
+  the original migration. The new SECURITY INVOKER helper takes the object path
+  explicitly and uses $1 even inside its EXISTS query, preventing column capture.
+  It requires the existing strict namespace/UUID/WebP/owner helper, list-thumbnail
+  namespace, an existing parsed list ID and auth.uid() ownership. Only two INSERT
+  WITH CHECK expressions are altered; the private bucket, restrictive boundary,
+  no-overwrite and owner SELECT/DELETE remain unchanged. A crafted list title
+  cannot authorize arbitrary list IDs within the caller's namespace anymore.
+- The validator requires the corrected helper/policies and verifies helper source
+  against the pinned forward migration. It rejects the reported l.name binding.
+  Recovery requires all repository migrations installed, including the correction;
+  metadata-only inspection can read the known pending-correction state. Local-only runtime authorization cases
+  are prepared in scripts/fixtures/private-artwork-correction.test.mjs; they do not
+  install migrations and are disabled during Codex's offline checks.
+- Correction validation: 29 offline operator/correction checks and 54 artwork
+  unit tests passed, along with syntax, TypeScript, ESLint and git diff --check.
+  The nine actual PostgreSQL authorization cases are prepared but not executed;
+  their local-only suite was explicitly disabled. The original migration SHA
+  remains unchanged. No migration, live policy, Production or scheduler mutation
+  was performed. Applying the correction remains a separate human-approved step.
+- Prepared scripts/apply-dev-list-artwork-policy-fix.mjs for the existing human
+  credentialed PowerShell session. It reuses the original direct PG/TLS/development
+  identity guards and verifies both migration hashes. The original must already
+  be applied, the correction must be absent and the sole pending migration, and
+  the known legacy policy defect/three original helpers must match exactly.
+  Requires the separate exact typed policy-fix approval. Target/hash/ledger/state
+  and paused stable schedule checks repeat after approval. Only the corrective
+  SQL body and its one ledger row execute atomically; schema/policy/source, avatar
+  read checks, existing data and stable paused schedules are checked before and
+  after commit. The four unrelated policies and original helpers must remain
+  identical. It never executes the original migration or any other pending file.
+  --precheck-only is read-only and has no prompt. Operator not executed by Codex;
+  see the artwork acceptance doc for the exact manual command.
+- Corrective operator preparation validation: 41 offline operator/correction
+  checks, syntax, TypeScript, ESLint and git diff --check passed. The local-only
+  PostgreSQL runtime suite remained disabled. The production build again failed
+  only fetching Geist from Google Fonts. Both migration SHA pins are unchanged;
+  no live application, QStash/Google/Production mutation, commit or push occurred.
+
+- Hashim reports the artwork migration committed successfully on development.
+  The reported final failure is reached only after the original committed ledger,
+  artwork metadata and existing-data fingerprint checks passed. No reapplication,
+  repair, rollback or schedule modification is authorized.
+- The old operator hashed complete QStash schedule objects. It retained no raw
+  before/after snapshots or per-property differences, so the exact historical
+  changed property and whether it was volatile cannot be reconstructed. Do not
+  claim a specific timestamp/header/internal field caused the mismatch.
+- scripts/apply-dev-private-artwork-migration.mjs --recover dispatches to a
+  separate read-only path before approval or mutation code. It checks the exact
+  development target/TLS/live fixture identity, ledger version/name exactly once
+  and recorded pinned SQL body, both artwork fields, private bucket, six policy
+  contracts, helper source/signatures/grants and ownership/reference guards.
+  Read-only owner/anonymous helper checks and profile/list/member integrity are
+  required. Two fresh read-only database snapshots must agree; no historical
+  pre-migration fingerprint was persisted, so it is not fabricated from new data.
+- Schedule comparisons now select only fixed ID/destination/GET/cron/retries/
+  timeout/paused/labels. Calendar labels remain pinned. Hashim explicitly approved
+  adopting the current reminder labels from a GET only after all other fixed
+  reminder fields pass; the second read must retain that label baseline. Label
+  order and opaque metadata are ignored. A stable mismatch reports only the
+  schedule and field name, never values or headers. QStash access is GET-only.
+- Recovery is prepared, not executed by Codex. No live database, Storage, QStash,
+  Google, GitHub, Production, commit or push action occurred during this task.
+  Its 25 offline operator tests and 20 artwork migration/path tests passed;
+  syntax, TypeScript and ESLint passed. See docs/PRIVATE_ARTWORK_ACCEPTANCE.md
+  for the exact recovery command.
+
+## 2026-11-02 — Private profile pictures and list thumbnails (implementation history)
+
+- Uses the new private watchflow-artwork bucket with separate avatar/list owner
+  namespaces, generated immutable UUID filenames and normal authenticated SSR
+  clients. Fresh getUser and owner/list predicates precede every mutation.
+  Uploads are JPEG/PNG/WebP up to 2 MiB/20 MP, decoded/re-encoded as bounded,
+  oriented metadata-free WebP by existing Sharp (now a direct pinned dependency).
+- Shared avatar/image components cover profile, desktop sidebar and mobile
+  drawer. List cards/detail use custom artwork or the existing collage fallback.
+  The compact thumbnail editor is a detail dialog; no list-card form redesign.
+  Gallery paths use one batch query; detail extends its existing owned query.
+  Pre-migration list reads fall back safely so approved list features remain usable.
+- One forward migration, 202611020001_private_profile_and_list_artwork.sql,
+  adds only the list reference, avatar-reference trigger and scoped Storage
+  bucket/functions/policies. RLS is required; restrictive guards prevent broader
+  policies allowing cross-owner access or immutable-object overwrite. Normal
+  image reads use authenticated same-origin GET, never public bucket URLs or
+  repeated signed-URL generation. Cookie/private/no-store response boundaries
+  and versioned names prevent stale/cross-session image reuse.
+- Reference CAS updates handle concurrent tabs. Old-file cleanup occurs only
+  after confirmed writes; uncertain responses keep possibly referenced objects
+  intact. Stored-file cleanup warnings are explicit. Account deletion first
+  cleans owned artwork in bounded batches, preserving the existing confirmation,
+  recent-login and current-user checks; otherwise Storage ownership would block
+  Supabase Auth deletion. No raw bytes/tokens/provider errors are logged.
+- Migration is not applied and live Storage policy behavior is not claimed
+  verified. Manual deployment/checklist: docs/PRIVATE_ARTWORK_ACCEPTANCE.md.
+  Prior custom-list sort/bulk/password and completed Unit 2D work are preserved.
+- Development deployment request: local branch, linked project name/ref and
+  migration scope were checked; 20 migration/path tests passed. Deployment
+  stopped before any remote database connection because this Codex shell lacks
+  SUPABASE_DB_PASSWORD and SUPABASE_DB_CA_CERT_PATH. The required typed artwork
+  migration approval has not been entered. Live ledger/conflict checks, apply
+  and postchecks remain pending; no migration or artwork upload was attempted.
+  The localhost smoke endpoint was unavailable during this deployment attempt.
+- Prepared scripts/apply-dev-private-artwork-migration.mjs for the human's
+  existing credentialed PowerShell session. Uses the existing pg/TLS development
+  pooler pattern; credentials remain inherited and in memory. Requires exact
+  typed artwork approval, the pinned migration as sole pending, no conflicts,
+  known live development identity and unchanged paused schedule GET snapshots.
+  Applies only that pinned SQL body plus its ledger entry in one transaction;
+  schema/bucket/six-policy/RLS and existing-data/function fingerprints are checked
+  before commit and re-read after commit. No CLI broad migration application,
+  uploads, OAuth, executor, QStash writes or GitHub calls. Operator not executed;
+  deployment and live acceptance remain pending. Its 16 offline tests, syntax,
+  ESLint and TypeScript checks passed; the build again failed only fetching Geist
+  from Google Fonts. See the artwork acceptance doc for the exact manual command.
+- Relevant unit/static validation passed: 642 tests across 79 files (artwork, lists, auth, settings, library,
+  notifications and Supabase request contracts). TypeScript and ESLint passed;
+  the production build failed only fetching Geist from Google Fonts. Read-only
+  localhost smoke checks returned 200 for /auth/sign-up and 401 for an unauthenticated
+  private artwork request. The existing development server was left running and
+  unchanged. No live Storage writes, migration application, commit or push occurred.
+
+## 2026-11-02 — Custom-list sorting, bulk membership and password change (approved)
 
 - Reused the existing private-list RPC, ownership/RLS, transaction/lock order,
   duplicate constraint and selection bounds. A single bounded owner-scoped

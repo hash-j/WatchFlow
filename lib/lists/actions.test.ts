@@ -12,12 +12,14 @@ const mocks = vi.hoisted(() => ({
   moveOwnedListItem: vi.fn(),
   removeOwnedListMovie: vi.fn(),
   setOwnedMovieListMemberships: vi.fn(),
+  mutateArtwork: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/server", () => ({ after: (callback: () => void) => callback() }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
+vi.mock("@/lib/artwork/server", () => ({ mutateArtwork: mocks.mutateArtwork }));
 vi.mock("@/lib/lists/supabase-lists", () => ({
   createOwnedCustomList: mocks.createOwnedCustomList,
   updateOwnedCustomList: mocks.updateOwnedCustomList,
@@ -47,6 +49,7 @@ import {
   ListsMissingRpcError,
 } from "./errors";
 import { initialListActionState } from "./types";
+import { ArtworkError } from "@/lib/artwork/images";
 
 const listId = "11111111-1111-4111-8111-111111111111";
 const listMovieId = "22222222-2222-4222-8222-222222222222";
@@ -92,12 +95,66 @@ beforeEach(() => {
   mocks.moveOwnedListItem.mockResolvedValue(mutationResult());
   mocks.removeOwnedListMovie.mockResolvedValue(mutationResult());
   mocks.setOwnedMovieListMemberships.mockResolvedValue(mutationResult());
+  mocks.mutateArtwork.mockResolvedValue({ status: "success", message: "Image saved." });
   mocks.redirect.mockImplementation((url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
   });
 });
 
 describe("custom-list create, edit, and delete actions", () => {
+  function coverForm(operation = "upload") {
+    const form = new FormData(); form.set("name", "Weekend Movies"); form.set("listId", listId);
+    form.set("coverOperation", operation);
+    if (operation === "upload") form.set("coverImage", new File(["image"], "cover.png", { type: "image/png" }));
+    return form;
+  }
+  it("uploads an optional cover only after the owned list exists, never accepting a browser object path", async () => {
+    const form = coverForm(); form.set("path", "foreign/object"); form.set("userId", "foreign");
+    await expect(createListAction(initialListActionState, form)).rejects.toThrow(`NEXT_REDIRECT:/lists/${listId}?created=1`);
+    expect(mocks.mutateArtwork).toHaveBeenCalledWith({ kind: "list", listId }, "upload", expect.any(File));
+    expect(mocks.createOwnedCustomList.mock.invocationCallOrder[0]).toBeLessThan(mocks.mutateArtwork.mock.invocationCallOrder[0]);
+  });
+  it("keeps the newly created list and redirects with a safe notice if its optional upload fails", async () => {
+    mocks.mutateArtwork.mockRejectedValue(new Error("SECRET_STORAGE_DETAILS"));
+    await expect(createListAction(initialListActionState, coverForm())).rejects.toThrow(`NEXT_REDIRECT:/lists/${listId}?created=1&cover=failed`);
+    expect(mocks.createOwnedCustomList).toHaveBeenCalledTimes(1);
+    expect(mocks.deleteOwnedCustomList).not.toHaveBeenCalled();
+  });
+  it("rejects invalid, empty and oversized files before creating or updating list details", async () => {
+    for (const file of [new File(["<svg>"], "cover.svg", { type: "image/svg+xml" }),
+      new File([], "cover.png", { type: "image/png" }), new File([new Uint8Array(2 * 1024 * 1024 + 1)], "big.png", { type: "image/png" })]) {
+      const form = coverForm(); form.set("coverImage", file);
+      expect((await createListAction(initialListActionState, form)).status).toBe("error");
+      expect((await updateListAction(initialListActionState, form)).status).toBe("error");
+    }
+    expect(mocks.createOwnedCustomList).not.toHaveBeenCalled(); expect(mocks.updateOwnedCustomList).not.toHaveBeenCalled();
+    expect(mocks.mutateArtwork).not.toHaveBeenCalled();
+  });
+  it("rejects an ambiguous cover operation and a remove operation during creation", async () => {
+    expect((await createListAction(initialListActionState, coverForm("remove"))).status).toBe("error");
+    expect((await updateListAction(initialListActionState, coverForm("foreign"))).status).toBe("error");
+    expect(mocks.createOwnedCustomList).not.toHaveBeenCalled(); expect(mocks.updateOwnedCustomList).not.toHaveBeenCalled();
+  });
+  it("replaces or removes the cover through the existing private artwork flow after an owned metadata update", async () => {
+    for (const operation of ["upload", "remove"]) {
+      const result = await updateListAction(initialListActionState, coverForm(operation));
+      expect(result.status).toBe("success");
+      expect(mocks.mutateArtwork).toHaveBeenLastCalledWith({ kind: "list", listId }, operation, operation === "upload" ? expect.any(File) : null);
+    }
+  });
+  it("reports saved details plus a controlled cover failure, leaving edit retry possible", async () => {
+    mocks.mutateArtwork.mockRejectedValueOnce(new ArtworkError("Sign in again."));
+    const result = await updateListAction(initialListActionState, coverForm());
+    expect(result).toMatchObject({ status: "error", message: "List details saved, but the cover could not be changed. Sign in again." });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists");
+  });
+  it("never changes artwork for a missing or unauthorized list", async () => {
+    mocks.updateOwnedCustomList.mockResolvedValueOnce(null);
+    expect((await updateListAction(initialListActionState, coverForm())).status).toBe("error");
+    mocks.updateOwnedCustomList.mockRejectedValueOnce(new ListsAuthenticationError());
+    expect((await updateListAction(initialListActionState, coverForm("remove"))).status).toBe("error");
+    expect(mocks.mutateArtwork).not.toHaveBeenCalled();
+  });
   it("creates a trimmed list, revalidates private views, and redirects to it", async () => {
     const formData = new FormData();
     formData.set("name", "  Weekend   Movies ");
@@ -119,6 +176,7 @@ describe("custom-list create, edit, and delete actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/lists/[listId]", "page");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/library/[movieId]", "page");
     expect(mocks.revalidatePath).toHaveBeenCalledTimes(3);
+    expect(mocks.mutateArtwork).not.toHaveBeenCalled();
   });
 
   it("returns field errors for a blank name without writing", async () => {

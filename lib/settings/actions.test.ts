@@ -8,12 +8,14 @@ const mocks = vi.hoisted(() => ({
   updateNotificationPreferences: vi.fn(),
   deleteOwnedLibraryData: vi.fn(),
   deleteVerifiedAuthUser: vi.fn(),
+  deleteAccountArtwork: vi.fn(),
   hasRecentServerVerifiedLogin: vi.fn(),
   revalidatePath: vi.fn(),
   redirect: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/lib/artwork/server", () => ({ deleteAccountArtwork: mocks.deleteAccountArtwork }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/server", () => ({ after: (callback: () => void) => callback() }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
@@ -81,6 +83,7 @@ beforeEach(() => {
   mocks.updateNotificationPreferences.mockResolvedValue(undefined);
   mocks.deleteOwnedLibraryData.mockResolvedValue(3);
   mocks.deleteVerifiedAuthUser.mockResolvedValue(undefined);
+  mocks.deleteAccountArtwork.mockResolvedValue(undefined);
   mocks.hasRecentServerVerifiedLogin.mockReturnValue(true);
   mocks.redirect.mockImplementation((url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
@@ -271,7 +274,16 @@ describe("settings Server Actions", () => {
     ).rejects.toThrow("NEXT_REDIRECT:/?accountDeleted=1");
 
     expect(mocks.deleteVerifiedAuthUser).toHaveBeenCalledWith(session.user);
+    expect(mocks.deleteAccountArtwork).toHaveBeenCalledWith(session.client, session.user.id);
+    expect(mocks.deleteAccountArtwork.mock.invocationCallOrder[0]).toBeLessThan(mocks.deleteVerifiedAuthUser.mock.invocationCallOrder[0]);
     expect(session.client.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
+  });
+
+  it("keeps the account active when owned artwork cleanup fails", async () => {
+    mocks.deleteAccountArtwork.mockRejectedValueOnce(new SettingsPersistenceError("Stored images could not be removed. Account remains active."));
+    const result = await deleteAccountAction(INITIAL_SETTINGS_ACTION_STATE, form({ confirmation: "DELETE", confirmed: true }));
+    expect(result.status).toBe("error"); expect(result.message).toContain("Account remains active");
+    expect(mocks.deleteVerifiedAuthUser).not.toHaveBeenCalled(); expect(session.client.auth.signOut).not.toHaveBeenCalled();
   });
 
   it("does not sign out or report success after admin deletion failure", async () => {

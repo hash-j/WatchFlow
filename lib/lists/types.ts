@@ -12,6 +12,7 @@ export type CustomList = {
   visibility: "private";
   createdAt: string;
   updatedAt: string;
+  thumbnailPath?: string | null;
 };
 
 export type CustomListSummary = CustomList & {

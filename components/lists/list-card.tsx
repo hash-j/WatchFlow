@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import type { CustomListSummary } from "@/lib/lists/types";
 
 import { EditListDialog } from "./edit-list-dialog";
-import { ListPosterCollage } from "./list-poster-collage";
+import { ListArtwork } from "./list-artwork";
 import { ListSummaryOrderControls } from "./list-summary-order-controls";
 
 function formatListDate(value: string) {
@@ -32,7 +32,9 @@ export function ListCard({
 }) {
   return (
     <article className="flex min-w-0 flex-col rounded-xl border bg-card p-4 shadow-sm">
-      <ListPosterCollage
+      <ListArtwork
+        listId={list.id}
+        path={list.thumbnailPath}
         posterPaths={list.posterPaths}
         listName={list.name}
       />
