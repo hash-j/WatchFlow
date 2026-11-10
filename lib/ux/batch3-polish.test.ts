@@ -98,7 +98,7 @@ describe("Part 16F-B Batch 3 schedule, list, and picker polish contracts", () =>
 
     expect(row).toContain("grid-cols-[4.5rem_minmax(0,1fr)]");
     expect(row).toContain("col-start-1 row-start-1");
-    expect(row).toContain("Position {item.position}");
+    expect(row).toContain("Position {displayPosition}");
     expect(order).toContain("grid grid-cols-2");
     expect(order).toContain("Move earlier");
     expect(order).toContain("Move later");

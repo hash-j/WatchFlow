@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
 
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
+import { PublicFooter } from "@/components/public-information";
 
 import "./globals.css";
 
@@ -46,10 +47,12 @@ export const viewport: Viewport = {
   ],
 };
 
-const geistSans = Geist({
+const geistSans = localFont({
+  src: "./fonts/geist-latin.woff2",
+  weight: "100 900",
+  style: "normal",
   variable: "--font-geist-sans",
   display: "swap",
-  subsets: ["latin"],
 });
 
 export default function RootLayout({
@@ -67,6 +70,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <PublicFooter />
         </ThemeProvider>
         <ServiceWorkerRegistration />
       </body>

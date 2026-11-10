@@ -1,14 +1,15 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { normalizeSourceNewlines } from "../testing/source-text";
 
-const migration = readFileSync(
+const migration = normalizeSourceNewlines(readFileSync(
   join(
     process.cwd(),
     "supabase/migrations/202609290002_part_18j_restrict_helper_execution.sql",
   ),
   "utf8",
-).toLowerCase();
+)).toLowerCase();
 
 const internalHelpers = [
   "public.watchflow_part18j_uuid(text, text)",

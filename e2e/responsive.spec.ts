@@ -29,6 +29,11 @@ const publicRoutes = [
   "/auth/update-password",
   "/auth/reset-password",
   "/auth/error?reason=invalid_link",
+  "/privacy",
+  "/terms",
+  "/support",
+  "/data-deletion",
+  "/about",
 ] as const;
 
 test.describe("public responsive shell", () => {

@@ -30,6 +30,8 @@ const contentSecurityPolicy = [
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  // Preserve existing navigation semantics during the security update.
+  partialPrefetching: false,
   experimental: {
     serverActions: {
       // A validated 2 MiB CSV can expand when its parsed rows are serialized

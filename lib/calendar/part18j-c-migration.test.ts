@@ -1,35 +1,36 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { normalizeSourceNewlines } from "../testing/source-text";
 
-const migration = readFileSync(
+const migration = normalizeSourceNewlines(readFileSync(
   join(
     process.cwd(),
     "supabase/migrations/202609300001_part_18j_c_credential_rotation.sql",
   ),
   "utf8",
-).toLowerCase();
-const pauseGuardMigration = readFileSync(
+)).toLowerCase();
+const pauseGuardMigration = normalizeSourceNewlines(readFileSync(
   join(
     process.cwd(),
     "supabase/migrations/202609300002_part_18j_c_pause_claim_guard.sql",
   ),
   "utf8",
-).toLowerCase();
-const eventIdMigration = readFileSync(
+)).toLowerCase();
+const eventIdMigration = normalizeSourceNewlines(readFileSync(
   join(
     process.cwd(),
     "supabase/migrations/202609300003_part_18j_c_google_event_id_compatibility.sql",
   ),
   "utf8",
-).toLowerCase();
-const pausedDesiredStateMigration = readFileSync(
+)).toLowerCase();
+const pausedDesiredStateMigration = normalizeSourceNewlines(readFileSync(
   join(
     process.cwd(),
     "supabase/migrations/202609300004_part_18j_c_preserve_paused_desired_state.sql",
   ),
   "utf8",
-).toLowerCase();
+)).toLowerCase();
 
 const signature =
   "public.watchflow_replace_google_calendar_credential(\n  uuid, uuid, bytea, bytea, bytea, smallint\n)";

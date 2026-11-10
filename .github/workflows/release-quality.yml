@@ -93,5 +93,5 @@ jobs:
       - name: Install Chrome for public browser checks
         run: npx playwright install --with-deps chrome
 
-      - name: Run public responsive browser checks
-        run: npx playwright test e2e/responsive.spec.ts
+      - name: Run production PWA and public responsive browser checks
+        run: npm run test:release

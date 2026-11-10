@@ -1,12 +1,196 @@
 # WatchFlow Project Context
 
-Last updated: 2026-11-03
-Last updated by: Codex / custom-list cover dialogs
+Last updated: 2026-11-04
+Last updated by: Codex / read-only reminder release diagnosis
 Purpose: Canonical project handoff and single source of truth for coding agents  
-Current phase: Custom-list cover UX moved into create/edit dialogs, using the existing private artwork flow. No new migration. Original artwork migration remains committed; corrective migration application has not been reported. Calendar/QStash/Google acceptance work is frozen and untouched. No push or automatic commit.
+Current phase: Movies-only WatchFlow v1.0 release finalization. Series/TV and payments are deferred. Hashim explicitly opened a read-only scheduled-reminder diagnosis and controlled acceptance-plan preparation; no reminder resume or acceptance execution is authorized. Other completed Part 18/QStash/calendar work remains frozen. No push, commit or deployment.
 Current branch: `codex/part-18-production-operations`.
-Current status: List detail now shows information and movies without inline cover/editor controls. Create/edit share name/description/cover forms with previews, prominent upload/replace, remove/undo and cancellation cleanup. Server actions reuse owner-checked artwork mutations and handle optional-cover partial failures without duplicate creation. No live uploads or migrations were performed. Existing correction/deployment checkpoints below remain separate; live artwork acceptance still requires those existing backend prerequisites. Earlier checkpoints do not authorize rerunning any operator.
+Current status: New reminder operational release gate is open; public content/support remains complete. Live read-only console inspection confirmed the exact development reminder schedule is paused, GETs the reminder endpoint every five minutes, zero retries and 55-second timeout. GitHub reminder gate is false and independent of QStash. The example job has correct UTC/15-minute calculation, pending/zero attempts, enabled reminder/push preferences and one stored unexpired owner subscription. At inspection the example due instant was still future and corresponds to 06:38 Karachi, not 01:38 local time. Detailed safe acceptance plan is prepared but NOT approved/run; deployed bearer/VAPID matching and fresh isolation checks remain prerequisites. No live application/scheduler state changed. Public build/TypeScript/lint/secret/PWA evidence from the prior contact task remains valid; this task changed docs only and passed 75 focused offline checks. No Production, Google/calendar execution, Android work, commit, push or deployment. See docs/V1_REMINDER_RELEASE_ACCEPTANCE.md and docs/WATCHFLOW_V1_RELEASE_CHECKLIST.md.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
+
+## 2026-11-04 — Read-only reminder release diagnosis and acceptance plan
+
+- Hashim explicitly authorized inspection and plan preparation only and forbids
+  resuming the reminder schedule or running acceptance before human approval.
+  Do not reuse old calendar/operator scripts as reminder activation helpers.
+- Live QStash EU console confirmed the exact reminder schedule remains paused,
+  GET destination is the dedicated development reminder endpoint, cron is
+  2-57/5 every hour in default UTC, provider retries are zero, timeout is 55,000
+  ms and forwarded Authorization is redacted. Calendar also remains paused;
+  the region has no active schedules. No secret value was revealed or copied.
+- Read-only GitHub API confirmed the reminder workflow gate is false. It gates
+  only GitHub's trigger, not QStash. No workflow or executor was dispatched.
+  Unauthenticated development reminder GET returned 401/no-store; signup 200
+  and its CSP confirm the known development backend. No privileged request ran.
+- The live example matches Hashim's timestamps: scheduled 2026-11-04T01:53Z,
+  timezone UTC, lead 15, due 01:38Z, pending and zero attempts. Matched owner
+  preferences are reminders/push enabled and lead 15; one owner subscription
+  exists and is unexpired by stored expiry. No endpoint/key/user ID was saved.
+  Complete reminder grid has that pending job and one old skipped job; repeat
+  fresh isolation checks before any future activation because the scan is global.
+- Profile reads confirm UTC. At the clock observation 2026-11-03 20:51:34 UTC,
+  the example was not yet due; its due time is 06:38 Karachi on 4 November.
+  Existing source conversion and live stored subtraction agree. Valid profile
+  timezone defaults new forms; changing it does not rewrite old movie instants
+  or zones. No profile/preference/schedule was changed. Offline example proof
+  and 75 tests across 10 relevant timezone/settings/reminder files passed.
+- Existing deterministic notification identity, per-subscription ledger, row
+  locks/leases, owner/schedule/future checks, bounded retries and no ambiguous
+  resend are retained. Five-minute cadence can pick up a due reminder up to
+  almost five minutes later. Push-service acceptance is not proof of OS display.
+  No separate worker or calendar executor is required by this reminder path.
+- docs/V1_REMINDER_RELEASE_ACCEPTANCE.md prepares one QA/movie fixture, future
+  cron-aligned 15-minute reminder, two automatic ticks and exact idempotency /
+  owner-isolation evidence, followed by approved re-pause and fixture-only
+  cleanup. Deployed bearer/VAPID matching, effective live contracts and fresh
+  backlog/in-flight/alternate-trigger isolation remain hard preconditions.
+  SAFE TO RUN NOW is NO: human approval is pending and the test was not run.
+- Only diagnosis/plan/checklist/handoff documents changed. No live application
+  data, preferences, schedule state, Production, Google events, calendar executor,
+  Android/device tests, commit, push or deployment changed. Prior public release
+  checks are preserved; a fresh app build is unnecessary for docs-only work.
+
+## 2026-11-04 — Approved public support contact
+
+- Published Hashim's exact supplied public contact, hashim.ghub@gmail.com, as
+  a shared Server Component mailto link in /privacy, /terms, /data-deletion,
+  /about, /support and the global public footer. Settings already links to the
+  Help & contact page. Information pages now show the 4 November update date.
+- Changed only support-contact clauses and the necessary public/release content;
+  approved policy substance, operator name and TMDB branding are unchanged.
+  No SMTP/Brevo configuration, Auth sender behavior, environment file or provider
+  setting was edited. No email was sent by the mailto browser assertions.
+- Updated the release checklist/audit and future listing contact in the existing
+  Android runbook, without starting Android work. Former pending-contact notices
+  are resolved, including stale handoff status; historical checkpoints remain
+  explicitly historical. No contact/company/address/domain was invented.
+- Fresh production build passes 49/49 page generations, along with ESLint,
+  direct TypeScript and the 487-artifact secret scan. The public-content test
+  verifies the exact email/href in each page and footer and rejects unresolved
+  notices. All 15 public-content/PWA/responsive cases passed with one worker and
+  zero retries. Source/docs search and all five generated public pages confirm
+  no unresolved support-contact notices remain. Diff hygiene passed.
+- No repeat RLS/QA authentication, application data write, calendar/QStash action,
+  Android/device test, commit, push, deployment or provider-console change.
+
+## 2026-11-03 — Final web acceptance checkpoint (before contact publication)
+
+- Accepted Hashim's successful read-only RLS rerun as owner-reported evidence:
+  five passed, one intentionally excluded/skipped push-subscription write test,
+  no authentication failure, calendar/QStash tests or destructive/write suite.
+  This supersedes the earlier credential-setup blocker; no new authentication
+  attempt or credential read is needed. No secret/environment values recorded.
+- Re-reviewed /privacy, /terms, /data-deletion and /about. Public access,
+  source-aligned data disclosures, deletion limitations and required TMDB
+  wording/unmodified official logo are ready for final web acceptance. The
+  support contact was still pending by explicit owner instruction at that time;
+  its later publication on 2026-11-04 resolves that public-content blocker.
+- Updated release checklist and audit evidence. Source/dependencies are unchanged
+  since the successful final build, TypeScript, ESLint, secret scan and 15-case
+  public browser sweep, so those passing results are retained without repeating
+  completed checks. Docs-only diff hygiene is rechecked. Candidate is ready for
+  Hashim's final web acceptance; Android stays deferred until separately approved.
+- No application data mutation, QStash/calendar action, Android/device testing,
+  commit, push, Production deployment or provider-console change was performed.
+
+## 2026-11-03 — Web release cleanup and public information (earlier checkpoint)
+
+- Exact CRLF cause: six raw SQL inputs in three migration-contract test files
+  retained Windows CRLF while seven exact multiline assertions used LF.
+  normalizeSourceNewlines changes only CRLF pairs to LF before existing
+  lowercasing; all SQL signature/role/ownership/forbidden-operation assertions
+  remain unchanged. Added LF/CRLF regression checks preserve indentation and
+  reject altered grant operations, arguments and role lists. Focused 21/21 and
+  full 1,236/1,236 checks across 148 files pass. No migration bytes changed.
+- Reviewed all 16 npm moderate records: one minimatch root advisory propagated
+  through ESLint/Next ESLint/TypeScript-ESLint, with two installed versions. All
+  reported nodes are development-only; production audit has zero findings.
+  Applied compatible eslintrc 3.3.7 and matching TypeScript-ESLint 8.72.1 updates.
+  Upstream still uses the affected minimatch major ranges; no forced override,
+  major upgrade or downgrade. Exact package/version/chain/exposure/fix matrix
+  and residual build-tool DoS risk are in docs/WEB_RELEASE_AUDIT.md.
+- Added public static Server Component routes /privacy, /terms, /support,
+  /data-deletion and /about, shared public footer and Settings policy/help links.
+  Disclosures reflect actual account/movie/review/schedule/artwork data, Google
+  grants/event transport, push/browser metadata, cookies/theme, existing delivery
+  providers, external trailer links and absence of an analytics/ad integration.
+  No invented company/address/contact/domain, guaranteed delivery, fixed backup
+  retention or Google event deletion as an account-deletion side effect.
+- Operator name WatchFlow is supplied by Hashim. Public support was deliberately
+  left pending rather than inventing an email or request form; Hashim supplied
+  the approved contact on 2026-11-04. Deletion guidance
+  explains browser self-service, recent login, exact confirmation and separate
+  Google disconnect cleanup. No application data action was run for the content.
+- /about includes TMDB's exact required notice and unmodified official logo,
+  original colors/aspect ratio, subordinate to WatchFlow branding. Download hash
+  matches its official asset filename; provenance is recorded in public/brand.
+  No new external browser image host or tracking request was added.
+- Expanded public production browser coverage: 15/15 passes, one worker/zero
+  retries. All five new routes are public HTTP 200 and join the 13-viewport web
+  matrix; existing PWA cache/offline/font/signup checks still pass. One initial
+  Chrome teardown timeout passed on focused and subsequent full reruns with
+  unchanged assertions/timeouts. Production build generates 49/49 pages; lint,
+  direct TypeScript and the 487-artifact secret scan pass.
+- The existing read-only RLS selection is blocked before assertions by Auth
+  invalid_credentials. No push write case, calendar suite or scheduler/operator
+  ran. Hashim will refresh ignored local QA credentials, not share them in chat;
+  wait for explicit readiness before another login. Both users must already
+  exist and be distinct confirmed development accounts. Key names/precedence
+  and exact five-case read-only command are in docs/WEB_RELEASE_AUDIT.md; no
+  actual credential/environment values are recorded. Duplicate QA declarations
+  in the ignored test file must be refreshed/consolidated; last declaration wins.
+- Release checklist now classifies remaining gates as READY, MANUAL ACTION,
+  ANDROID PHASE or POST-V1. Series stays POST-V1. No Android/device testing,
+  schema, live application data mutation, QStash/calendar operation, commit,
+  push, Production deployment or provider-console setting changed.
+
+## 2026-11-03 — Movies-only v1 release finalization (earlier pass)
+
+- Working tree was clean on the requested branch before this pass. No Series,
+  new product feature, schema/migration, live database, scheduler, Google,
+  Production, GitHub push, commit or deployment action was performed. Owner
+  confirms the recent features and development artwork migrations complete.
+  Historical pending operator notes are not instructions to repeat them.
+- Replaced next/font/google with next/font/local and checked in the unmodified
+  Geist Latin variable WOFF2 (28,356 bytes), provenance/hash and public OFL
+  license. Browser/build font delivery is same-origin and needs no Google fetch.
+- Current npm audit exposed critical/high production dependency advisories.
+  Updated Next and matching ESLint config to 16.4.4, direct/Next-overridden
+  Sharp to 0.35.5 and Zod to 4.6.6. Compatible transitive updates include
+  Vitest 4.1.12 and patched tooling; corrected brace-expansion/js-yaml overrides.
+  Production audit now has zero findings. Full audit has 16 moderate development
+  findings inherited from minimatch; no high/critical remain. No forced major
+  override/downgrade was used. Explicit partialPrefetching false preserves the
+  existing navigation behavior through the framework security update.
+- Fixed auth proxy redirects dropping Supabase cookie updates: every cookie and
+  option now reaches the redirect response. Two runtime unit tests cover it.
+  Updated one stale source assertion to match approved list displayPosition;
+  no list implementation, calendar test or migration was changed.
+- Added npm run test:release with a dedicated public-only production profile,
+  fresh loopback port 3101 server, one worker, zero retries and video off.
+  Real Chrome verifies manifest/icons/headers, local font/no Google requests,
+  worker control, static-only Cache Storage, protected logged-out redirects,
+  generic offline fallback/recovery and signup HTTP 200. Thirteen existing
+  responsive viewport cases cover 320–1920px. Release Quality CI now invokes
+  this profile; no remote CI run is claimed. Initial browser setup lacked ffmpeg;
+  disabling unnecessary video allowed all 14 cases to pass without installation.
+- Final production build on Next 16.4.4 passed all 44 page generations, along
+  with ESLint, direct TypeScript and the 435-artifact client-secret scan. The
+  Windows sandbox denied Turbopack CSS-worker creation; the standard build
+  passed outside the sandbox. Full unit/source suite: 1,225 passed, seven failed
+  across 147 files (144 passed/three failed). Remaining failures are existing
+  calendar SQL CRLF/LF string assertions; the suite is not claimed green.
+- PWA source/runtime audit preserves network-only private documents and
+  existing cache identity. Icons have correct dimensions; maskable artwork was
+  visually inspected. Final static JS/CSS inventory: 59 assets / 1,619,606 raw
+  bytes / 507,237 individually gzipped bytes; largest chunk 71,702 gzip bytes.
+  These are whole-build sizes, not route transfers or production Core Web Vitals.
+- Created the release checklist and official-source Android TWA/Bubblewrap
+  runbook, including API 36, AAB/Play App Signing, real certificate asset links,
+  account-dependent testing, privacy/deletion/Data safety and device review.
+  No Android package ID, keystore, assetlinks endpoint, wrapper or store release
+  was fabricated. Missing public privacy/deletion guidance/TMDB attribution,
+  final deployed/mobile performance and production parity remain explicit gates.
 
 ## 2026-11-03 — Custom-list cover UX
 
@@ -4307,9 +4491,13 @@ libraries, movie management, queueing, scheduling, favourites, private custom
 lists, a random picker, rule-based recommendations, CSV import, CSV/JSON
 export, settings, a personal Statistics page, and basic dashboard summaries.
 It does **not** contain public/global/social analytics, shared lists, AI
-recommendations or insights, notification delivery, calendar sync, or payments.
+recommendations or insights, Series/TV, or payments. Existing notification and
+optional calendar implementations and acceptance are recorded in the dated
+Part 18 checkpoints above and remain frozen during v1 release finalization.
 
-The direction remains a production-oriented SaaS, but paid launch is deferred. The repository contains no billing implementation or proof of a production deployment.
+WatchFlow v1.0 is movies only. Paid launch is deferred; no billing implementation
+exists. The completed Part 17 production acceptance is recorded above; this
+release-finalization pass has not deployed the current branch.
 
 ## 3. Technology Stack
 
@@ -4912,6 +5100,10 @@ Migrations 1 and parts of 2 are not safely repeatable; never rerun old SQL blind
 
 ## 20. Current Project State
 
+- Current v1 candidate: see the top checkpoint and
+  `docs/WATCHFLOW_V1_RELEASE_CHECKLIST.md`. The following is the historical
+  Part 15.5G baseline, not the current branch, migration inventory or release gate.
+
 - Branch and code HEAD: `master` at `2bb576a` (`fix: harden authenticated
   profile privileges`), matching `origin/master` and the latest successful
   Release Quality run.
@@ -4932,12 +5124,16 @@ Migrations 1 and parts of 2 are not safely repeatable; never rerun old SQL blind
 
 ## 21. Next Development Queue
 
-This is the roadmap, not completed functionality.
+Current authorized direction supersedes the historical Part 16–19 queue:
 
-1. **Part 16 - Preview deployment**
-2. **Part 17 - Public beta preparation**
-3. **Part 18 - Notifications and calendar integration**
-4. **Part 19 - Paid SaaS**
+1. Finalize the movies-only v1 release gates in the release checklist.
+2. Complete production/device validation and Android Play packaging/submission
+   through the prepared runbook when its operator inputs are settled.
+3. Series/TV is post-v1; payments remain out of scope.
+
+Do not reopen completed Part 18/QStash/calendar work or the manually approved
+list sorting, bulk list actions, password and artwork features. Do not push
+GitHub or deploy without a subsequent instruction.
 
 ## 22. Part 12 Implementation Notes
 

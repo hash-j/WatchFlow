@@ -1,14 +1,15 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { normalizeSourceNewlines } from "../testing/source-text";
 
-const migration = readFileSync(
+const migration = normalizeSourceNewlines(readFileSync(
   resolve(
     process.cwd(),
     "supabase/migrations/202609300005_part_18j_d_disconnect_reconciliation.sql",
   ),
   "utf8",
-).toLowerCase();
+)).toLowerCase();
 
 describe("Part 18J-D disconnect reconciliation migration", () => {
   it("turns disconnect into idempotent cleanup work without deleting credentials early", () => {
