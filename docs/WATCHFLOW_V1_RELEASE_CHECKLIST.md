@@ -27,7 +27,7 @@ this checklist. Prior approved list/password/artwork behavior is preserved.
 | READY | Browser secret boundary | Post-build scan passed across 487 browser/rendered artifacts; no forbidden secret names/values |
 | READY | Auth redirect cookie propagation | Earlier fix preserved, including two passing runtime regression tests |
 | READY | Read-only live RLS integration | Hashim reports the rerun after local credential refresh passed five read-only cases; one push-subscription write case was intentionally excluded/skipped. No authentication failure, application data write, destructive suite or calendar/QStash tests. This is owner-reported successful execution, not a new agent-run login |
-| MANUAL ACTION | Scheduled reminder operational acceptance | New owner-reported v1 blocker: live development QStash reminder schedule remains paused. Stored example is correct UTC/15-minute due time and was still future at inspection. Source checks and read-only diagnosis are complete; runtime preconditions and explicit approval are required before temporary resume or the prepared controlled test. See V1_REMINDER_RELEASE_ACCEPTANCE.md |
+| READY | Scheduled reminder operational acceptance | **PASS; end-to-end PASS** (owner-approved 2026-11-10). Hashim confirmed the Chrome/Windows push appeared on screen and the in-app "Scheduled movie reminder" shows at 12:32 AM Karachi. On watchflow-dev-ops (HEAD 80754b3, VAPID configured), a QStash tick at 19:32Z delivered automatically: 1 job `push_delivered`, 1 delivery accepted by the push service, 1 in-app notification. The pre-due tick was a no-op; bearer and VAPID were verified; isolation held; calendar stayed paused; the reminder schedule was re-paused. Same-version repeat-tick idempotency is covered by the existing automated tests (29/29 focused tests passed), not live evidence. Blockers found and fixed during acceptance: the dev Supabase project was paused, the dev project had no VAPID variables, and the deployment was stale. See V1_REMINDER_RELEASE_ACCEPTANCE.md |
 | READY | Public production browser checks | Fresh full sweep: 15/15 passed with zero retries. Includes PWA, public-content and 13 responsive cases covering all new public pages. One earlier Chrome teardown timeout passed on a focused rerun and the subsequent full sweep |
 | READY | Signup route stability | Public production browser checks returned HTTP 200 for `/auth/sign-up` and rendered the expected form |
 | READY | Scope/diff hygiene | No SQL migrations or application calendar/scheduler behavior changed; no commit/push/deploy |
@@ -54,9 +54,9 @@ rerun. Credentials remain private and are not inspected or recorded here.
 Public self-service deletion instructions are ready. Account-access, privacy
 and deletion assistance can be requested at [hashim.ghub@gmail.com](mailto:hashim.ghub@gmail.com).
 No public support-contact placeholders or public-content blockers remain.
-Overall web release acceptance now awaits the newly requested controlled
-development reminder verification as well as Hashim's final acceptance. No
-resume/test is authorized yet; public launch needs a separately approved release.
+The controlled development reminder acceptance passed on 2026-11-10. Overall
+web release acceptance now awaits Hashim's final acceptance; public launch
+needs a separately approved release.
 Android is not authorized to start.
 
 ## PWA / performance and acceptance
@@ -67,7 +67,7 @@ Android is not authorized to start.
 | READY | PWA runtime audit | Real Chrome verifies manifest/icon delivery, worker headers/control, local fonts, protected logged-out redirects, static-only Cache Storage, offline fallback/recovery and signup |
 | READY | Public page coverage | Public-content regression checks routes, footer links, TMDB logo/wording, the exact approved support mailto link in each public page and footer, and absence of unresolved support notices. Responsive matrix includes all five new pages at 13 desktop/mobile web viewports |
 | READY | Performance scope | Existing request-scoped private reads, bounded datasets, responsive images and earlier approved optimizations preserved; no new analytics/client feature or cross-user cache |
-| MANUAL ACTION | Hashim final web acceptance | Public content is ready. Complete the newly requested development reminder operational acceptance under explicit approval, then review the overall web candidate; no remaining public-content authoring blocker |
+| MANUAL ACTION | Hashim final web acceptance | Public content is ready and the reminder gate passed. QA cleanup was done and verified on 2026-11-10. Remaining: a decision on committing these docs and pushing the 4 unpushed commits, then final review of the overall web candidate |
 | MANUAL ACTION | Deployed web acceptance | After a separately authorized deployment: verify target parity/private artwork policies, HTTPS/Auth/email/callback configuration, required public policy/support URLs in provider consoles and authenticated desktop/mobile web smoke. These are later deployment checks, not additional public-content authoring blockers. No deployment or console change is authorized now |
 | MANUAL ACTION | Deployed performance evidence | Measure representative authenticated mobile web routes; local builds/public browser passes are not field Core Web Vitals or database query-plan evidence |
 | POST-V1 | New performance architecture | No global private caching, prefetch migration or speculative indexing is introduced to complete this release |

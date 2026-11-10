@@ -75,6 +75,39 @@ vercel deploy --prod --local-config vercel.watchflow-dev.json --project watchflo
 Here, `--prod` promotes only within the dedicated non-Production Vercel project;
 it does not authorize a WatchFlow Production deployment.
 
+**Verified working method (2026-11-11, Vercel CLI 65.4.0).** The command above
+is now rejected with "Hobby accounts are limited to daily cron jobs". The CLI
+still uploads the root `vercel.json`, and the build validates its one-minute crons,
+even with `--local-config`. Deploy an exact Git export of the reviewed commit
+that omits `vercel.json`, pinned to the dev project by ID. From Git Bash, with
+`<dir>` an empty scratch folder outside the repository:
+
+```bash
+git archive HEAD | tar -x -C <dir>
+rm <dir>/vercel.json
+cd <dir>
+VERCEL_ORG_ID=team_dpsZ4OsXuH0ZALzmHsiefYS7 \
+VERCEL_PROJECT_ID=prj_1hR9C2zlQ75RQOz46grBtkZCYFZh \
+npx --yes vercel@65.4.0 deploy --prod --local-config vercel.watchflow-dev.json
+```
+
+`git archive` exports only tracked files, so no `.env*` secrets (other than
+`.env.example`) or uncommitted edits are uploaded. The committed `vercel.json` is
+unchanged. The IDs are watchflow-dev-ops identifiers, not secrets. Never use them for the
+`watchflow` Production project. Do not push this branch as a deployment
+shortcut: watchflow-dev-ops tracks it, but the `watchflow` project would also
+build a protected Preview whose variables point at the Production backend.
+Afterwards, verify `/about` 200, reminder route 401 `no-store`, and that the CSP origin is
+watchflow-dev. Required watchflow-dev-ops Production variables: the Supabase
+URL, publishable key and secret key, `TMDB_READ_ACCESS_TOKEN`, `WATCHFLOW_SCHEDULER_SECRET`,
+`WATCHFLOW_EXPECTED_SUPABASE_PROJECT_REF`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
+`VAPID_PRIVATE_KEY` and `VAPID_SUBJECT`.
+
+QStash (EU) is the accepted development reminder trigger; see
+[V1_REMINDER_RELEASE_ACCEPTANCE.md](V1_REMINDER_RELEASE_ACCEPTANCE.md). The
+watchflow-dev Supabase project is on the Free plan and pauses after inactivity.
+A paused project blocks every executor until it is resumed.
+
 The repository has separate reminder and calendar workflows. Each uses a fixed
 `https://watchflow-dev-ops.vercel.app` origin, one fixed executor path, GET,
 the existing bearer contract, no redirects, bounded request time, and exact
