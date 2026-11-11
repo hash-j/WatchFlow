@@ -21,6 +21,7 @@ import {
   type LibraryMovieStatus,
 } from "@/lib/movies/types";
 import { getMovieManagementFieldVisibility } from "@/lib/library/management-fields";
+import { createNonResettingSubmitHandler } from "@/lib/forms/non-resetting-submit";
 
 type MovieManagementFormProps = {
   item: LibraryMovie;
@@ -64,7 +65,7 @@ function MovieManagementFields({
   const fields = getMovieManagementFieldVisibility(status);
 
   return (
-    <form action={action} className="space-y-6">
+    <form onSubmit={createNonResettingSubmitHandler(action)} className="space-y-6">
       <input type="hidden" name="libraryId" value={item.libraryId} />
       <input type="hidden" name="movieId" value={item.movie.id} />
 

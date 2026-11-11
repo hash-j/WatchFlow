@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ProfileSettings } from "@/lib/settings/types";
 import { INITIAL_SETTINGS_ACTION_STATE } from "@/lib/settings/types";
+import { createNonResettingSubmitHandler } from "@/lib/forms/non-resetting-submit";
 import { FieldError, FormMessage } from "./form-message";
 
 const COMMON_TIMEZONES = [
@@ -29,7 +30,7 @@ export function ProfileSettingsForm({ profile }: { profile: ProfileSettings }) {
   );
 
   return (
-    <form action={action} className="space-y-6">
+    <form onSubmit={createNonResettingSubmitHandler(action)} className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="full-name">Full name</Label>
         <Input

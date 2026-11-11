@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ListPlus, Save } from "lucide-react";
 
 import { setMovieListMembershipsAction } from "@/app/(app)/actions/lists";
+import { createNonResettingSubmitHandler } from "@/lib/forms/non-resetting-submit";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   initialListActionState,
@@ -96,7 +97,10 @@ function MovieListMembershipsFormState({
           </p>
         </div>
       ) : (
-        <form action={action} className="mt-5 space-y-4">
+        <form
+          onSubmit={createNonResettingSubmitHandler(action)}
+          className="mt-5 space-y-4"
+        >
           <input type="hidden" name="userMovieId" value={userMovieId} />
           <input type="hidden" name="movieId" value={movieId} />
           {[...selectedIds].map((listId) => (

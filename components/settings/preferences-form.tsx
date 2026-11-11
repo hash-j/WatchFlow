@@ -19,6 +19,7 @@ import {
   TIME_FORMATS,
   type UserPreferences,
 } from "@/lib/settings/types";
+import { createNonResettingSubmitHandler } from "@/lib/forms/non-resetting-submit";
 import { FieldError, FormMessage } from "./form-message";
 
 function Toggle({
@@ -57,7 +58,7 @@ export function PreferencesForm({ preferences }: { preferences: UserPreferences 
   );
 
   return (
-    <form action={action} className="space-y-6">
+    <form onSubmit={createNonResettingSubmitHandler(action)} className="space-y-6">
       <div className="grid gap-5 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="default-status">Default movie status</Label>

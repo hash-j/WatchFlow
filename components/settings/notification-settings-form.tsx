@@ -12,6 +12,7 @@ import {
   REMINDER_OFFSET_OPTIONS,
   type UserPreferences,
 } from "@/lib/settings/types";
+import { createNonResettingSubmitHandler } from "@/lib/forms/non-resetting-submit";
 import { FieldError, FormMessage } from "./form-message";
 
 const reminderLabels: Record<number, string> = {
@@ -55,7 +56,7 @@ export function NotificationSettingsForm({
   );
 
   return (
-    <form action={action} className="space-y-6">
+    <form onSubmit={createNonResettingSubmitHandler(action)} className="space-y-6">
       <fieldset className="space-y-3">
         <legend className="text-sm font-semibold">Notification categories</legend>
         <p className="text-sm text-muted-foreground">

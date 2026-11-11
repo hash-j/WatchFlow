@@ -8,6 +8,38 @@ Current branch: `codex/part-18-production-operations`.
 Current status: Reminder gate PASS on watchflow-dev-ops (HEAD 80754b3, VAPID configured): automatic QStash delivery at 19:32Z with 1 notification and 1 accepted push; Hashim saw the Chrome/Windows push and the in-app "Scheduled movie reminder" at 12:32 AM Karachi; bearer, VAPID and isolation verified; both QStash schedules paused; QA cleanup done. Remaining: a push decision and Hashim final web acceptance. See docs/V1_REMINDER_RELEASE_ACCEPTANCE.md.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
+## 2026-11-11 — A-to-Z QA audit P1/P2 fix: React 19 form auto-reset (uncommitted)
+
+- Root cause: `<form action={useActionState action}>` makes React 19 call
+  `form.reset()` after every action, success or error. The affected pages are
+  not re-rendered with fresh props because revalidation is skipped
+  (`movieDetails: false`) or deferred via `after()`. Selects and checkboxes
+  therefore revert to their mount-time defaults while React state keeps the new
+  values. A second unchanged save on the movie form then submitted the stale
+  status with the hidden fields omitted, wiping the rating and rewatch (P1). Preferences
+  displayed stale values after a successful save (P2).
+- Fix: `lib/forms/non-resetting-submit.ts` dispatches the same `useActionState`
+  action from `onSubmit` inside `startTransition`. Server actions, validation,
+  pending states and markup are unchanged. Applied to the movie management,
+  preferences, notification settings, profile and movie list-membership
+  forms. Library selection workspace forms contain only hidden inputs and are
+  unchanged. Trade-off: these five forms now require JavaScript to submit.
+- Tests: `lib/forms/non-resetting-submit.test.ts` (13). Full suite 149 files /
+  1,249 tests, TypeScript and ESLint passed. The production build could not run
+  on this host because a Windows Application Control policy blocks Next's
+  native SWC binary. There is no DOM test environment (no jsdom/testing-library),
+  so the UI is verified live on dev after an approved deploy. Not committed.
+- 2026-11-12 approved live verification: scratch copy = `git archive ec96ba7` +
+  the 5 forms + `lib/forms/non-resetting-submit.ts`, without `vercel.json`, deployed
+  to watchflow-dev-ops only by org/project ID (Vercel build READY, so the remote
+  build passes). Live on dev, every form held its values 9 s after save, after
+  a second unchanged save and after reload: movie Watched->Watch Next (rating
+  9.5/rewatch/date preserved), Scheduled 21:00 Karachi = 16:00Z, invalid
+  timezone error kept status and typed values, preferences, notification
+  categories/lead, profile success and error paths, and list membership
+  add/remove. All QA values restored, and the temporary list was deleted. Nothing was committed or
+  pushed, and QStash, Production, Google and the `watchflow` project were untouched.
+
 ## 2026-11-10 — Read-only reminder preflight (halted)
 
 - Hashim approved the read-only preflight only. GitHub gates false; dev reminder
