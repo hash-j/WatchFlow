@@ -17,7 +17,7 @@ const sections = [
   {
     href: "/settings/notifications",
     title: "Notifications",
-    description: "Store reminder and summary choices for future delivery.",
+    description: "Choose notification categories, movie reminders, and browser push.",
     icon: Bell,
   },
   {
@@ -39,7 +39,7 @@ export default function SettingsPage() {
     <div>
       <h2 className="text-2xl font-semibold tracking-tight">Choose a settings category</h2>
       <p className="mt-2 max-w-2xl text-muted-foreground">
-        Update your profile and defaults, review future notification choices,
+        Update your profile and defaults, choose how WatchFlow notifies you,
         or manage your private data.
       </p>
 

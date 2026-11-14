@@ -21,10 +21,14 @@ const links = [
 export function SettingsNav() {
   const pathname = usePathname();
 
+  // The /settings overview already lists every section as a card; rendering
+  // the section nav there would show the same five links twice.
+  if (pathname === "/settings") return null;
+
   return (
     <nav
       aria-label="Settings sections"
-      className="grid min-w-0 grid-cols-2 gap-1 rounded-xl border bg-card p-2 shadow-sm sm:grid-cols-5 lg:grid-cols-1"
+      className="grid min-w-0 grid-cols-2 gap-1 rounded-xl border bg-card p-2 shadow-sm sm:grid-cols-3 lg:grid-cols-1"
     >
       {links.map(({ href, label, icon: Icon }) => (
         <Link

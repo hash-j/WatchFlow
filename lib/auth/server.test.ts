@@ -11,7 +11,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 
-import { redirectAuthenticatedUser } from "./server";
+import { hasAuthenticatedSession, redirectAuthenticatedUser } from "./server";
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -50,6 +50,41 @@ describe("public auth route session redirect", () => {
     mocks.createClient.mockRejectedValue(new Error("service unavailable"));
 
     await expect(redirectAuthenticatedUser()).resolves.toBeUndefined();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+});
+
+describe("public header session awareness", () => {
+  it("reports an authenticated visitor without redirecting", async () => {
+    mocks.createClient.mockResolvedValue({
+      auth: {
+        getClaims: vi.fn().mockResolvedValue({
+          data: { claims: { sub: "authenticated-user" } },
+          error: null,
+        }),
+      },
+    });
+
+    await expect(hasAuthenticatedSession()).resolves.toBe(true);
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+
+  it("reports a signed-out visitor", async () => {
+    mocks.createClient.mockResolvedValue({
+      auth: {
+        getClaims: vi
+          .fn()
+          .mockResolvedValue({ data: { claims: null }, error: null }),
+      },
+    });
+
+    await expect(hasAuthenticatedSession()).resolves.toBe(false);
+  });
+
+  it("falls back to signed out during a temporary auth outage", async () => {
+    mocks.createClient.mockRejectedValue(new Error("service unavailable"));
+
+    await expect(hasAuthenticatedSession()).resolves.toBe(false);
     expect(mocks.redirect).not.toHaveBeenCalled();
   });
 });

@@ -8,6 +8,33 @@ Current branch: `codex/part-18-production-operations`.
 Current status: Reminder gate PASS on watchflow-dev-ops (HEAD 80754b3, VAPID configured): automatic QStash delivery at 19:32Z with 1 notification and 1 accepted push; Hashim saw the Chrome/Windows push and the in-app "Scheduled movie reminder" at 12:32 AM Karachi; bearer, VAPID and isolation verified; both QStash schedules paused; QA cleanup done. Remaining: a push decision and Hashim final web acceptance. See docs/V1_REMINDER_RELEASE_ACCEPTANCE.md.
 This document records repository evidence, not assumptions about an uninspected Supabase project. Verify relevant statements against current code and update only affected sections after each milestone.
 
+## 2026-11-14 — v1 UI/UX sweep fixes (uncommitted, not deployed)
+
+- Duplicate footer on Settings: the root layout already renders `PublicFooter`.
+  `app/(app)/settings/layout.tsx` also rendered `PublicInformationLinks`
+  ("Help and policies"), so the same five links appeared twice. That block was removed.
+- Settings overview showed the section nav and identical section cards. The nav now
+  returns null on `/settings`, and the layout uses the two-column grid only when a nav
+  is present (`lg:has-[>nav]`). The settings nav is 3 columns below `lg`, because
+  5 columns split "Notifications" mid-word at 768 px.
+- Recommendations empty state repeated its notice in a separate box; the box now
+  only shows when recommendation sections exist. Settings overview copy no
+  longer calls notifications "future delivery". The avatar/list artwork file
+  picker button gets the same visible `file:bg-muted` pill as the CSV import picker.
+- Public header action was always "Log in", even with a live session. Added
+  `hasAuthenticatedSession()` beside `redirectAuthenticatedUser` in
+  `lib/auth/server.ts` (no redirect; an auth outage reports signed out) and
+  `components/public-header-auth-action.tsx`, streamed from the public layout
+  inside `<Suspense>` with the signed-out link as the fallback. Cache Components
+  requires that boundary, so the public pages stay prerendered and only the header
+  action is dynamic. Both states share one class string, so the swap cannot shift
+  the header. No client auth provider and no client-side session fetch.
+- Live sweep of dev (public, 18 authenticated routes, 375/390/768/1440) found
+  no other duplicate landmarks, unnamed controls or horizontal overflow. Tests:
+  `lib/ux/ui-sweep.test.ts` and `lib/auth/server.test.ts`; full suite 150 files /
+  1,260 tests, TypeScript, ESLint and diff check pass. All seven fixes verified
+  live on watchflow-dev-ops, signed out and signed in, at 375/768/desktop.
+
 ## 2026-11-11 — A-to-Z QA audit P1/P2 fix: React 19 form auto-reset (uncommitted)
 
 - Root cause: `<form action={useActionState action}>` makes React 19 call

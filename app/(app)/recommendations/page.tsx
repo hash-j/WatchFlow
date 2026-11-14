@@ -242,7 +242,7 @@ async function RecommendationsContent({
         </p>
       ) : null}
 
-      {result.notice ? (
+      {result.notice && result.sections.length > 0 ? (
         <p
           className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground"
           role="status"

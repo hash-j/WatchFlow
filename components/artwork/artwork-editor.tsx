@@ -23,6 +23,7 @@ export function ArtworkEditor({ target, hasImage }: { target: ArtworkTarget; has
     {target.kind === "list" && <input type="hidden" name="listId" value={target.listId} />}
     <Label htmlFor={inputId}>{target.kind === "avatar" ? "Profile picture" : "List thumbnail"}</Label>
     <Input id={inputId} name="image" type="file" accept={ARTWORK_TYPES.join(",")} disabled={pending}
+      className="cursor-pointer items-center file:mr-4 file:cursor-pointer file:rounded file:bg-muted file:px-3 file:py-1"
       aria-describedby={`${inputId}-help`} onChange={event => {
         const file = event.currentTarget.files?.[0]; setFileError(""); setPreview(null);
         if (!file) return;
