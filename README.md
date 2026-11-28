@@ -504,12 +504,6 @@ Potential follow-up work includes:
 
 ---
 
-## License
-
-Add the appropriate project license here if WatchFlow is intended to be open-source.
-
----
-
 ## Author
 
 **Hashim Javed**
