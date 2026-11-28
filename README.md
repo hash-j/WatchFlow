@@ -4,9 +4,7 @@
 
 Live app: https://watchflow-movies.vercel.app
 
-> Add a current WatchFlow dashboard screenshot here:
->
-> `![WatchFlow Dashboard](docs/watchflow-dashboard.png)`
+![WatchFlow Dashboard](docs/watchflow-dashboard.png)
 
 ## At a glance
 
